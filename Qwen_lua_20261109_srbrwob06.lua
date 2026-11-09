@@ -65,6 +65,16 @@ pcall(function() gui.ClipToDeviceSafeArea = false end)
 gui.DisplayOrder = 1200
 gui.Parent = parent
 local alive = true
+local sharedRuntime = _G
+pcall(function()
+    if type(getgenv) == "function" then sharedRuntime = getgenv() end
+end)
+sharedRuntime.__UNKNOWN_STOP_ACTIVE = function()
+    alive = false
+    if gui and gui.Parent then
+        pcall(function() gui:Destroy() end)
+    end
+end
 local highlight
 gui.Destroying:Connect(function() alive = false; if highlight then highlight:Destroy() end end)
 local function make(class, props, holder)
@@ -2716,6 +2726,41 @@ local function verifyKey()
     gui:Destroy()
 
     launchUnknown()
+
+    -- Revalidate the active key while UNKNOWN is running.
+    -- Explicit invalid/expired responses close the Finder; transient network errors do not.
+    task.spawn(function()
+        while true do
+            task.wait(60)
+            local requestOk, checkResponse = pcall(function()
+                return httpRequest({
+                    Url = VERIFY_URL,
+                    Method = "POST",
+                    Headers = { ["Content-Type"] = "application/json" },
+                    Body = HttpService:JSONEncode({ key = key })
+                })
+            end)
+            if requestOk and type(checkResponse) == "table" then
+                local checkBody = checkResponse.Body or checkResponse.body or ""
+                local checkDecoded, checkData = pcall(function()
+                    return HttpService:JSONDecode(checkBody)
+                end)
+                if checkDecoded and type(checkData) == "table" and checkData.valid ~= true then
+                    local env = _G
+                    pcall(function()
+                        if type(getgenv) == "function" then env = getgenv() end
+                    end)
+                    if type(env) == "table" and type(env.__UNKNOWN_STOP_ACTIVE) == "function" then
+                        pcall(env.__UNKNOWN_STOP_ACTIVE)
+                    end
+                    if type(delfile) == "function" then
+                        pcall(function() delfile("unknown_saved_access_key.txt") end)
+                    end
+                    break
+                end
+            end
+        end
+    end)
 end
 
 verifyButton.MouseButton1Click:Connect(verifyKey)
