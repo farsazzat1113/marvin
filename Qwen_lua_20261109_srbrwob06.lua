@@ -1,105 +1,146 @@
--- ==========================================
--- MARVIN | Key Gate System (Lightweight)
--- ==========================================
+-- ===== UNKNOWN | Golden Crown Key Gate =====
 local HttpService = game:GetService("HttpService")
+local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 if not player then return end
 
-local VERIFY_URL = "https://unknown.unknownsystem.workers.dev/validate" -- رابط التحقق الخاص بك
+local VERIFY_URL = "https://unknown.unknownsystem.workers.dev/validate"
 
-local function launchMarvin()
+local function launchUnknown()
     local runtimeEnv = _G
     pcall(function() if type(getgenv) == "function" then runtimeEnv = getgenv() end end)
     if type(runtimeEnv) == "table" then
-        if runtimeEnv["__MARVIN_RUNNING_JOB"] == game.JobId then return end
-        runtimeEnv["__MARVIN_RUNNING_JOB"] = game.JobId
+        local runningJob = "__UNKNOWN_RUNNING_JOB"
+        if runtimeEnv[runningJob] == game.JobId then return end
+        runtimeEnv[runningJob] = game.JobId
     end
-    -- هنا يتم تشغيل السكربت الأصلي الخاص بك
-    pcall(function() loadstring(game:HttpGet("https://raw.githubusercontent.com/mostafaezzatrqm700-droid/UNKNOWN/UNKNOWN/UNKNOWN.lua"))() end)
+    pcall(startUnknown)
 end
 
 local function httpRequest(options)
     local req = request or http_request or (syn and syn.request) or (fluxus and fluxus.request)
     if type(req) == "function" then return req(options) end
-    error("MARVIN: Executor HTTP not supported.")
+    error("HTTP غير متاح في هذا الـ executor")
 end
 
 -- إنشاء الواجهة
 local gui = Instance.new("ScreenGui")
-gui.Name = "MARVIN_KeySystem"
+gui.Name = "UNKNOWN_KeySystem"
 gui.ResetOnSpawn = false
 gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-gui.Parent = player:WaitForChild("PlayerGui")
+gui.IgnoreGuiInset = true
 
+local parent
+pcall(function() parent = gethui() end)
+if not parent then parent = player:WaitForChild("PlayerGui", 15) or player:FindFirstChild("PlayerGui") end
+if not parent then return end
+gui.Parent = parent
+
+-- الإطار الرئيسي (ثيم ذهبي)
 local frame = Instance.new("Frame")
-frame.Size = UDim2.fromOffset(320, 190)
-frame.Position = UDim2.new(0.5, -160, 0.5, -95)
-frame.BackgroundColor3 = Color3.fromRGB(15, 15, 25) -- لون داكن فخم
+frame.Name = "Main"
+frame.Size = UDim2.fromOffset(340, 205)
+frame.Position = UDim2.new(0.5, -170, 0.5, -102)
+frame.BackgroundColor3 = Color3.fromRGB(20, 15, 10)  -- أسود/بني داكن
 frame.BorderSizePixel = 0
 frame.Active = true
 frame.Draggable = true
 frame.Parent = gui
 
-Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 10)
 local stroke = Instance.new("UIStroke", frame)
-stroke.Color = Color3.fromRGB(255, 215, 0) -- حدود ذهبية
+stroke.Color = Color3.fromRGB(255, 215, 0)  -- ذهبي
 stroke.Thickness = 2
 
+local gradient = Instance.new("UIGradient", frame)
+gradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(20, 15, 10)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(40, 30, 15))
+})
+gradient.Rotation = 135
+
+-- العنوان
 local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, -20, 0, 40)
-title.Position = UDim2.fromOffset(10, 5)
+title.Size = UDim2.new(1, -24, 0, 38)
+title.Position = UDim2.fromOffset(12, 8)
 title.BackgroundTransparency = 1
-title.Text = "👑 MARVIN"
-title.TextColor3 = Color3.fromRGB(255, 215, 0) -- نص ذهبي
+title.Text = "👑 UNKNOWN"
+title.TextColor3 = Color3.fromRGB(255, 215, 0)  -- ذهبي
 title.Font = Enum.Font.GothamBold
-title.TextSize = 24
-title.TextStrokeColor3 = Color3.fromRGB(180, 140, 0)
+title.TextSize = 22
+title.TextStrokeColor3 = Color3.fromRGB(180, 140, 40)
 title.TextStrokeTransparency = 0.4
 title.Parent = frame
 
+-- العنوان الفرعي
 local subtitle = Instance.new("TextLabel")
-subtitle.Size = UDim2.new(1, -20, 0, 20)
-subtitle.Position = UDim2.fromOffset(10, 40)
+subtitle.Size = UDim2.new(1, -24, 0, 22)
+subtitle.Position = UDim2.fromOffset(12, 43)
 subtitle.BackgroundTransparency = 1
-subtitle.Text = "Enter your access key to continue"
-subtitle.TextColor3 = Color3.fromRGB(200, 200, 200)
+subtitle.Text = "أدخل مفتاح الوصول للمتابعة"
+subtitle.TextColor3 = Color3.fromRGB(200, 180, 140)
 subtitle.Font = Enum.Font.Gotham
 subtitle.TextSize = 12
 subtitle.Parent = frame
 
+-- صندوق المفتاح
 local keyBox = Instance.new("TextBox")
-keyBox.Size = UDim2.new(1, -30, 0, 36)
-keyBox.Position = UDim2.fromOffset(15, 70)
-keyBox.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
+keyBox.Size = UDim2.new(1, -32, 0, 40)
+keyBox.Position = UDim2.fromOffset(16, 77)
+keyBox.BackgroundColor3 = Color3.fromRGB(35, 25, 15)
 keyBox.BorderSizePixel = 0
-keyBox.PlaceholderText = "MARVIN-XXXX-XXXX"
-keyBox.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
-keyBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+keyBox.PlaceholderText = "TF-..."
+keyBox.PlaceholderColor3 = Color3.fromRGB(120, 100, 70)
+keyBox.Text = ""
+keyBox.TextColor3 = Color3.fromRGB(255, 245, 220)
 keyBox.Font = Enum.Font.GothamBold
 keyBox.TextSize = 14
 keyBox.ClearTextOnFocus = false
 keyBox.Parent = frame
-Instance.new("UICorner", keyBox).CornerRadius = UDim.new(0, 6)
 
+Instance.new("UICorner", keyBox).CornerRadius = UDim.new(0, 7)
+local boxStroke = Instance.new("UIStroke", keyBox)
+boxStroke.Color = Color3.fromRGB(255, 215, 0)
+boxStroke.Thickness = 1
+boxStroke.Transparency = 0.5
+
+-- زر التحقق
 local verifyButton = Instance.new("TextButton")
-verifyButton.Size = UDim2.new(1, -30, 0, 36)
-verifyButton.Position = UDim2.fromOffset(15, 115)
-verifyButton.BackgroundColor3 = Color3.fromRGB(255, 215, 0) -- زر ذهبي
+verifyButton.Size = UDim2.new(1, -32, 0, 36)
+verifyButton.Position = UDim2.fromOffset(16, 128)
+verifyButton.BackgroundColor3 = Color3.fromRGB(255, 215, 0)  -- ذهبي
 verifyButton.BorderSizePixel = 0
 verifyButton.Text = "VERIFY KEY"
-verifyButton.TextColor3 = Color3.fromRGB(0, 0, 0) -- نص أسود للتباين
+verifyButton.TextColor3 = Color3.fromRGB(20, 15, 10)  -- داكن للتباين
 verifyButton.Font = Enum.Font.GothamBold
-verifyButton.TextSize = 14
+verifyButton.TextSize = 13
 verifyButton.Parent = frame
-Instance.new("UICorner", verifyButton).CornerRadius = UDim.new(0, 6)
 
+Instance.new("UICorner", verifyButton).CornerRadius = UDim.new(0, 7)
+local btnStroke = Instance.new("UIStroke", verifyButton)
+btnStroke.Color = Color3.fromRGB(255, 200, 50)
+btnStroke.Thickness = 1
+
+-- تأثير Hover
+verifyButton.MouseEnter:Connect(function()
+    TweenService:Create(verifyButton, TweenInfo.new(0.15), {
+        BackgroundColor3 = Color3.fromRGB(255, 230, 80)
+    }):Play()
+end)
+verifyButton.MouseLeave:Connect(function()
+    TweenService:Create(verifyButton, TweenInfo.new(0.15), {
+        BackgroundColor3 = Color3.fromRGB(255, 215, 0)
+    }):Play()
+end)
+
+-- حالة
 local status = Instance.new("TextLabel")
-status.Size = UDim2.new(1, -30, 0, 20)
-status.Position = UDim2.fromOffset(15, 160)
+status.Size = UDim2.new(1, -32, 0, 22)
+status.Position = UDim2.fromOffset(16, 168)
 status.BackgroundTransparency = 1
-status.Text = "Waiting for key..."
-status.TextColor3 = Color3.fromRGB(180, 180, 180)
+status.Text = "في انتظار المفتاح..."
+status.TextColor3 = Color3.fromRGB(200, 180, 140)
 status.Font = Enum.Font.Gotham
 status.TextSize = 11
 status.TextXAlignment = Enum.TextXAlignment.Left
@@ -108,63 +149,82 @@ status.Parent = frame
 local busy = false
 local function setStatus(msg, color)
     status.Text = msg
-    status.TextColor3 = color or Color3.fromRGB(180, 180, 180)
+    status.TextColor3 = color or Color3.fromRGB(200, 180, 140)
 end
 
 local function verifyKey()
     if busy then return end
     local key = keyBox.Text:gsub("^%s+", ""):gsub("%s+$", "")
     if key == "" then
-        setStatus("⚠️ Please enter your key.", Color3.fromRGB(255, 170, 0))
+        setStatus("⚠️ أدخل المفتاح أولاً", Color3.fromRGB(255, 190, 90))
         return
     end
 
     busy = true
-    verifyButton.Text = "CHECKING..."
-    verifyButton.BackgroundColor3 = Color3.fromRGB(200, 170, 0)
-    setStatus("🔄 Checking with server...", Color3.fromRGB(255, 255, 255))
+    verifyButton.Text = "جاري التحقق..."
+    verifyButton.BackgroundColor3 = Color3.fromRGB(200, 170, 50)
+    setStatus("🔍 الاتصال بالخادم...", Color3.fromRGB(255, 245, 220))
 
     local ok, response = pcall(function()
         return httpRequest({
             Url = VERIFY_URL,
             Method = "POST",
             Headers = {["Content-Type"] = "application/json"},
-            Body = HttpService:JSONEncode({ key = key })
+            Body = HttpService:JSONEncode({key = key, hwid = HttpService:GenerateGUID(false)})
         })
     end)
 
     if not ok or type(response) ~= "table" then
-        setStatus("❌ Connection failed. Check executor.", Color3.fromRGB(255, 80, 80))
+        setStatus("❌ فشل الاتصال - تحقق من الـ executor", Color3.fromRGB(255, 80, 80))
         verifyButton.Text = "VERIFY KEY"
         verifyButton.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
         busy = false
+        task.delay(2.5, function() if verifyButton.Text ~= "ACCEPTED" then setStatus("في انتظار المفتاح...") end end)
         return
     end
 
+    local statusCode = tonumber(response.StatusCode or response.Status)
     local body = response.Body or response.body or ""
+
+    if statusCode ~= 200 then
+        setStatus("❌ خطأ من الخادم (" .. tostring(statusCode) .. ")", Color3.fromRGB(255, 80, 80))
+        verifyButton.Text = "VERIFY KEY"
+        verifyButton.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
+        busy = false
+        task.delay(2.5, function() if verifyButton.Text ~= "ACCEPTED" then setStatus("في انتظار المفتاح...") end end)
+        return
+    end
+
     local decodedOk, data = pcall(function() return HttpService:JSONDecode(body) end)
 
     if not decodedOk or type(data) ~= "table" or data.valid ~= true then
-        local reason = (decodedOk and type(data.reason) == "string") and data.reason or "Invalid or revoked key."
-        setStatus("❌ " .. reason, Color3.fromRGB(255, 80, 80))
+        local reason = "مفتاح غير صالح أو منتهي"
+        if decodedOk and type(data.reason) == "string" then
+            if data.reason == "expired" then reason = "⏰ المفتاح منتهي الصلاحية"
+            elseif data.reason == "invalid" then reason = "❌ صيغة المفتاح خاطئة"
+            else reason = "⚠️ " .. data.reason end
+        end
+        setStatus(reason, Color3.fromRGB(255, 80, 80))
         verifyButton.Text = "VERIFY KEY"
         verifyButton.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
         busy = false
+        task.delay(2.5, function() if verifyButton.Text ~= "ACCEPTED" then setStatus("في انتظار المفتاح...") end end)
         return
     end
 
-    -- حفظ المفتاح محلياً
+    -- نجاح!
     if type(writefile) == "function" then
-        pcall(function() writefile("marvin_saved_key.txt", key) end)
+        pcall(function() writefile("unknown_saved_access_key.txt", key) end)
     end
 
-    setStatus("✅ Key accepted! Loading MARVIN...", Color3.fromRGB(80, 255, 120))
-    verifyButton.Text = "ACCEPTED"
-    verifyButton.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
-    
+    setStatus("✅ تم القبول! جاري التحميل...", Color3.fromRGB(80, 255, 120))
+    verifyButton.Text = "✓ ACCEPTED"
+    verifyButton.BackgroundColor3 = Color3.fromRGB(50, 180, 50)
+    verifyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+
     task.delay(0.5, function()
         gui:Destroy()
-        launchMarvin()
+        launchUnknown()
     end)
 end
 
@@ -173,10 +233,10 @@ keyBox.FocusLost:Connect(function(enterPressed)
     if enterPressed then verifyKey() end
 end)
 
--- تحميل المفتاح المحفوظ تلقائياً
+-- تحميل المفتاح المحفوظ
 if type(readfile) == "function" then
     local savedKey
-    pcall(function() savedKey = readfile("marvin_saved_key.txt") end)
+    pcall(function() savedKey = readfile("unknown_saved_access_key.txt") end)
     if type(savedKey) == "string" and savedKey:gsub("%s+", "") ~= "" then
         keyBox.Text = savedKey
         task.defer(verifyKey)
