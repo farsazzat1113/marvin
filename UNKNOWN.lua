@@ -1,7 +1,30 @@
--- UNKNOWN | Integrated Cloudflare key gate
+--================================================================================================--
+--   UNKNOWN  ::  Shared Egg Finder + Cloudflare Key Gate
+--================================================================================================--
+--   File      : UNKNOWN.lua
+--   Build     : Public v0.4.3 / UI19 "Glass Premium"
+--   Theme     : Glass Premium - translucent panels, gradient strokes, animated starfield
+--   Key gate  : the Finder boots only after the endpoint returns valid=true, and is
+--               re-validated every 60 s while running.
+--
+--   Contents
+--     [1] Bootstrap .......... auto-execute queue + shared-runtime registration
+--     [2] Finder core ........ services, GUI factory, parsing/formatting helpers
+--     [3] Glass Premium UI ... panel theme, header, settings overlay, animations
+--     [4] Network ............ config loader, broadcast, feed pagination, auto-join
+--     [5] Card renderer ...... egg cards, rarity/mutation glyphs, join flow
+--     [6] Scan loop .......... field-egg reader feeding the UI and the broadcaster
+--     [7] Key gate ........... glass key window, online validation + periodic recheck
+--================================================================================================--
+
 -- Finder code starts only after the key validation endpoint returns valid=true.
 local function startUnknown()
--- Auto Execute: register the next-server launch once, and retry silently if registration fails.
+
+--============================================================================--
+--  [1] BOOTSTRAP - auto-execute is registered once per server hop; all retries
+--      are silent so a failed registration never breaks the session.
+--============================================================================--
+
 local HttpService = game:GetService("HttpService")
 local RAW_SCRIPT_URL = "https://raw.githubusercontent.com/mostafaezzatrqm700-droid/UNKNOWN/backup/unknown-safe-copy-2026-11-07/UNKNOWN.lua?v=40"
 local autoExecuteEnabled = true
@@ -39,7 +62,11 @@ local function queueAutoExecute()
     return false
 end
 queueAutoExecute()
--- UNKNOWN public v0.4.3 / UI18
+--============================================================================--
+--  [2] FINDER CORE - services, shared state and the GUI factory helpers every
+--      later section builds on.
+--============================================================================--
+-- UNKNOWN public v0.4.3 / UI19
 -- Based on public commit 7fd7826415b94846abc924aa0ce9308b541c0653.
 -- Public host/config; broadcast contract preserved from public v0.4.3.
 -- NYX Spawn Panel: current-server field eggs, read-only display.
@@ -265,6 +292,10 @@ local function readTraitNames(record)
     add(record.BaseMutation);table.sort(names)
     return names,known
 end
+--============================================================================--
+--  [3-5] FINDER UI + NETWORK + RENDERER - createFinder(D) wires the glass
+--        panel, the broadcast/feed networking and the egg-card list together.
+--============================================================================--
 local function createFinder(D)
     local cycleModule
     pcall(function() cycleModule=module('Shared.Util.AreaEggCycle') end)
@@ -410,7 +441,7 @@ local function createFinder(D)
         elseif saved==0 and settings.rarityMenu=='mythic-up-v1' then minRank=0 end
     end
     local menuHotkey=Enum.KeyCode.F
-    local sharingNotice=D.label(D.gui,'EGG FINDER ON â¢ Sharing egg sightings & server ID',UDim2.new(0,12,1,-28),UDim2.new(1,-24,0,22),Color3.fromRGB(245,245,245),12)
+    local sharingNotice=D.label(D.gui,'EGG FINDER ON • Sharing egg sightings & server ID',UDim2.new(0,12,1,-28),UDim2.new(1,-24,0,22),Color3.fromRGB(245,245,245),12)
     sharingNotice.Visible=false;sharingNotice.TextSize=12;sharingNotice.TextWrapped=true;sharingNotice.TextStrokeTransparency=0.15
     local panel=D.make('Frame',{AnchorPoint=Vector2.new(1,0.5),Position=UDim2.new(1,-18,0.5,0),Size=UDim2.new(0.94,0,0.86,0),BackgroundColor3=Color3.fromRGB(22,23,27),Visible=false},D.gui)
     local responsiveScale=D.make('UIScale',{Scale=0.8},panel)
@@ -623,7 +654,7 @@ local function createFinder(D)
         end
     end)
     D.gui.Destroying:Connect(function() moveConnection:Disconnect();endConnection:Disconnect();drag=nil end)
-    local status=D.label(panel,'Connectingâ¦',UDim2.fromOffset(14,52),UDim2.new(1,-28,0,48),Color3.fromRGB(210,218,240),14)
+    local status=D.label(panel,'Connecting…',UDim2.fromOffset(14,52),UDim2.new(1,-28,0,48),Color3.fromRGB(210,218,240),14)
     status.Visible=true
     status.TextWrapped=true
     local discordSubtitle=D.label(panel,DISCORD,UDim2.fromOffset(10,27),UDim2.fromOffset(205,14),Color3.new(1,1,1),11)
@@ -674,99 +705,156 @@ local function createFinder(D)
     resetTimer.TextTruncate=Enum.TextTruncate.AtEnd
     resetTimer.Active=false
     local refreshing=false
-    local list=D.make('ScrollingFrame',{Position=UDim2.fromOffset(14,92),Size=UDim2.new(1,-16,1,-278),BackgroundTransparency=1,BorderSizePixel=0,AutomaticCanvasSize=Enum.AutomaticSize.None,CanvasSize=UDim2.new(),ScrollBarThickness=6,ScrollBarImageColor3=Color3.fromRGB(137,140,150),ScrollBarImageTransparency=0},panel)
+    local list=D.make('ScrollingFrame',{Position=UDim2.fromOffset(14,92),Size=UDim2.new(1,-16,1,-278),BackgroundTransparency=1,BorderSizePixel=0,AutomaticCanvasSize=Enum.AutomaticSize.None,CanvasSize=UDim2.new(),ScrollBarThickness=6,ScrollBarImageColor3=Color3.fromRGB(150,132,190),ScrollBarImageTransparency=0.1},panel)
     
-    -- UNKNOWN SPACE THEME PATCH v1 (visual-only)
-    local SpaceTheme = {
-        bg = Color3.fromRGB(9, 5, 24),
-        panel = Color3.fromRGB(17, 8, 39),
-        panel2 = Color3.fromRGB(28, 12, 58),
-        purple = Color3.fromRGB(166, 55, 255),
-        bright = Color3.fromRGB(211, 105, 255),
-        cyan = Color3.fromRGB(57, 211, 255),
-        text = Color3.fromRGB(245, 238, 255),
-        muted = Color3.fromRGB(190, 166, 222),
-        green = Color3.fromRGB(35, 235, 133),
+    --========================================================================--
+    --  [3] GLASS PREMIUM THEME (visual-only)
+    --  Translucent deep-space panels, purple/cyan gradient strokes, a soft
+    --  outer glow and a slow-twinkling starfield. Behavior is untouched.
+    --========================================================================--
+    local Theme = {
+        bg        = Color3.fromRGB(10, 7, 22),     -- panel base
+        bgDeep    = Color3.fromRGB(5, 3, 14),      -- title bar
+        glass     = Color3.fromRGB(27, 20, 48),    -- resting control surface
+        glassHigh = Color3.fromRGB(46, 33, 80),    -- raised / input surface
+        accent    = Color3.fromRGB(147, 92, 255),  -- signature purple
+        accentHot = Color3.fromRGB(213, 96, 255),  -- bright purple
+        cyan      = Color3.fromRGB(56, 205, 255),  -- secondary accent
+        text      = Color3.fromRGB(245, 240, 255),
+        muted     = Color3.fromRGB(176, 162, 210),
+        green     = Color3.fromRGB(52, 235, 150),
+        tabActive = Color3.fromRGB(96, 58, 170),
     }
+    D.theme = Theme
 
-    panel.BackgroundColor3 = SpaceTheme.bg
-    panel.BackgroundTransparency = 0.04
-    local spaceStroke = panel:FindFirstChildOfClass('UIStroke')
-    if spaceStroke then
-        spaceStroke.Color = SpaceTheme.purple
-        spaceStroke.Thickness = 2
+    --== Panel shell: glass gradient, gradient border, outer glow ==--
+    panel.BackgroundColor3 = Theme.bg
+    panel.BackgroundTransparency = 0.05
+    local glassCorner = panel:FindFirstChildOfClass('UICorner')
+    if glassCorner then glassCorner.CornerRadius = UDim.new(0, 12) end
+    D.make('UIGradient', {
+        Rotation = 95,
+        Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(150, 138, 190)),
+    }, panel)
+    local glassStroke = panel:FindFirstChildOfClass('UIStroke')
+    if glassStroke then
+        glassStroke.Color = Theme.accent
+        glassStroke.Thickness = 1.5
+        glassStroke.Transparency = 0.22
+        glassStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+        D.make('UIGradient', {Rotation = 55, Color = ColorSequence.new(Theme.accent, Theme.cyan)}, glassStroke)
     end
+    local edgeGlow = D.make('Frame', {
+        Name = 'GlassEdgeGlow', BackgroundTransparency = 1, BorderSizePixel = 0,
+        Position = UDim2.fromOffset(-4, -4), Size = UDim2.new(1, 8, 1, 8),
+        Active = false, ZIndex = 1,
+    }, panel)
+    D.make('UICorner', {CornerRadius = UDim.new(0, 16)}, edgeGlow)
+    D.make('UIStroke', {
+        Color = Theme.accent, Thickness = 6, Transparency = 0.82,
+        ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+    }, edgeGlow)
 
+    --== Title bar: deep glass + fading gradient hairline ==--
     if bar then
-        bar.BackgroundColor3 = Color3.fromRGB(7, 3, 19)
-        bar.BackgroundTransparency = 0.08
+        bar.BackgroundColor3 = Theme.bgDeep
+        bar.BackgroundTransparency = 0.15
+        local barCorner = bar:FindFirstChildOfClass('UICorner')
+        if barCorner then barCorner.CornerRadius = UDim.new(0, 12) end
+        D.make('UIGradient', {
+            Rotation = 90,
+            Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(130, 118, 170)),
+        }, bar)
     end
+    local hairline = D.make('Frame', {
+        Name = 'HeaderHairline', BorderSizePixel = 0, Active = false,
+        BackgroundColor3 = Theme.accent, Position = UDim2.new(0, 12, 0, 45),
+        Size = UDim2.new(1, -24, 0, 1), ZIndex = 4,
+    }, panel)
+    D.make('UIGradient', {Rotation = 0, Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 1),
+        NumberSequenceKeypoint.new(0.18, 0.25),
+        NumberSequenceKeypoint.new(0.82, 0.25),
+        NumberSequenceKeypoint.new(1, 1),
+    })}, hairline)
+
     if heading then
-        heading.TextColor3 = SpaceTheme.text
-        heading.TextStrokeColor3 = SpaceTheme.purple
+        heading.TextColor3 = Theme.text
+        heading.TextStrokeColor3 = Theme.accent
         heading.TextStrokeTransparency = 0.35
     end
     if status then
-        status.TextColor3 = SpaceTheme.cyan
+        status.TextColor3 = Theme.cyan
     end
 
-    local starfield = Instance.new('Frame')
-    starfield.Name = 'UNKNOWN_SpaceStarfield'
-    starfield.BackgroundTransparency = 1
-    starfield.BorderSizePixel = 0
-    starfield.Size = UDim2.fromScale(1, 1)
-    starfield.Position = UDim2.fromScale(0, 0)
-    starfield.Active = false
-    starfield.ZIndex = 2
-    starfield.Parent = panel
-
+    --== Starfield: fine twinkling stars over three breathing nebula glows ==--
+    local starfield = D.make('Frame', {
+        Name = 'UNKNOWN_GlassStarfield', BackgroundTransparency = 1, BorderSizePixel = 0,
+        Size = UDim2.fromScale(1, 1), Position = UDim2.fromScale(0, 0), Active = false, ZIndex = 2,
+    }, panel)
     local starRandom = Random.new(7319)
     local starTweens = {}
     local TweenService = game:GetService('TweenService')
-    for i = 1, 34 do
-        local dot = Instance.new('Frame')
-        dot.Name = 'Star' .. i
-        local size = starRandom:NextInteger(2, 4)
+    for i = 1, 30 do
+        local dot = D.make('Frame', {
+            Name = 'Star' .. i, BorderSizePixel = 0, Active = false, ZIndex = 2,
+            Position = UDim2.fromScale(starRandom:NextNumber(0.03, 0.97), starRandom:NextNumber(0.10, 0.96)),
+            BackgroundColor3 = (i % 7 == 0) and Theme.cyan or (i % 3 == 0) and Theme.accentHot or Color3.fromRGB(232, 226, 255),
+        }, starfield)
+        local size = starRandom:NextInteger(2, 3)
         dot.Size = UDim2.fromOffset(size, size)
-        dot.Position = UDim2.fromScale(starRandom:NextNumber(0.02, 0.98), starRandom:NextNumber(0.08, 0.96))
-        dot.BackgroundColor3 = (i % 5 == 0) and SpaceTheme.cyan or SpaceTheme.bright
-        dot.BackgroundTransparency = starRandom:NextNumber(0.18, 0.55)
-        dot.BorderSizePixel = 0
-        dot.Active = false
-        dot.ZIndex = 2
-        dot.Parent = starfield
-        local corner = Instance.new('UICorner')
-        corner.CornerRadius = UDim.new(1, 0)
-        corner.Parent = dot
-        local glow = TweenService:Create(dot, TweenInfo.new(starRandom:NextNumber(1.1, 2.8), Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {
-            BackgroundTransparency = 0.82,
-            Size = UDim2.fromOffset(size + 2, size + 2)
+        dot.BackgroundTransparency = starRandom:NextNumber(0.30, 0.62)
+        D.make('UICorner', {CornerRadius = UDim.new(1, 0)}, dot)
+        local glow = TweenService:Create(dot, TweenInfo.new(starRandom:NextNumber(1.4, 3.4), Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {
+            BackgroundTransparency = 0.88,
+            Size = UDim2.fromOffset(size + 1, size + 1),
         })
         glow:Play()
         table.insert(starTweens, glow)
     end
+    for i, spec in ipairs({
+        {132, Theme.accent, 0.94},
+        {96, Theme.cyan, 0.95},
+        {72, Theme.accentHot, 0.95},
+    }) do
+        local nebula = D.make('Frame', {
+            Name = 'Nebula' .. i, BorderSizePixel = 0, Active = false, ZIndex = 2,
+            Position = UDim2.fromScale(starRandom:NextNumber(0.08, 0.78), starRandom:NextNumber(0.14, 0.70)),
+            Size = UDim2.fromOffset(spec[1], spec[1]),
+            BackgroundColor3 = spec[2], BackgroundTransparency = spec[3],
+        }, starfield)
+        D.make('UICorner', {CornerRadius = UDim.new(1, 0)}, nebula)
+        local breathe = TweenService:Create(nebula, TweenInfo.new(4 + i, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {
+            BackgroundTransparency = math.min(0.985, spec[3] + 0.03),
+        })
+        breathe:Play()
+        table.insert(starTweens, breathe)
+    end
 
-    local function liftAboveStars(obj)
-        if obj:IsA('GuiObject') and obj ~= starfield and not obj:IsDescendantOf(starfield) then
+    --== Z-order: real content always floats above the stars and the glow ==--
+    local function liftAboveBackdrop(obj)
+        if obj:IsA('GuiObject') and obj ~= starfield and obj ~= edgeGlow and not obj:IsDescendantOf(starfield) then
             if obj.ZIndex <= 2 then obj.ZIndex = 3 end
         end
     end
-    for _, obj in ipairs(panel:GetDescendants()) do liftAboveStars(obj) end
+    for _, obj in ipairs(panel:GetDescendants()) do liftAboveBackdrop(obj) end
     panel.DescendantAdded:Connect(function(obj)
-        if obj ~= starfield and not obj:IsDescendantOf(starfield) then
+        if obj ~= starfield and obj ~= edgeGlow and not obj:IsDescendantOf(starfield) then
             task.defer(function()
-                if obj.Parent then liftAboveStars(obj) end
+                if obj.Parent then liftAboveBackdrop(obj) end
             end)
         end
     end)
 
-    local function styleSpaceControl(obj)
+    --== Control skinning: current and future panel controls share one look ==--
+    local function styleGlassControl(obj)
         if obj:IsA('TextButton') then
             -- Server status buttons own their colors (JOIN green, FULL/TAKEN red, HERE gray).
             if obj.Name ~= 'JoinStatusButton' and obj.Name ~= 'AutoJoin' then
-                obj.BackgroundColor3 = SpaceTheme.panel2
+                obj.BackgroundColor3 = Theme.glass
+                obj.BackgroundTransparency = 0.04
             end
-            obj.TextColor3 = SpaceTheme.text
+            obj.TextColor3 = Theme.text
             obj.Font = Enum.Font.GothamBold
             obj.AutoButtonColor = false
             local stroke = obj:FindFirstChildOfClass('UIStroke')
@@ -775,55 +863,115 @@ local function createFinder(D)
                 stroke.Thickness = 1
                 stroke.Parent = obj
             end
-            stroke.Color = SpaceTheme.purple
-            stroke.Transparency = 0.18
+            stroke.Color = Theme.accent
+            stroke.Transparency = 0.30
+            stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
             local corner = obj:FindFirstChildOfClass('UICorner')
             if not corner then
                 corner = Instance.new('UICorner')
-                corner.CornerRadius = UDim.new(0, 9)
                 corner.Parent = obj
             end
+            corner.CornerRadius = UDim.new(0, 8)
             if obj == refreshButton then
-                obj.BackgroundColor3 = Color3.fromRGB(92, 12, 178)
-                stroke.Color = SpaceTheme.bright
-                stroke.Thickness = 2
-            elseif obj == scope or obj == myScope then
-                obj.BackgroundColor3 = SpaceTheme.panel2
+                obj.BackgroundColor3 = Color3.fromRGB(112, 34, 200)
+                obj.BackgroundTransparency = 0.06
+                stroke.Color = Theme.accentHot
+                stroke.Transparency = 0.12
+                stroke.Thickness = 1.5
             elseif obj == settingsButton then
-                obj.BackgroundColor3 = Color3.fromRGB(42, 15, 75)
+                obj.BackgroundColor3 = Theme.glassHigh
             elseif obj == rarity then
-                obj.BackgroundColor3 = Color3.fromRGB(35, 12, 65)
+                obj.BackgroundColor3 = Theme.glass
+            end
+        elseif obj:IsA('TextBox') then
+            obj.BackgroundColor3 = Theme.glassHigh
+            obj.TextColor3 = Theme.text
+            local stroke = obj:FindFirstChildOfClass('UIStroke')
+            if not stroke then
+                stroke = Instance.new('UIStroke')
+                stroke.Thickness = 1
+                stroke.Parent = obj
+            end
+            stroke.Color = Theme.accent
+            stroke.Transparency = 0.45
+            stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+            local corner = obj:FindFirstChildOfClass('UICorner')
+            if corner then corner.CornerRadius = UDim.new(0, 8) end
+        elseif obj:IsA('Frame') then
+            if obj.Name == 'ValueOfServers' or obj.Name == 'MinAutoJoinValue' then
+                obj.BackgroundColor3 = Theme.glass
+                local corner = obj:FindFirstChildOfClass('UICorner')
+                if corner then corner.CornerRadius = UDim.new(0, 10) end
+                D.make('UIStroke', {
+                    Color = Theme.accent, Thickness = 1, Transparency = 0.55,
+                    ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+                }, obj)
+                D.make('UIGradient', {
+                    Rotation = 90,
+                    Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(168, 156, 205)),
+                }, obj)
+            elseif obj.Name == 'SettingsOverlay' then
+                obj.BackgroundColor3 = Theme.bg
+                obj.BackgroundTransparency = 0.02
+                local corner = obj:FindFirstChildOfClass('UICorner')
+                if corner then corner.CornerRadius = UDim.new(0, 12) end
+                D.make('UIStroke', {
+                    Color = Theme.accent, Thickness = 1.5, Transparency = 0.30,
+                    ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+                }, obj)
             end
         elseif obj:IsA('TextLabel') then
-            if obj.TextColor3 ~= SpaceTheme.green then
-                obj.TextStrokeColor3 = Color3.fromRGB(18, 4, 35)
+            if obj.TextColor3 ~= Theme.green then
+                obj.TextStrokeColor3 = Color3.fromRGB(14, 5, 28)
                 obj.TextStrokeTransparency = math.min(obj.TextStrokeTransparency, 0.55)
             end
         end
     end
-    for _, obj in ipairs(panel:GetDescendants()) do styleSpaceControl(obj) end
+    for _, obj in ipairs(panel:GetDescendants()) do styleGlassControl(obj) end
     panel.DescendantAdded:Connect(function(obj)
-        if obj ~= starfield and not obj:IsDescendantOf(starfield) then
+        if obj ~= starfield and obj ~= edgeGlow and not obj:IsDescendantOf(starfield) then
             task.defer(function()
-                if obj.Parent then styleSpaceControl(obj) end
+                if obj.Parent then styleGlassControl(obj) end
             end)
         end
     end)
 
-    local function refreshSpaceScope()
+    --== Scope tabs: the active side carries the accent, the rest stays glass ==--
+    local function refreshGlassScope()
         if scope then
-            scope.BackgroundColor3 = othersOnly and SpaceTheme.panel2 or Color3.fromRGB(91, 20, 153)
+            scope.BackgroundColor3 = othersOnly and Theme.glass or Theme.tabActive
         end
         if myScope then
-            myScope.BackgroundColor3 = othersOnly and Color3.fromRGB(91, 20, 153) or SpaceTheme.panel2
+            myScope.BackgroundColor3 = othersOnly and Theme.tabActive or Theme.glass
         end
     end
-    if scope then scope.Activated:Connect(function() task.defer(refreshSpaceScope) end) end
-    if myScope then myScope.Activated:Connect(function() task.defer(refreshSpaceScope) end) end
-    refreshSpaceScope()
+    if scope then scope.Activated:Connect(function() task.defer(refreshGlassScope) end) end
+    if myScope then myScope.Activated:Connect(function() task.defer(refreshGlassScope) end) end
+    refreshGlassScope()
+
+    --== Launcher ring: a thin accent circle around the floating icon ==--
+    if open then
+        D.make('UIStroke', {
+            Color = Theme.accent, Thickness = 2, Transparency = 0.15,
+            ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+        }, open)
+    end
+
+    --== Soft pop whenever the panel opens ==--
+    local popTween
+    panel:GetPropertyChangedSignal('Visible'):Connect(function()
+        if not panel.Visible then return end
+        local target = responsiveScale.Scale
+        if type(target) ~= 'number' or target <= 0 then return end
+        responsiveScale.Scale = target * 0.94
+        if popTween then popTween:Cancel() end
+        popTween = TweenService:Create(responsiveScale, TweenInfo.new(0.32, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = target})
+        popTween:Play()
+    end)
 
     gui.Destroying:Connect(function()
         for _, tween in ipairs(starTweens) do pcall(function() tween:Cancel() end) end
+        if popTween then pcall(function() popTween:Cancel() end) end
     end)
     D.make('UIListLayout',{Padding=UDim.new(0,4),SortOrder=Enum.SortOrder.LayoutOrder},list)
     local loadingVisible=true
@@ -1281,7 +1429,7 @@ local function createFinder(D)
         local isKg=type(entry.weight)=='number'
         local value=isKg and entry.weight or entry.scale
         local neutral=Color3.fromRGB(220,224,235)
-        if type(value)~='number' or value~=value or value<0 or value==math.huge then return 'â',neutral end
+        if type(value)~='number' or value~=value or value<0 or value==math.huge then return '—',neutral end
         local compact=value>=1000
         local number
         if value>=1e15 then number=string.format('%.2g',value)
@@ -1296,7 +1444,7 @@ local function createFinder(D)
             elseif value<0.80 then color=Color3.fromRGB(255,210,75)
             elseif value>2.50 then color=Color3.fromRGB(100,240,140) end
         end
-        return (isKg and number..' KG' or 'Ã'..number),color
+        return (isKg and number..' KG' or '×'..number),color
     end
     local function mutationNames(entry)
         if entry.isEvent or entry.source=='event' then return {} end
@@ -2034,14 +2182,15 @@ local function createFinder(D)
             if not card or not card.row.Parent or card.signature~=signature then
             if card and card.row.Parent then card.row:Destroy() end
             card={entry=entry,signature=signature}
-            local row=D.make('Frame',{Size=UDim2.new(1,-12,0,90),LayoutOrder=i,BackgroundColor3=Color3.fromRGB(105,106,110),BackgroundTransparency=0.24,BorderSizePixel=0},list)
+            local row=D.make('Frame',{Size=UDim2.new(1,-12,0,90),LayoutOrder=i,BackgroundColor3=Color3.fromRGB(26,18,46),BackgroundTransparency=0.10,BorderSizePixel=0},list)
             card.row=row
             row.ClipsDescendants=true
-            D.make('UICorner',{CornerRadius=UDim.new(0,1)},row)
-            D.make('UIGradient',{Color=ColorSequence.new(Color3.new(1,1,1),Color3.fromRGB(145,148,155)),Rotation=90},row)
-            D.make('UIStroke',{Color=Color3.fromRGB(20,21,24),Thickness=2,ApplyStrokeMode=Enum.ApplyStrokeMode.Border},row)
-            D.make('Frame',{Name='CardBevelTop',Position=UDim2.fromOffset(2,1),Size=UDim2.new(1,-4,0,1),BackgroundColor3=Color3.fromRGB(190,192,198),BackgroundTransparency=0.3,BorderSizePixel=0,Active=false},row)
-            D.make('Frame',{Name='CardBevelBottom',Position=UDim2.new(0,2,1,-2),Size=UDim2.new(1,-4,0,1),BackgroundColor3=Color3.fromRGB(24,25,28),BorderSizePixel=0,Active=false},row)
+            -- Glass card: deep indigo surface, soft vertical gradient, purple hairline border.
+            D.make('UICorner',{CornerRadius=UDim.new(0,8)},row)
+            D.make('UIGradient',{Color=ColorSequence.new(Color3.new(1,1,1),Color3.fromRGB(168,158,200)),Rotation=90},row)
+            D.make('UIStroke',{Color=Color3.fromRGB(110,80,185),Transparency=0.3,Thickness=1,ApplyStrokeMode=Enum.ApplyStrokeMode.Border},row)
+            D.make('Frame',{Name='CardBevelTop',Position=UDim2.fromOffset(3,1),Size=UDim2.new(1,-6,0,1),BackgroundColor3=Color3.fromRGB(235,230,255),BackgroundTransparency=0.55,BorderSizePixel=0,Active=false},row)
+            D.make('Frame',{Name='CardBevelBottom',Position=UDim2.new(0,3,1,-2),Size=UDim2.new(1,-6,0,1),BackgroundColor3=Color3.fromRGB(10,6,22),BackgroundTransparency=0,BorderSizePixel=0,Active=false},row)
             -- Static native UI rays: no downloads, image compression or animation work.
             local spotlight=D.make('Frame',{Name='PetSpotlight',Position=UDim2.fromOffset(2,0),Size=UDim2.new(0,82,1,-22),BackgroundTransparency=1,BorderSizePixel=0,ClipsDescendants=false,Active=false,ZIndex=row.ZIndex+1},row)
             -- Pet icon intentionally has no white rays or center-glow overlay.
@@ -2133,7 +2282,7 @@ local function createFinder(D)
             local join=D.make('TextButton',{Name='JoinStatusButton',Text=select(1,joinPresentation(entry)),Position=UDim2.new(1,-98,0,29),Size=UDim2.fromOffset(90,32),BackgroundColor3=entry.takenConfirmed and Color3.fromRGB(235,55,65) or (entry.full or entry.unavailable) and Color3.fromRGB(255,75,85) or here and Color3.fromRGB(86,90,100) or Color3.fromRGB(40,160,85),TextColor3=Color3.new(1,1,1),TextSize=13},row)
             card.join=join
             local joinCorner=join:FindFirstChildOfClass('UICorner')
-            if joinCorner then joinCorner.CornerRadius=UDim.new(0,3) end
+            if joinCorner then joinCorner.CornerRadius=UDim.new(0,8) end
             join.Font=Enum.Font.FredokaOne
             styleRaisedButton(join)
             local caption=join:FindFirstChild('RaisedCaption')
@@ -2349,7 +2498,7 @@ local function createFinder(D)
             local highlighted=hovered or moving
             tween=Tweens:Create(list,TweenInfo.new(0.14,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),{
                 ScrollBarThickness=highlighted and 9 or 6,
-                ScrollBarImageColor3=highlighted and Color3.fromRGB(200,205,220) or Color3.fromRGB(137,140,150),
+                ScrollBarImageColor3=highlighted and Color3.fromRGB(140,205,255) or Color3.fromRGB(150,132,190),
                 ScrollBarImageTransparency=highlighted and 0 or 0.18
             })
             tween:Play()
@@ -2434,7 +2583,7 @@ local function createFinder(D)
     end)
     task.spawn(function()
         while active do
-            status.Text=joining and 'Joining serverâ¦' or (tostring(reportStatus)..'\n'..tostring(queryStatus))
+            status.Text=joining and 'Joining server…' or (tostring(reportStatus)..'\n'..tostring(queryStatus))
             local cycle=cycleInfo()
             if cycle then
                 local seconds=math.max(0,math.ceil(cycle.remaining))
@@ -2453,6 +2602,10 @@ local function createFinder(D)
 end
 
 
+--============================================================================--
+--  [6] SCAN LOOP - reads field eggs from the game modules once per second and
+--      feeds both the UI renderer and the shared broadcast worker.
+--============================================================================--
 local function run()
     local EggState=module('Client.EggState')
     local Assets=module('Data.Assets')
@@ -2534,7 +2687,10 @@ end
 end)
 end
 
--- UNKNOWN | Cloudflare key gate
+--============================================================================--
+--  [7] KEY GATE - glass key window. Validates against the Cloudflare endpoint,
+--      caches accepted keys locally and rechecks them while the Finder runs.
+--============================================================================--
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
@@ -2566,10 +2722,14 @@ local function httpRequest(options)
     error("Your executor does not expose a supported HTTP request function.")
 end
 
+--== Key gate window: a centered glass card with a gradient border ==--
+local Tweens = game:GetService("TweenService")
+
 local gui = Instance.new("ScreenGui")
 gui.Name = "UNKNOWN_KeySystem"
 gui.ResetOnSpawn = false
 gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+gui.DisplayOrder = 1100
 
 local parent
 pcall(function()
@@ -2582,86 +2742,206 @@ gui.Parent = parent
 
 local frame = Instance.new("Frame")
 frame.Name = "Main"
-frame.Size = UDim2.fromOffset(340, 205)
-frame.Position = UDim2.new(0.5, -170, 0.5, -102)
-frame.BackgroundColor3 = Color3.fromRGB(18, 18, 23)
+frame.Size = UDim2.fromOffset(356, 230)
+frame.Position = UDim2.new(0.5, -178, 0.5, -115)
+frame.BackgroundColor3 = Color3.fromRGB(12, 9, 24)
+frame.BackgroundTransparency = 0.04
 frame.BorderSizePixel = 0
 frame.Active = true
 frame.Draggable = true
 frame.Parent = gui
 
 local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0, 10)
+corner.CornerRadius = UDim.new(0, 16)
 corner.Parent = frame
 
 local stroke = Instance.new("UIStroke")
-stroke.Color = Color3.fromRGB(85, 85, 105)
-stroke.Thickness = 1
+stroke.Color = Color3.fromRGB(147, 92, 255)
+stroke.Thickness = 1.5
+stroke.Transparency = 0.18
+stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 stroke.Parent = frame
 
+local strokeGradient = Instance.new("UIGradient")
+strokeGradient.Rotation = 55
+strokeGradient.Color = ColorSequence.new(Color3.fromRGB(147, 92, 255), Color3.fromRGB(56, 205, 255))
+strokeGradient.Parent = stroke
+
+local frameSheen = Instance.new("UIGradient")
+frameSheen.Rotation = 95
+frameSheen.Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(150, 138, 190))
+frameSheen.Parent = frame
+
+-- Soft purple ring hugging the outside edge of the card.
+local edgeGlow = Instance.new("Frame")
+edgeGlow.Name = "EdgeGlow"
+edgeGlow.BackgroundTransparency = 1
+edgeGlow.BorderSizePixel = 0
+edgeGlow.Position = UDim2.fromOffset(-4, -4)
+edgeGlow.Size = UDim2.new(1, 8, 1, 8)
+edgeGlow.ZIndex = 0
+edgeGlow.Active = false
+edgeGlow.Parent = frame
+
+local edgeGlowCorner = Instance.new("UICorner")
+edgeGlowCorner.CornerRadius = UDim.new(0, 20)
+edgeGlowCorner.Parent = edgeGlow
+
+local edgeGlowStroke = Instance.new("UIStroke")
+edgeGlowStroke.Color = Color3.fromRGB(147, 92, 255)
+edgeGlowStroke.Thickness = 6
+edgeGlowStroke.Transparency = 0.84
+edgeGlowStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+edgeGlowStroke.Parent = edgeGlow
+
+-- Title + fading accent underline + centered subtitle.
 local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, -24, 0, 38)
-title.Position = UDim2.fromOffset(12, 8)
+title.Size = UDim2.new(1, -24, 0, 34)
+title.Position = UDim2.fromOffset(12, 14)
 title.BackgroundTransparency = 1
 title.Text = "UNKNOWN"
-title.TextColor3 = Color3.fromRGB(245, 245, 250)
+title.TextColor3 = Color3.fromRGB(246, 242, 255)
 title.Font = Enum.Font.GothamBold
-title.TextSize = 22
+title.TextSize = 24
+title.TextXAlignment = Enum.TextXAlignment.Center
 title.Parent = frame
 
+local titleGradient = Instance.new("UIGradient")
+titleGradient.Rotation = 0
+titleGradient.Color = ColorSequence.new(Color3.fromRGB(255, 255, 255), Color3.fromRGB(196, 164, 255))
+titleGradient.Parent = title
+
+local underline = Instance.new("Frame")
+underline.Name = "TitleUnderline"
+underline.BorderSizePixel = 0
+underline.BackgroundColor3 = Color3.fromRGB(147, 92, 255)
+underline.Position = UDim2.new(0.5, -52, 0, 52)
+underline.Size = UDim2.fromOffset(104, 2)
+underline.Active = false
+underline.Parent = frame
+
+local underlineCorner = Instance.new("UICorner")
+underlineCorner.CornerRadius = UDim.new(1, 0)
+underlineCorner.Parent = underline
+
+local underlineGradient = Instance.new("UIGradient")
+underlineGradient.Rotation = 0
+underlineGradient.Transparency = NumberSequence.new({
+    NumberSequenceKeypoint.new(0, 1),
+    NumberSequenceKeypoint.new(0.5, 0),
+    NumberSequenceKeypoint.new(1, 1),
+})
+underlineGradient.Parent = underline
+
 local subtitle = Instance.new("TextLabel")
-subtitle.Size = UDim2.new(1, -24, 0, 22)
-subtitle.Position = UDim2.fromOffset(12, 43)
+subtitle.Size = UDim2.new(1, -24, 0, 20)
+subtitle.Position = UDim2.fromOffset(12, 60)
 subtitle.BackgroundTransparency = 1
 subtitle.Text = "Enter your access key to continue"
-subtitle.TextColor3 = Color3.fromRGB(160, 160, 175)
+subtitle.TextColor3 = Color3.fromRGB(172, 160, 202)
 subtitle.Font = Enum.Font.Gotham
 subtitle.TextSize = 12
+subtitle.TextXAlignment = Enum.TextXAlignment.Center
 subtitle.Parent = frame
 
+-- Glass input field; the border lights up cyan while focused.
 local keyBox = Instance.new("TextBox")
-keyBox.Size = UDim2.new(1, -32, 0, 40)
-keyBox.Position = UDim2.fromOffset(16, 77)
-keyBox.BackgroundColor3 = Color3.fromRGB(31, 31, 39)
+keyBox.Size = UDim2.new(1, -40, 0, 42)
+keyBox.Position = UDim2.fromOffset(20, 92)
+keyBox.BackgroundColor3 = Color3.fromRGB(24, 17, 44)
+keyBox.BackgroundTransparency = 0.08
 keyBox.BorderSizePixel = 0
-keyBox.PlaceholderText = "TF-..."
-keyBox.PlaceholderColor3 = Color3.fromRGB(120, 120, 135)
+keyBox.PlaceholderText = "TF-XXXX-XXXX"
+keyBox.PlaceholderColor3 = Color3.fromRGB(126, 116, 152)
 keyBox.Text = ""
-keyBox.TextColor3 = Color3.fromRGB(245, 245, 250)
-keyBox.Font = Enum.Font.Gotham
+keyBox.TextColor3 = Color3.fromRGB(246, 242, 255)
+keyBox.Font = Enum.Font.GothamBold
 keyBox.TextSize = 14
 keyBox.ClearTextOnFocus = false
 keyBox.Parent = frame
 
 local boxCorner = Instance.new("UICorner")
-boxCorner.CornerRadius = UDim.new(0, 7)
+boxCorner.CornerRadius = UDim.new(0, 10)
 boxCorner.Parent = keyBox
 
+local boxStroke = Instance.new("UIStroke")
+boxStroke.Color = Color3.fromRGB(147, 92, 255)
+boxStroke.Thickness = 1
+boxStroke.Transparency = 0.45
+boxStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+boxStroke.Parent = keyBox
+
+keyBox.Focused:Connect(function()
+    boxStroke.Color = Color3.fromRGB(56, 205, 255)
+    boxStroke.Transparency = 0.05
+end)
+keyBox.FocusLost:Connect(function()
+    boxStroke.Color = Color3.fromRGB(147, 92, 255)
+    boxStroke.Transparency = 0.45
+end)
+
+-- Gradient call-to-action with a subtle hover/press scale.
 local verifyButton = Instance.new("TextButton")
-verifyButton.Size = UDim2.new(1, -32, 0, 36)
-verifyButton.Position = UDim2.fromOffset(16, 128)
-verifyButton.BackgroundColor3 = Color3.fromRGB(93, 75, 190)
+verifyButton.Size = UDim2.new(1, -40, 0, 40)
+verifyButton.Position = UDim2.fromOffset(20, 146)
+verifyButton.BackgroundColor3 = Color3.fromRGB(120, 62, 220)
 verifyButton.BorderSizePixel = 0
 verifyButton.Text = "VERIFY KEY"
 verifyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 verifyButton.Font = Enum.Font.GothamBold
-verifyButton.TextSize = 13
+verifyButton.TextSize = 14
+verifyButton.AutoButtonColor = false
 verifyButton.Parent = frame
 
 local buttonCorner = Instance.new("UICorner")
-buttonCorner.CornerRadius = UDim.new(0, 7)
+buttonCorner.CornerRadius = UDim.new(0, 10)
 buttonCorner.Parent = verifyButton
 
+local buttonGradient = Instance.new("UIGradient")
+buttonGradient.Rotation = 25
+buttonGradient.Color = ColorSequence.new(Color3.fromRGB(168, 85, 247), Color3.fromRGB(124, 58, 237))
+buttonGradient.Parent = verifyButton
+
+local buttonStroke = Instance.new("UIStroke")
+buttonStroke.Color = Color3.fromRGB(213, 96, 255)
+buttonStroke.Thickness = 1
+buttonStroke.Transparency = 0.35
+buttonStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+buttonStroke.Parent = verifyButton
+
+local buttonScale = Instance.new("UIScale")
+buttonScale.Scale = 1
+buttonScale.Parent = verifyButton
+
+verifyButton.MouseEnter:Connect(function()
+    Tweens:Create(buttonScale, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 1.03}):Play()
+end)
+verifyButton.MouseLeave:Connect(function()
+    Tweens:Create(buttonScale, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 1}):Play()
+end)
+verifyButton.MouseButton1Down:Connect(function()
+    Tweens:Create(buttonScale, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 0.97}):Play()
+end)
+verifyButton.MouseButton1Up:Connect(function()
+    Tweens:Create(buttonScale, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 1.03}):Play()
+end)
+
 local status = Instance.new("TextLabel")
-status.Size = UDim2.new(1, -32, 0, 22)
-status.Position = UDim2.fromOffset(16, 168)
+status.Size = UDim2.new(1, -40, 0, 20)
+status.Position = UDim2.fromOffset(20, 194)
 status.BackgroundTransparency = 1
 status.Text = "Waiting for key..."
-status.TextColor3 = Color3.fromRGB(160, 160, 175)
+status.TextColor3 = Color3.fromRGB(172, 160, 202)
 status.Font = Enum.Font.Gotham
 status.TextSize = 11
-status.TextXAlignment = Enum.TextXAlignment.Left
+status.TextXAlignment = Enum.TextXAlignment.Center
 status.Parent = frame
+
+-- Entrance: a short Back-eased pop.
+local introScale = Instance.new("UIScale")
+introScale.Scale = 0.92
+introScale.Parent = frame
+Tweens:Create(introScale, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
 
 local busy = false
 
