@@ -2,7 +2,7 @@
 --   UNKNOWN  ::  Shared Egg Finder + Cloudflare Key Gate
 --================================================================================================--
 --   File      : UNKNOWN.lua
---   Build     : Public v0.4.3 / UI19 "Glass Premium"
+--   Build     : Public v0.4.3 / UI20 "Glass Premium + Auto Steal"
 --   Theme     : Glass Premium - translucent panels, gradient strokes, animated starfield
 --   Key gate  : the Finder boots only after the endpoint returns valid=true, and is
 --               re-validated every 60 s while running.
@@ -66,7 +66,7 @@ queueAutoExecute()
 --  [2] FINDER CORE - services, shared state and the GUI factory helpers every
 --      later section builds on.
 --============================================================================--
--- UNKNOWN public v0.4.3 / UI19
+-- UNKNOWN public v0.4.3 / UI20
 -- Based on public commit 7fd7826415b94846abc924aa0ce9308b541c0653.
 -- Public host/config; broadcast contract preserved from public v0.4.3.
 -- NYX Spawn Panel: current-server field eggs, read-only display.
@@ -420,6 +420,9 @@ local function createFinder(D)
     local settingsPath='tenshi_beta_ui.json'
     local settings={}
     if type(readfile)=='function' then pcall(function() local data=Http:JSONDecode(readfile(settingsPath));if type(data)=='table' then settings=data end end) end
+    -- Auto Steal defaults ON. It only acts on eggs the join flow tracked, plus
+    -- the best local egg while Auto Join is armed - never on random field eggs.
+    local autoStealEnabled=type(settings.autoSteal)~='boolean' or settings.autoSteal
     local autoJoinMinValue=1e9
     local autoJoinMinValueSettingKey='UNKNOWNAutoJoinMinValueV1'
     -- TeleportSetting is the freshest value across a server hop; local JSON may be stale.
@@ -519,7 +522,7 @@ local function createFinder(D)
         if type(writefile)~='function' then return end
         pcall(function()
             local function coords(p) return {p.X.Scale,p.X.Offset,p.Y.Scale,p.Y.Offset} end
-            writefile(settingsPath,Http:JSONEncode({myServer=othersOnly,minRank=minRank,rarityMenu='mythic-up-v1',serversMinValue=serversMinValue,autoJoinMinValue=autoJoinMinValue,autoExecute=autoExecuteEnabled,sizeFactor=sizeFactor,sizePercent=sizePercent,panel=coords(panel.Position),icon=coords(open.Position)}))
+            writefile(settingsPath,Http:JSONEncode({myServer=othersOnly,minRank=minRank,rarityMenu='mythic-up-v1',serversMinValue=serversMinValue,autoJoinMinValue=autoJoinMinValue,autoExecute=autoExecuteEnabled,autoSteal=autoStealEnabled,sizeFactor=sizeFactor,sizePercent=sizePercent,panel=coords(panel.Position),icon=coords(open.Position)}))
         end)
     end
     local settingsButton=D.make('TextButton',{Name='SettingsButton',Text='SETTINGS',Position=UDim2.new(0,0,0,7),Size=UDim2.fromOffset(92,34),BackgroundColor3=Color3.fromRGB(42,44,52),BackgroundTransparency=0,TextColor3=Color3.fromRGB(255,255,255),TextSize=12,Font=Enum.Font.GothamBold,BorderSizePixel=0,ZIndex=20},panel)
@@ -572,6 +575,18 @@ local function createFinder(D)
         refreshAutoExecuteToggle()
         saveSettings()
         if not autoExecuteEnabled then autoExecuteQueued=false end
+    end)
+    local autoStealToggle=D.make('TextButton',{Name='AutoStealToggle',Text='',Position=UDim2.fromOffset(14,178),Size=UDim2.new(1,-28,0,46),BackgroundColor3=Color3.fromRGB(40,135,75),TextColor3=Color3.fromRGB(255,255,255),TextSize=14,Font=Enum.Font.GothamBold,BorderSizePixel=0,ZIndex=31},settingsOverlay)
+    D.make('UICorner',{CornerRadius=UDim.new(0,6)},autoStealToggle)
+    local function refreshAutoStealToggle()
+        autoStealToggle.Text=autoStealEnabled and 'AUTO STEAL: ON' or 'AUTO STEAL: OFF'
+        autoStealToggle.BackgroundColor3=autoStealEnabled and Color3.fromRGB(40,135,75) or Color3.fromRGB(155,48,52)
+    end
+    refreshAutoStealToggle()
+    autoStealToggle.Activated:Connect(function()
+        autoStealEnabled=not autoStealEnabled
+        refreshAutoStealToggle()
+        saveSettings()
     end)
     D.saveGuiBeforeTeleport=saveSettings
     heading.Size=UDim2.fromOffset(185,32)
@@ -1414,6 +1429,87 @@ local function createFinder(D)
                 autoJoinBusy=false
             end
             task.wait(0.25)
+        end
+    end)
+
+    --========================================================================--
+    --  AUTO STEAL: hands-free carry + plant. Picks up the egg a join tracked
+    --  (joinedEgg), or - while Auto Join is armed - the best local egg over the
+    --  Auto Join minimum. Server-side range rules still apply, so the character
+    --  is parked next to the egg first and returned home to plant after.
+    --========================================================================--
+    local stealEggState,stealIdentity,stealPlot
+    pcall(function() stealEggState=module('Client.EggState') end)
+    pcall(function() stealIdentity=module('Shared.Util.AreaEggSlotIdentity') end)
+    pcall(function() stealPlot=module('Client.PlotState') end)
+    local stealDoneFor=nil
+    local function parkAt(cframe)
+        local character=D.player.Character
+        local root=character and character:FindFirstChild('HumanoidRootPart')
+        if root and root:IsA('BasePart') then root.CFrame=cframe end
+        return root
+    end
+    local function carryHome(uid)
+        if not (stealEggState and stealPlot) then return end
+        pcall(function()
+            local plot=stealPlot.ResolvePlot()
+            if not (plot and plot.CenterPoint) then return end
+            task.wait(0.3)
+            parkAt(plot.CenterPoint.CFrame*CFrame.new(0,3,0))
+            task.wait(0.35)
+            local placed=stealEggState.PlantEgg(uid,CFrame.new(0,0,0))
+            if placed then queryStatus='Auto Steal: planted at your plot' end
+        end)
+    end
+    task.spawn(function()
+        while active do
+            local ok,err=pcall(function()
+                if not autoStealEnabled or not stealEggState then return end
+                if type(D.ready)=='function' and not D.ready() then return end
+                local carrying=stealEggState.ReadCarryState and stealEggState.ReadCarryState()
+                if carrying and carrying.IsCarrying then return end
+                local target,trackedEgg
+                if joinedEgg and not joinedEgg.takenAt and joinedEgg.placeId==game.PlaceId and joinedEgg.jobId==game.JobId and stealDoneFor~=joinedEgg.uid then
+                    trackedEgg=joinedEgg
+                    for _,egg in ipairs(D.entries()) do
+                        if tostring(egg.uid)==trackedEgg.uid then target=egg break end
+                    end
+                end
+                if not target and autoJoinEnabled then
+                    local best,bestRate=nil,autoJoinMinValue
+                    for _,egg in ipairs(D.entries()) do
+                        local rate=tonumber(egg.rate) or 0
+                        if rate>=bestRate and (egg.tier or 0)>=minRank and tostring(egg.uid)~=stealDoneFor then best,bestRate=egg,rate end
+                    end
+                    target=best
+                end
+                if not target then return end
+                local uid=tostring(target.uid)
+                local model=target.model or modelFor(uid)
+                if not (model and model.Parent) then return end
+                local pivot=model:GetPivot()
+                parkAt(CFrame.new(pivot.Position+Vector3.new(0,3,2),Vector3.new(pivot.Position.X,pivot.Position.Y,pivot.Position.Z)))
+                task.wait(0.35)
+                local slotKey
+                if stealIdentity and target.areaKey and target.nestId and stealIdentity.LooksLikeFirstAreaUid(uid) then
+                    slotKey=stealIdentity.SlotKey(target.areaKey,target.nestId)
+                end
+                local carried=stealEggState.CarryFieldEgg(uid,slotKey)
+                if carried then
+                    stealDoneFor=uid
+                    queryStatus='Auto Steal: carried '..tostring(target.name or uid)
+                    if trackedEgg then
+                        trackedEgg.takenAt=os.time()
+                        local saved=table.clone(trackedEgg)
+                        saved._lastScanAt=nil;saved._missingScans=nil
+                        pcall(function() Teleports:SetTeleportSetting(joinedEggSettingKey,saved) end)
+                    end
+                    carryHome(uid)
+                    task.wait(1.5)
+                end
+            end)
+            if not ok then warn('UNKNOWN auto steal:',err) end
+            task.wait(0.75)
         end
     end)
 
@@ -2663,7 +2759,7 @@ local function run()
                     fieldCount=fieldCount+1
                     seen[tostring(uid)]=true
                     local traits,traitsKnown=readTraitNames(record)
-                    table.insert(eggs,{key='field:'..tostring(uid),uid=uid,traitsKnown=traitsKnown,category=record.AssetCategory,areaKey=record.AreaId,worldPos=typeof(record.BottomCFrame)=='CFrame' and record.BottomCFrame.Position or nil,area=tostring(record.AreaId)..' | Mut: '..(#traits>0 and table.concat(traits,', ') or traitsKnown and 'None' or 'UNKNOWN'),model=model,icon=asset.Icon,name=asset.DisplayName or record.AssetCategory or 'Unknown',rarity=rarity.DisplayName or rarity._id or 'Unknown',tier=tonumber(rarity.Rank) or 0,color=typeof(rarity.Color)=='Color3' and rarity.Color or Color3.new(1,1,1),scale=scale,weight=weight,rate=rate,estimated=estimated})
+                    table.insert(eggs,{key='field:'..tostring(uid),uid=uid,traitsKnown=traitsKnown,category=record.AssetCategory,areaKey=record.AreaId,nestId=record.NestId,worldPos=typeof(record.BottomCFrame)=='CFrame' and record.BottomCFrame.Position or nil,area=tostring(record.AreaId)..' | Mut: '..(#traits>0 and table.concat(traits,', ') or traitsKnown and 'None' or 'UNKNOWN'),model=model,icon=asset.Icon,name=asset.DisplayName or record.AssetCategory or 'Unknown',rarity=rarity.DisplayName or rarity._id or 'Unknown',tier=tonumber(rarity.Rank) or 0,color=typeof(rarity.Color)=='Color3' and rarity.Color or Color3.new(1,1,1),scale=scale,weight=weight,rate=rate,estimated=estimated})
                 end
             end
             -- One numeric value drives both display and ordering.

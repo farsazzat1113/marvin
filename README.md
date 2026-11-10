@@ -3,7 +3,7 @@
 **Shared Egg Finder + Cloudflare Key Gate** — a single-file Roblox UI script with a
 premium glass interface, live shared feed, and auto-join.
 
-![Build](https://img.shields.io/badge/build-Public%20v0.4.3%20%2F%20UI19-935CFF)
+![Build](https://img.shields.io/badge/build-Public%20v0.4.3%20%2F%20UI20-935CFF)
 ![Theme](https://img.shields.io/badge/theme-Glass%20Premium-38CDFF)
 ![File](https://img.shields.io/badge/format-single--file%20Lua-success)
 
@@ -15,6 +15,15 @@ with one-click join and an automatic "join the best server" mode.
 
 The Finder only boots **after the key-validation endpoint returns `valid=true`**
 and revalidates the key every 60 seconds while running.
+
+## What's new in UI20 — Auto Steal
+
+- **AUTO STEAL** — hands-free carry + plant for the egg a join tracked:
+  the character is parked next to the egg, the game's own carry remote is
+  invoked, then the egg is taken home and planted on your plot.
+- While **Auto Join** is armed, the best local egg over your minimum gets
+  picked up automatically too - no buttons pressed.
+- New persisted settings toggle: **SETTINGS → AUTO STEAL: ON/OFF** (default ON).
 
 ## What's new in UI19 — "Glass Premium"
 
@@ -61,4 +70,5 @@ Written to the executor workspace when available:
 - **REFRESH** — manual feed refresh with the reset countdown.
 - **VALUE OF SERVERS / MIN AUTO JOIN VALUE** — `1B`–`50B` thresholds.
 - **AUTO JOIN** — teleports to the best eligible reported server automatically.
-- **SETTINGS** — auto-execute toggle and Discord link.
+- **AUTO STEAL** — carries + plants the tracked egg without any input.
+- **SETTINGS** — auto-execute / auto-steal toggles and Discord link.
