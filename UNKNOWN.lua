@@ -1315,12 +1315,20 @@ local function createFinder(D)
         end
         return best
     end
+    -- Steal modules + shared busy flag are declared BEFORE the Auto Join worker so
+    -- both loops see the same upvalues: Auto Join must never hop while a steal is
+    -- walking an egg home (a hop mid-carry would drop it).
+    local stealEggState,stealIdentity,stealPlot
+    pcall(function() stealEggState=module('Client.EggState') end)
+    pcall(function() stealIdentity=module('Shared.Util.AreaEggSlotIdentity') end)
+    pcall(function() stealPlot=module('Client.PlotState') end)
+    local stealBusy=false
     -- Auto Join compares the best eligible local egg against every public server.
     -- It stays local on ties and only teleports when a strictly better remote egg exists.
     -- Reservation failures and asynchronous teleport failures advance to the next candidate.
     task.spawn(function()
         while active do
-            if autoJoinEnabled and not autoJoinBusy and not joining then
+            if autoJoinEnabled and not autoJoinBusy and not joining and not stealBusy then
                 autoJoinBusy=true
                 local ok,err=pcall(function()
                     if not config then
@@ -1411,6 +1419,10 @@ local function createFinder(D)
                         queryStatus='Auto Join: report expired; trying next server'
                         return
                     end
+                    if stealBusy then
+                        queryStatus='Auto Join: hop paused - steal in progress'
+                        return
+                    end
                     joining=true
                     queryStatus='Auto Join: joining server #'..tostring(autoJoinCandidateIndex)
                     rememberJoinedEgg(target)
@@ -1450,10 +1462,6 @@ local function createFinder(D)
     --  4) Failures cool the egg down instead of ramming it, deaths trigger a
     --     respawn wait and a clean retry, and trap Hitboxes are steered around.
     --========================================================================--
-    local stealEggState,stealIdentity,stealPlot
-    pcall(function() stealEggState=module('Client.EggState') end)
-    pcall(function() stealIdentity=module('Shared.Util.AreaEggSlotIdentity') end)
-    pcall(function() stealPlot=module('Client.PlotState') end)
     local RunSvc=game:GetService('RunService')
     local WorkspaceSvc=game:GetService('Workspace')
     task.spawn(function()
@@ -1465,7 +1473,6 @@ local function createFinder(D)
     local stealDoneFor=nil
     local stealCooldowns={}
     local stealFails={}
-    local stealBusy=false
     D.player.CharacterAdded:Connect(function()
         if stealBusy then stealDoneFor=nil end -- died mid-run: allow the retry
         stealBusy=false
@@ -1625,7 +1632,7 @@ local function createFinder(D)
                 local _,root=stealParts()
                 local side=root and Vector3.new(root.Position.X-pivot.Position.X,0,root.Position.Z-pivot.Position.Z) or Vector3.new(0,0,1)
                 if side.Magnitude<0.5 then side=Vector3.new(0,0,1) end
-                local arrived,reason=stealMove(pivot.Position+side.Unit*4.5,14)
+                local arrived,reason=stealMove(pivot.Position+side.Unit*4,14)
                 if reason=='dead' then waitForRespawn() end
                 if arrived then
                     RunSvc.Heartbeat:Wait() -- one settle frame, then the instant steal
