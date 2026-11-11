@@ -80,10 +80,10 @@ local player = Players.LocalPlayer
 assert(player, 'Join the game first')
 local parent = player:WaitForChild('PlayerGui', 15)
 assert(parent, 'PlayerGui unavailable')
-local old = parent:FindFirstChild('UNKNOWN') or parent:FindFirstChild('TENSHI_'..'FINDER_BETA')
+local old = parent:FindFirstChild('MARVIN') or parent:FindFirstChild('TENSHI_'..'FINDER_BETA')
 if old then old:Destroy() end
 local gui = Instance.new('ScreenGui')
-gui.Name = 'UNKNOWN'
+gui.Name = 'MARVIN'
 gui:SetAttribute('TenshiUIBuild','PUBLIC-V05-TOP10')
 gui.ResetOnSpawn = false
 gui.IgnoreGuiInset = true
@@ -453,11 +453,11 @@ local function createFinder(D)
     D.make('UIStroke',{Color=Color3.fromRGB(125,128,138),Thickness=2},panel)
     local bar=D.make('Frame',{Position=UDim2.fromOffset(1,1),Size=UDim2.new(1,-2,0,45),BackgroundColor3=Color3.fromRGB(0,0,0),BorderSizePixel=0},panel)
     D.make('UICorner',{CornerRadius=UDim.new(0,4)},bar)
-    local heading=D.label(panel,'UNKNOWN',UDim2.fromOffset(14,8),UDim2.new(1,-55,0,32),nil,22)
+    local heading=D.label(panel,'MARVIN',UDim2.fromOffset(14,8),UDim2.new(1,-55,0,32),nil,22)
     local open=D.make('ImageButton',{Image='',Position=UDim2.fromOffset(18,80),Size=UDim2.fromOffset(90,90),BackgroundColor3=Color3.fromRGB(250,250,250),ScaleType=Enum.ScaleType.Fit,ClipsDescendants=true},D.gui)
     D.make('UICorner',{CornerRadius=UDim.new(1,0)},open)
-    local fallback=D.label(open,'UNKNOWN',UDim2.new(),UDim2.fromScale(1,1),Color3.fromRGB(150,25,40),19)
-    local iconCaption=D.label(open,'UNKNOWN',UDim2.new(0.5,-48,1,5),UDim2.fromOffset(96,27),Color3.new(1,1,1),18)
+    local fallback=D.label(open,'MARVIN',UDim2.new(),UDim2.fromScale(1,1),Color3.fromRGB(150,25,40),19)
+    local iconCaption=D.label(open,'MARVIN',UDim2.new(0.5,-48,1,5),UDim2.fromOffset(96,27),Color3.new(1,1,1),18)
     open.ClipsDescendants=true
     -- Original icon only; no decorative portal or black-hole effects.
     iconCaption.TextStrokeTransparency=0.15;iconCaption.TextXAlignment=Enum.TextXAlignment.Center
@@ -556,7 +556,7 @@ local function createFinder(D)
             elseif type(toclipboard)=='function' then copied=pcall(toclipboard,discordUrl) end
             pcall(function()
                 game:GetService('StarterGui'):SetCore('SendNotification',{
-                    Title='UNKNOWN • Discord',
+                    Title='MARVIN • Discord',
                     Text=copied and 'Could not open Discord automatically. Profile link copied; paste it in your browser.' or 'Could not open Discord automatically. Use the Discord link shown at the top of the menu.',
                     Duration=6
                 })
@@ -593,7 +593,7 @@ local function createFinder(D)
     heading.TextSize=19
     local brandLogo=D.make('ImageLabel',{Name='TenshiBrandLogo',Position=UDim2.fromOffset(10,2),Size=UDim2.fromOffset(180,42),BackgroundTransparency=1,Image='',ScaleType=Enum.ScaleType.Fit,Active=true},panel)
     brandLogo.Visible=false
-    heading.Text='UNKNOWN'
+    heading.Text='MARVIN'
     heading.TextSize=18
     heading.Font=Enum.Font.Arcade
     heading.TextScaled=true
@@ -1721,7 +1721,7 @@ local function createFinder(D)
     end
     do
     -- Header title and subtitle styling.
-    heading.Text='UNKNOWN'
+    heading.Text='MARVIN'
     heading.AnchorPoint=Vector2.new(0.5,0)
     heading.Position=UDim2.new(0.5,-10,0,2);heading.Size=UDim2.new(1,-112,0,24)
     heading.TextXAlignment=Enum.TextXAlignment.Center
@@ -2895,7 +2895,7 @@ local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, -24, 0, 34)
 title.Position = UDim2.fromOffset(12, 14)
 title.BackgroundTransparency = 1
-title.Text = "UNKNOWN"
+title.Text = "MARVIN"
 title.TextColor3 = Color3.fromRGB(246, 242, 255)
 title.Font = Enum.Font.GothamBold
 title.TextSize = 24
