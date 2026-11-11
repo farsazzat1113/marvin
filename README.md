@@ -3,7 +3,7 @@
 **Shared Egg Finder + Cloudflare Key Gate** — a single-file Roblox UI script with a
 premium glass interface, live shared feed, and auto-join.
 
-![Build](https://img.shields.io/badge/build-Public%20v0.4.3%20%2F%20UI20-935CFF)
+![Build](https://img.shields.io/badge/build-Public%20v0.5.0%20%2F%20UI21-935CFF)
 ![Theme](https://img.shields.io/badge/theme-Glass%20Premium-38CDFF)
 ![File](https://img.shields.io/badge/format-single--file%20Lua-success)
 
@@ -15,6 +15,29 @@ with one-click join and an automatic "join the best server" mode.
 
 The Finder only boots **after the key-validation endpoint returns `valid=true`**
 and revalidates the key every 60 seconds while running.
+
+## What's new in UI21 — Deathless Steal + Fast Join
+
+- **No more deaths while stealing** — the obby anti-teleport punisher is
+  disarmed every Heartbeat via `Workspace:SetAttribute("ClientObbyAntiTp", false)`,
+  and the steal movement uses **no teleports at all**: short ground-hugging
+  steps (9 studs/frame, velocity zeroed), so the character never pops upward,
+  never gets lagback-yanked out of the area, and never trips the kill logic.
+- **Park once, steal instantly** — a single stop beside the nest at ground
+  level, then the carry remote fires the same frame of arrival.
+- **Safe carry home** — the way back to your plot uses the same safe steps.
+- **Anti Trap pathing** — trap Hitboxes (any Owner other than you) are steered
+  around; if a nest is fully caged, the egg cools down instead of walking in.
+- **Fail cooldown + respawn recovery** — after 3 failed attempts an egg rests
+  for 45 s; if the character dies mid-run, the script waits for the respawn
+  and retries cleanly instead of skipping that egg forever.
+- **First-frame steal after a hop** — the remembered joined egg is hunted
+  straight from its world model before the fresh scan even lands, and the
+  queued auto-execute now reloads **this** build (it used to reload the packed
+  upstream copy, which silently dropped Auto Steal after every teleport).
+- **Fast Auto Join** — feed refresh cadence 6 s → 2 s while armed, and the
+  hop is fully pre-staged *before* the claim round-trip so the teleport fires
+  the instant the server approves.
 
 ## What's new in UI20 — Auto Steal
 
