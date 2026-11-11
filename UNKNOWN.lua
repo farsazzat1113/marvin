@@ -2,7 +2,7 @@
 --   UNKNOWN  ::  Shared Egg Finder + Cloudflare Key Gate
 --================================================================================================--
 --   File      : UNKNOWN.lua
---   Build     : Public v0.5.0 / UI21 "Glass Premium + Deathless Steal + Fast Join"
+--   Build     : Public v0.4.3 / UI20 "Glass Premium + Auto Steal"
 --   Theme     : Glass Premium - translucent panels, gradient strokes, animated starfield
 --   Key gate  : the Finder boots only after the endpoint returns valid=true, and is
 --               re-validated every 60 s while running.
@@ -26,9 +26,7 @@ local function startUnknown()
 --============================================================================--
 
 local HttpService = game:GetService("HttpService")
--- The queued auto-execute must reload THIS build after every server hop.
--- Pointing it at the packed upstream copy used to strip Auto Steal post-join.
-local RAW_SCRIPT_URL = "https://raw.githubusercontent.com/farsazzat1113/marvin/Marvin/UNKNOWN.lua?v=41"
+local RAW_SCRIPT_URL = "https://raw.githubusercontent.com/mostafaezzatrqm700-droid/UNKNOWN/backup/unknown-safe-copy-2026-11-07/UNKNOWN.lua?v=40"
 local autoExecuteEnabled = true
 if type(readfile) == "function" then
     pcall(function()
@@ -68,7 +66,7 @@ queueAutoExecute()
 --  [2] FINDER CORE - services, shared state and the GUI factory helpers every
 --      later section builds on.
 --============================================================================--
--- UNKNOWN public v0.5.0 / UI21
+-- UNKNOWN public v0.4.3 / UI20
 -- Based on public commit 7fd7826415b94846abc924aa0ce9308b541c0653.
 -- Public host/config; broadcast contract preserved from public v0.4.3.
 -- NYX Spawn Panel: current-server field eggs, read-only display.
@@ -410,7 +408,6 @@ local function createFinder(D)
             rank=tonumber(entry.rank or entry.localTier) or 0,
             mutations=tostring(entry.mutations or entry.mutationText or ''),
             traitsKnown=entry.traitsKnown~=false,area=tostring(entry.area or ''),
-            areaKey=entry.areaKey or entry.areaId or entry.area,nestId=entry.nestId,
             source=tostring(entry.source or 'field')
         }
         joinedEgg=saved
@@ -1315,20 +1312,12 @@ local function createFinder(D)
         end
         return best
     end
-    -- Steal modules + shared busy flag are declared BEFORE the Auto Join worker so
-    -- both loops see the same upvalues: Auto Join must never hop while a steal is
-    -- walking an egg home (a hop mid-carry would drop it).
-    local stealEggState,stealIdentity,stealPlot
-    pcall(function() stealEggState=module('Client.EggState') end)
-    pcall(function() stealIdentity=module('Shared.Util.AreaEggSlotIdentity') end)
-    pcall(function() stealPlot=module('Client.PlotState') end)
-    local stealBusy=false
     -- Auto Join compares the best eligible local egg against every public server.
     -- It stays local on ties and only teleports when a strictly better remote egg exists.
     -- Reservation failures and asynchronous teleport failures advance to the next candidate.
     task.spawn(function()
         while active do
-            if autoJoinEnabled and not autoJoinBusy and not joining and not stealBusy then
+            if autoJoinEnabled and not autoJoinBusy and not joining then
                 autoJoinBusy=true
                 local ok,err=pcall(function()
                     if not config then
@@ -1336,7 +1325,7 @@ local function createFinder(D)
                         return
                     end
                     if #autoJoinCandidates==0 then
-                        if os.clock()-feedAt>2 then -- 2s cadence while armed: see fresh reports before other hunters do
+                        if os.clock()-feedAt>6 then
                             local refreshed,message=refresh(true)
                             if not refreshed then
                                 queryStatus='Auto Join: '..tostring(message or 'feed refresh failed')
@@ -1395,11 +1384,6 @@ local function createFinder(D)
                         return
                     end
                     queryStatus='Auto Join: trying #'..tostring(autoJoinCandidateIndex)..' '..tostring(target.name)..' ('..tostring(target.rate)..'/s)'
-                    -- Pre-stage the hop BEFORE the claim round-trip: once the server
-                    -- says go, the teleport fires with zero leftover work.
-                    queueAutoExecute()
-                    D.saveGuiBeforeTeleport()
-                    D.stopFarm()
                     local claim,claimError=network(config.endpoint..'/v1/join','POST',
                         Http:JSONEncode({placeId=target.placeId,jobId=target.jobId,uid=target.uid,reporterId=reporterId,userId=D.player.UserId}),
                         headers())
@@ -1419,12 +1403,11 @@ local function createFinder(D)
                         queryStatus='Auto Join: report expired; trying next server'
                         return
                     end
-                    if stealBusy then
-                        queryStatus='Auto Join: hop paused - steal in progress'
-                        return
-                    end
                     joining=true
                     queryStatus='Auto Join: joining server #'..tostring(autoJoinCandidateIndex)
+                    queueAutoExecute()
+                    D.saveGuiBeforeTeleport()
+                    D.stopFarm()
                     rememberJoinedEgg(target)
                     local teleported,teleportError=pcall(function()
                         Teleports:TeleportToPlaceInstance(target.placeId,target.jobId,D.player)
@@ -1450,169 +1433,53 @@ local function createFinder(D)
     end)
 
     --========================================================================--
-    --  AUTO STEAL v2 (UI21): deathless, hands-free carry + plant.
-    --  1) The obby anti-teleport punisher kills on big CFrame jumps. It reads a
-    --     client-side off-switch, so Workspace:GetAttribute('ClientObbyAntiTp')
-    --     is pinned to false every Heartbeat (the server can re-arm it).
-    --  2) No teleports at all: movement is short ground-hugging steps (9 studs
-    --     per Heartbeat, velocity zeroed) - far below the anti-TP envelope even
-    --     if a re-arm slips through, and no airborne hop ever happens.
-    --  3) The character parks ONCE beside the nest at ground level and steals
-    --     the instant it arrives, then walks home with the same safe steps.
-    --  4) Failures cool the egg down instead of ramming it, deaths trigger a
-    --     respawn wait and a clean retry, and trap Hitboxes are steered around.
+    --  AUTO STEAL: hands-free carry + plant. Picks up the egg a join tracked
+    --  (joinedEgg), or - while Auto Join is armed - the best local egg over the
+    --  Auto Join minimum. Server-side range rules still apply, so the character
+    --  is parked next to the egg first and returned home to plant after.
     --========================================================================--
-    local RunSvc=game:GetService('RunService')
-    local WorkspaceSvc=game:GetService('Workspace')
-    task.spawn(function()
-        while active do
-            pcall(function() WorkspaceSvc:SetAttribute('ClientObbyAntiTp',false) end)
-            RunSvc.Heartbeat:Wait()
-        end
-    end)
+    local stealEggState,stealIdentity,stealPlot
+    pcall(function() stealEggState=module('Client.EggState') end)
+    pcall(function() stealIdentity=module('Shared.Util.AreaEggSlotIdentity') end)
+    pcall(function() stealPlot=module('Client.PlotState') end)
     local stealDoneFor=nil
-    local stealCooldowns={}
-    local stealFails={}
-    D.player.CharacterAdded:Connect(function()
-        if stealBusy then stealDoneFor=nil end -- died mid-run: allow the retry
-        stealBusy=false
-    end)
-    local function stealParts()
+    local function parkAt(cframe)
         local character=D.player.Character
         local root=character and character:FindFirstChild('HumanoidRootPart')
-        local humanoid=character and character:FindFirstChildOfClass('Humanoid')
-        if root and root:IsA('BasePart') and humanoid and humanoid.Health>0 then
-            return character,root,humanoid
-        end
-    end
-    local function waitForRespawn()
-        local deadline=os.clock()+45
-        while active and os.clock()<deadline and not stealParts() do task.wait(0.25) end
-        task.wait(1)
-    end
-    -- Trap models carry an Owner attribute plus a Hitbox BasePart that kills thieves.
-    local function trapHitboxes()
-        local boxes={}
-        for _,obj in ipairs(WorkspaceSvc:GetDescendants()) do
-            if obj:IsA('BasePart') and obj.Name=='Hitbox' then
-                local model=obj:FindFirstAncestorOfClass('Model')
-                local owner=model and model:GetAttribute('Owner')
-                if owner~=nil and tostring(owner)~=tostring(D.player.UserId) then
-                    boxes[#boxes+1]=obj
-                end
-            end
-        end
-        return boxes
-    end
-    local STEAL_STEP=9
-    local STEER_ANGLES={0,25,-25,50,-50,75,-75,100,-100,130,-130,155,-155,180} -- hoisted: no per-frame table garbage
-    local function stealMove(target,maxSeconds)
-        -- Small horizontal steps glued to the terrain; never teleports, never jumps.
-        local character,root,humanoid=stealParts()
-        if not character then return false,'dead' end
-        local rayParams=RaycastParams.new()
-        rayParams.FilterType=Enum.RaycastFilterType.Exclude
-        rayParams.FilterDescendantsInstances={character}
-        local traps,trapRefresh=trapHitboxes(),os.clock()
-        local deadline=os.clock()+(maxSeconds or 14)
-        local stuck=0
-        while active do
-            character,root,humanoid=stealParts()
-            if not character then return false,'dead' end
-            if os.clock()>deadline then return false,'timeout' end
-            local from=root.Position
-            local flat=Vector3.new(target.X-from.X,0,target.Z-from.Z)
-            local distance=flat.Magnitude
-            if distance<=STEAL_STEP then
-                local hit=WorkspaceSvc:Raycast(Vector3.new(target.X,from.Y+40,target.Z),Vector3.new(0,-140,0),rayParams)
-                local landY=hit and hit.Position.Y+3 or from.Y
-                root.AssemblyLinearVelocity=Vector3.new(0,0,0)
-                root.AssemblyAngularVelocity=Vector3.new(0,0,0)
-                humanoid.Sit=false
-                root.CFrame=CFrame.new(Vector3.new(target.X,landY,target.Z))*(root.CFrame-root.CFrame.Position)
-                return true
-            end
-            if os.clock()-trapRefresh>0.5 then traps=trapHitboxes() trapRefresh=os.clock() end
-            local forward=flat.Unit
-            local chosen
-            for _,angle in ipairs({0,25,-25,50,-50,75,-75,100,-100,130,-130,155,-155,180}) do
-                local rad=math.rad(angle)
-                local cosA,sinA=math.cos(rad),math.sin(rad)
-                local dir=Vector3.new(forward.X*cosA-forward.Z*sinA,0,forward.X*sinA+forward.Z*cosA)
-                local nextFlat=Vector3.new(from.X,0,from.Z)+dir*STEAL_STEP
-                local clear=true
-                for _,box in ipairs(traps) do
-                    local bp=box.Position
-                    if (nextFlat-Vector3.new(bp.X,0,bp.Z)).Magnitude<7 then clear=false break end
-                end
-                if clear then chosen=dir break end
-            end
-            if not chosen then
-                stuck+=1
-                if stuck>=20 then return false,'trapped' end
-                task.wait(0.2)
-                continue
-            end
-            stuck=0
-            local ahead=Vector3.new(from.X+chosen.X*STEAL_STEP,from.Y,from.Z+chosen.Z*STEAL_STEP)
-            local hit=WorkspaceSvc:Raycast(ahead+Vector3.new(0,40,0),Vector3.new(0,-140,0),rayParams)
-            local newY=from.Y
-            if hit then
-                newY=hit.Position.Y+3
-                if newY-from.Y>5 then newY=from.Y+2 end -- climb gently; never pop upward
-            end
-            root.AssemblyLinearVelocity=Vector3.new(0,0,0)
-            root.AssemblyAngularVelocity=Vector3.new(0,0,0)
-            humanoid.Sit=false
-            root.CFrame=CFrame.lookAt(Vector3.new(ahead.X,newY,ahead.Z),Vector3.new(ahead.X+chosen.X,newY,ahead.Z+chosen.Z))
-            RunSvc.Heartbeat:Wait()
-        end
-        return false,'stopped'
+        if root and root:IsA('BasePart') then root.CFrame=cframe end
+        return root
     end
     local function carryHome(uid)
         if not (stealEggState and stealPlot) then return end
-        local ok,err=pcall(function()
+        pcall(function()
             local plot=stealPlot.ResolvePlot()
             if not (plot and plot.CenterPoint) then return end
-            stealMove(plot.CenterPoint.Position,20) -- same safe ground steps home
+            task.wait(0.3)
+            parkAt(plot.CenterPoint.CFrame*CFrame.new(0,3,0))
+            task.wait(0.35)
             local placed=stealEggState.PlantEgg(uid,CFrame.new(0,0,0))
             if placed then queryStatus='Auto Steal: planted at your plot' end
         end)
-        if not ok then warn('UNKNOWN auto steal home:',err) end
     end
     task.spawn(function()
         while active do
             local ok,err=pcall(function()
-                if stealBusy or not autoStealEnabled or not stealEggState then return end
-                local scanReady=type(D.ready)~='function' or D.ready()
+                if not autoStealEnabled or not stealEggState then return end
+                if type(D.ready)=='function' and not D.ready() then return end
                 local carrying=stealEggState.ReadCarryState and stealEggState.ReadCarryState()
                 if carrying and carrying.IsCarrying then return end
                 local target,trackedEgg
-                if joinedEgg and not joinedEgg.takenAt and joinedEgg.placeId==game.PlaceId and joinedEgg.jobId==game.JobId then
-                    local trackedUid=tostring(joinedEgg.uid)
-                    local cooled=stealCooldowns[trackedUid]
-                    if trackedUid~=stealDoneFor and not (cooled and cooled>os.clock()) then
-                        trackedEgg=joinedEgg
-                        for _,egg in ipairs(D.entries()) do
-                            if tostring(egg.uid)==trackedUid then target=egg break end
-                        end
-                        if not target then
-                            -- First-frame path right after a hop: hunt the remembered egg
-                            -- straight from its world model, before the fresh scan lands.
-                            local remembered=modelFor(trackedUid)
-                            if remembered and remembered.Parent then
-                                target={uid=trackedUid,name=trackedEgg.name,rate=trackedEgg.rate,tier=trackedEgg.rank or 0,model=remembered,areaKey=trackedEgg.areaKey,nestId=trackedEgg.nestId}
-                            end
-                        end
+                if joinedEgg and not joinedEgg.takenAt and joinedEgg.placeId==game.PlaceId and joinedEgg.jobId==game.JobId and stealDoneFor~=joinedEgg.uid then
+                    trackedEgg=joinedEgg
+                    for _,egg in ipairs(D.entries()) do
+                        if tostring(egg.uid)==trackedEgg.uid then target=egg break end
                     end
                 end
-                if not target and scanReady and autoJoinEnabled then
+                if not target and autoJoinEnabled then
                     local best,bestRate=nil,autoJoinMinValue
                     for _,egg in ipairs(D.entries()) do
                         local rate=tonumber(egg.rate) or 0
-                        local eggUid=tostring(egg.uid)
-                        local cooled=stealCooldowns[eggUid]
-                        if rate>=bestRate and (egg.tier or 0)>=minRank and eggUid~=stealDoneFor and not (cooled and cooled>os.clock()) then best,bestRate=egg,rate end
+                        if rate>=bestRate and (egg.tier or 0)>=minRank and tostring(egg.uid)~=stealDoneFor then best,bestRate=egg,rate end
                     end
                     target=best
                 end
@@ -1620,51 +1487,29 @@ local function createFinder(D)
                 local uid=tostring(target.uid)
                 local model=target.model or modelFor(uid)
                 if not (model and model.Parent) then return end
+                local pivot=model:GetPivot()
+                parkAt(CFrame.new(pivot.Position+Vector3.new(0,3,2),Vector3.new(pivot.Position.X,pivot.Position.Y,pivot.Position.Z)))
+                task.wait(0.35)
                 local slotKey
-                local needsSlot=stealIdentity and stealIdentity.LooksLikeFirstAreaUid and stealIdentity.LooksLikeFirstAreaUid(uid)
-                if needsSlot and target.areaKey and target.nestId then
+                if stealIdentity and target.areaKey and target.nestId and stealIdentity.LooksLikeFirstAreaUid(uid) then
                     slotKey=stealIdentity.SlotKey(target.areaKey,target.nestId)
                 end
-                if needsSlot and not slotKey and not scanReady then
-                    return -- first-area eggs want a slot key; let the fresh scan provide it
-                end
-                stealBusy=true
-                local pivot=model:GetPivot()
-                local _,root=stealParts()
-                local side=root and Vector3.new(root.Position.X-pivot.Position.X,0,root.Position.Z-pivot.Position.Z) or Vector3.new(0,0,1)
-                if side.Magnitude<0.5 then side=Vector3.new(0,0,1) end
-                local arrived,reason=stealMove(pivot.Position+side.Unit*4,14)
-                if reason=='dead' then waitForRespawn() end
-                if arrived then
-                    RunSvc.Heartbeat:Wait() -- one settle frame, then the instant steal
-                    local carried=stealEggState.CarryFieldEgg(uid,slotKey)
-                    if carried then
-                        stealFails[uid]=nil
-                        stealDoneFor=uid
-                        queryStatus='Auto Steal: carried '..tostring(target.name or uid)
-                        if trackedEgg then
-                            trackedEgg.takenAt=os.time()
-                            local saved=table.clone(trackedEgg)
-                            saved._lastScanAt=nil;saved._missingScans=nil
-                            pcall(function() Teleports:SetTeleportSetting(joinedEggSettingKey,saved) end)
-                        end
-                        carryHome(uid)
-                        task.wait(1.5)
-                    elseif scanReady or slotKey then
-                        -- Cooldown instead of ramming a nest the server keeps rejecting.
-                        stealFails[uid]=(stealFails[uid] or 0)+1
-                        if stealFails[uid]>=3 then
-                            stealCooldowns[uid]=os.clock()+45
-                            stealFails[uid]=nil
-                            queryStatus='Auto Steal: '..tostring(target.name or uid)..' cooling down'
-                        end
-                        task.wait(0.2)
+                local carried=stealEggState.CarryFieldEgg(uid,slotKey)
+                if carried then
+                    stealDoneFor=uid
+                    queryStatus='Auto Steal: carried '..tostring(target.name or uid)
+                    if trackedEgg then
+                        trackedEgg.takenAt=os.time()
+                        local saved=table.clone(trackedEgg)
+                        saved._lastScanAt=nil;saved._missingScans=nil
+                        pcall(function() Teleports:SetTeleportSetting(joinedEggSettingKey,saved) end)
                     end
+                    carryHome(uid)
+                    task.wait(1.5)
                 end
-                stealBusy=false
             end)
-            if not ok then stealBusy=false warn('UNKNOWN auto steal:',err) end
-            task.wait(0.4)
+            if not ok then warn('UNKNOWN auto steal:',err) end
+            task.wait(0.75)
         end
     end)
 
