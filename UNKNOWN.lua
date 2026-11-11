@@ -1505,6 +1505,7 @@ local function createFinder(D)
         return boxes
     end
     local STEAL_STEP=9
+    local STEER_ANGLES={0,25,-25,50,-50,75,-75,100,-100,130,-130,155,-155,180} -- hoisted: no per-frame table garbage
     local function stealMove(target,maxSeconds)
         -- Small horizontal steps glued to the terrain; never teleports, never jumps.
         local character,root,humanoid=stealParts()
