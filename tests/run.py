@@ -22,9 +22,11 @@ SOURCE = ROOT / "UNKNOWN.lua"
 def binary(name: str, variable: str) -> str:
     result = os.environ.get(variable) or shutil.which(name)
     # Convenience for this Arena workspace; not a project dependency.
+    workspace_build = Path.home() / "luau-0.746/build/release" / name
     local_build = Path.home() / ".cache/unknown-luau/luau-0.746" / name
-    if not result and local_build.is_file():
-        result = str(local_build)
+    for candidate in (workspace_build, local_build):
+        if not result and candidate.is_file():
+            result = str(candidate)
     if not result:
         raise SystemExit(f"Install the Luau CLI and set {variable} (missing {name}).")
     return result
