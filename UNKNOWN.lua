@@ -1111,6 +1111,88 @@ local function createFinder(D)
         end
     end)
 
+    -- MARVIN interaction polish: animated wordmark + tactile button feedback.
+    -- All effects are presentation-only; existing Activated callbacks remain intact.
+    if heading and heading:IsA('TextLabel') then
+        heading.Font = Enum.Font.GothamBlack
+        heading.TextSize = math.max(heading.TextSize, 23)
+        local wordmarkGradient = D.make('UIGradient', {
+            Rotation = 0,
+            Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, Theme.text),
+                ColorSequenceKeypoint.new(0.42, Theme.accentHot),
+                ColorSequenceKeypoint.new(0.72, Theme.cyan),
+                ColorSequenceKeypoint.new(1, Theme.text),
+            }),
+        }, heading)
+        local wordmarkMotion = TweenService:Create(wordmarkGradient,
+            TweenInfo.new(5.5, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1),
+            {Rotation = 360})
+        wordmarkMotion:Play()
+        table.insert(starTweens, wordmarkMotion)
+    end
+
+    local function addButtonFeedback(button)
+        if not button:IsA('TextButton') or button:GetAttribute('MarvinFeedbackReady') then return end
+        button:SetAttribute('MarvinFeedbackReady', true)
+        local scale = button:FindFirstChildOfClass('UIScale')
+        if not scale then
+            scale = Instance.new('UIScale')
+            scale.Scale = 1
+            scale.Parent = button
+        end
+        local hoverTween
+        local function animateScale(value, duration, style)
+            if hoverTween then hoverTween:Cancel() end
+            hoverTween = TweenService:Create(scale,
+                TweenInfo.new(duration, style or Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                {Scale = value})
+            hoverTween:Play()
+        end
+        button.MouseEnter:Connect(function()
+            animateScale(1.035, 0.14)
+        end)
+        button.MouseLeave:Connect(function()
+            animateScale(1, 0.18)
+        end)
+        button.Activated:Connect(function()
+            animateScale(0.965, 0.07, Enum.EasingStyle.Quad)
+            task.delay(0.08, function()
+                if button.Parent then animateScale(1, 0.22, Enum.EasingStyle.Back) end
+            end)
+        end)
+        table.insert(starTweens, {
+            Cancel = function()
+                if hoverTween then hoverTween:Cancel() end
+            end
+        })
+    end
+    for _, obj in ipairs(panel:GetDescendants()) do addButtonFeedback(obj) end
+    panel.DescendantAdded:Connect(function(obj)
+        task.defer(function()
+            if obj.Parent then addButtonFeedback(obj) end
+        end)
+    end)
+
+    -- Give the main refresh action a clear primary-action treatment.
+    if refreshButton then
+        refreshButton.Font = Enum.Font.GothamBlack
+        refreshButton.TextSize = math.max(refreshButton.TextSize, 13)
+        refreshButton.BackgroundTransparency = 0
+        local refreshGradient = refreshButton:FindFirstChildOfClass('UIGradient')
+        if not refreshGradient then
+            refreshGradient = D.make('UIGradient', {
+                Rotation = 0,
+                Color = ColorSequence.new(Theme.accent, Theme.accentHot),
+            }, refreshButton)
+        end
+        local refreshMotion = TweenService:Create(refreshGradient,
+            TweenInfo.new(4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+            {Rotation = 18})
+        refreshMotion:Play()
+        table.insert(starTweens, refreshMotion)
+    end
+
     local function refreshGlassScope()
         if scope then scope.BackgroundColor3 = othersOnly and Theme.glass or Theme.tabActive end
         if myScope then myScope.BackgroundColor3 = othersOnly and Theme.tabActive or Theme.glass end
