@@ -26,7 +26,7 @@ local function startUnknown()
 --============================================================================--
 
 local HttpService = game:GetService("HttpService")
-local RAW_SCRIPT_URL = "https://raw.githubusercontent.com/mostafaezzatrqm700-droid/UNKNOWN/backup/unknown-safe-copy-2026-11-07/UNKNOWN.lua?v=40"
+local RAW_SCRIPT_URL = "https://raw.githubusercontent.com/farsazzat1113/marvin/Marvin/UNKNOWN.lua?v=" .. tostring(os.time())
 local autoExecuteEnabled = true
 if type(readfile) == "function" then
     pcall(function()
