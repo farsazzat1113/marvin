@@ -534,10 +534,8 @@ local function createFinder(D)
         local view=D.gui.AbsoluteSize
         if view.X<=0 or view.Y<=0 then return end
         local baseWidth,baseHeight=1500,850
-        -- Fit the complete dashboard inside short/narrow phone viewports.
-        -- The previous 0.42 floor could force the 1500x850 panel off-screen.
-        local scale=math.min(1.08*sizeFactor,view.X*0.94/baseWidth,view.Y*0.92/baseHeight)
-        scale=math.max(0.24,scale)
+        local scale=math.min(1.08*sizeFactor,view.X*0.90/baseWidth,view.Y*0.88/baseHeight)
+        scale=math.max(0.42,scale)
         responsiveScale.Scale=scale
         panel.AnchorPoint=Vector2.new(0.5,0.5)
         panel.Position=UDim2.fromScale(0.5,0.5)
@@ -767,22 +765,22 @@ local function createFinder(D)
     local list=D.make('ScrollingFrame',{Position=UDim2.fromOffset(14,92),Size=UDim2.new(1,-16,1,-278),BackgroundTransparency=1,BorderSizePixel=0,AutomaticCanvasSize=Enum.AutomaticSize.None,CanvasSize=UDim2.new(),ScrollBarThickness=6,ScrollBarImageColor3=Color3.fromRGB(150,132,190),ScrollBarImageTransparency=0.1},panel)
     
     --========================================================================--
-    --  [3] MARVIN PREMIUM PURPLE THEME 3.0 (visual-only)
+    --  [3] MARVIN DESKTOP THEME 2.0 (visual-only)
     --  Wide midnight dashboard, animated energy sweep, moving nebulae and
     --  restrained neon accents. No gameplay callbacks or data flow are changed.
     --========================================================================--
     local Theme = {
-        bg        = Color3.fromRGB(9, 5, 20),
-        bgDeep    = Color3.fromRGB(5, 3, 14),
-        glass     = Color3.fromRGB(24, 13, 43),
-        glassHigh = Color3.fromRGB(39, 22, 65),
-        accent    = Color3.fromRGB(171, 79, 255),
-        accentHot = Color3.fromRGB(255, 61, 184),
-        cyan      = Color3.fromRGB(106, 211, 255),
+        bg        = Color3.fromRGB(5, 10, 22),
+        bgDeep    = Color3.fromRGB(4, 8, 18),
+        glass     = Color3.fromRGB(13, 24, 42),
+        glassHigh = Color3.fromRGB(20, 38, 61),
+        accent    = Color3.fromRGB(53, 216, 255),
+        accentHot = Color3.fromRGB(159, 93, 255),
+        cyan      = Color3.fromRGB(92, 231, 255),
         text      = Color3.fromRGB(239, 247, 255),
         muted     = Color3.fromRGB(143, 166, 195),
         green     = Color3.fromRGB(65, 238, 167),
-        tabActive = Color3.fromRGB(91, 37, 145),
+        tabActive = Color3.fromRGB(24, 93, 131),
     }
     D.theme = Theme
     local starTweens = {}
@@ -797,9 +795,9 @@ local function createFinder(D)
     local panelGradient = D.make('UIGradient', {
         Rotation = 24,
         Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, Color3.fromRGB(10, 5, 24)),
-            ColorSequenceKeypoint.new(0.48, Color3.fromRGB(23, 10, 43)),
-            ColorSequenceKeypoint.new(1, Color3.fromRGB(43, 8, 39)),
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(5, 11, 25)),
+            ColorSequenceKeypoint.new(0.48, Color3.fromRGB(11, 18, 39)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(17, 10, 36)),
         }),
     }, panel)
     local panelMotion = TweenService:Create(panelGradient,
@@ -849,9 +847,9 @@ local function createFinder(D)
         D.make('UIGradient', {
             Rotation = 0,
             Color = ColorSequence.new({
-                ColorSequenceKeypoint.new(0, Color3.fromRGB(13, 6, 29)),
-                ColorSequenceKeypoint.new(0.55, Color3.fromRGB(35, 12, 57)),
-                ColorSequenceKeypoint.new(1, Color3.fromRGB(57, 10, 47)),
+                ColorSequenceKeypoint.new(0, Color3.fromRGB(6, 17, 34)),
+                ColorSequenceKeypoint.new(0.55, Color3.fromRGB(17, 22, 49)),
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(28, 13, 48)),
             }),
         }, bar)
     end
@@ -1054,7 +1052,7 @@ local function createFinder(D)
             end
             corner.CornerRadius = UDim.new(0, 10)
             if obj == refreshButton then
-                obj.BackgroundColor3 = Color3.fromRGB(112, 48, 174)
+                obj.BackgroundColor3 = Color3.fromRGB(33, 114, 160)
                 stroke.Color = Theme.cyan
                 stroke.Transparency = 0.08
                 stroke.Thickness = 1.6
@@ -1112,88 +1110,6 @@ local function createFinder(D)
             end)
         end
     end)
-
-    -- MARVIN interaction polish: animated wordmark + tactile button feedback.
-    -- All effects are presentation-only; existing Activated callbacks remain intact.
-    if heading and heading:IsA('TextLabel') then
-        heading.Font = Enum.Font.GothamBlack
-        heading.TextSize = math.max(heading.TextSize, 23)
-        local wordmarkGradient = D.make('UIGradient', {
-            Rotation = 0,
-            Color = ColorSequence.new({
-                ColorSequenceKeypoint.new(0, Theme.text),
-                ColorSequenceKeypoint.new(0.42, Theme.accentHot),
-                ColorSequenceKeypoint.new(0.72, Theme.cyan),
-                ColorSequenceKeypoint.new(1, Theme.text),
-            }),
-        }, heading)
-        local wordmarkMotion = TweenService:Create(wordmarkGradient,
-            TweenInfo.new(5.5, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1),
-            {Rotation = 360})
-        wordmarkMotion:Play()
-        table.insert(starTweens, wordmarkMotion)
-    end
-
-    local function addButtonFeedback(button)
-        if not button:IsA('TextButton') or button:GetAttribute('MarvinFeedbackReady') then return end
-        button:SetAttribute('MarvinFeedbackReady', true)
-        local scale = button:FindFirstChildOfClass('UIScale')
-        if not scale then
-            scale = Instance.new('UIScale')
-            scale.Scale = 1
-            scale.Parent = button
-        end
-        local hoverTween
-        local function animateScale(value, duration, style)
-            if hoverTween then hoverTween:Cancel() end
-            hoverTween = TweenService:Create(scale,
-                TweenInfo.new(duration, style or Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                {Scale = value})
-            hoverTween:Play()
-        end
-        button.MouseEnter:Connect(function()
-            animateScale(1.035, 0.14)
-        end)
-        button.MouseLeave:Connect(function()
-            animateScale(1, 0.18)
-        end)
-        button.Activated:Connect(function()
-            animateScale(0.965, 0.07, Enum.EasingStyle.Quad)
-            task.delay(0.08, function()
-                if button.Parent then animateScale(1, 0.22, Enum.EasingStyle.Back) end
-            end)
-        end)
-        table.insert(starTweens, {
-            Cancel = function()
-                if hoverTween then hoverTween:Cancel() end
-            end
-        })
-    end
-    for _, obj in ipairs(panel:GetDescendants()) do addButtonFeedback(obj) end
-    panel.DescendantAdded:Connect(function(obj)
-        task.defer(function()
-            if obj.Parent then addButtonFeedback(obj) end
-        end)
-    end)
-
-    -- Give the main refresh action a clear primary-action treatment.
-    if refreshButton then
-        refreshButton.Font = Enum.Font.GothamBlack
-        refreshButton.TextSize = math.max(refreshButton.TextSize, 13)
-        refreshButton.BackgroundTransparency = 0
-        local refreshGradient = refreshButton:FindFirstChildOfClass('UIGradient')
-        if not refreshGradient then
-            refreshGradient = D.make('UIGradient', {
-                Rotation = 0,
-                Color = ColorSequence.new(Theme.accent, Theme.accentHot),
-            }, refreshButton)
-        end
-        local refreshMotion = TweenService:Create(refreshGradient,
-            TweenInfo.new(4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
-            {Rotation = 18})
-        refreshMotion:Play()
-        table.insert(starTweens, refreshMotion)
-    end
 
     local function refreshGlassScope()
         if scope then scope.BackgroundColor3 = othersOnly and Theme.glass or Theme.tabActive end
