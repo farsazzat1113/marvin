@@ -506,7 +506,8 @@ local function createFinder(D)
         for i=1,4 do if type(value[i])~='number' or value[i]~=value[i] or math.abs(value[i])>5000 then return end end
         target.Position=UDim2.new(value[1],value[2],value[3],value[4])
     end
-    restorePosition(panel,settings.panel);restorePosition(open,settings.icon)
+    if settings.desktopLayoutVersion==2 then restorePosition(panel,settings.panel) end
+    restorePosition(open,settings.icon)
     D.publicGuiPercent=function(value,factor)
         local n=tonumber(value) or (tonumber(factor) or 1)*100
         if n~=n or math.abs(n)==math.huge then n=100 end
@@ -532,12 +533,13 @@ local function createFinder(D)
     local function fitFinder()
         local view=D.gui.AbsoluteSize
         if view.X<=0 or view.Y<=0 then return end
-        local landscape=view.X>view.Y
-        local width=math.min(321.6*sizeFactor,view.X*(landscape and 0.40 or 0.92),view.X-16)
-        local height=math.min(592*sizeFactor,view.Y*0.90)
-        local scale=math.min(0.8*sizeFactor,width/402,height/680)
+        local baseWidth,baseHeight=1500,850
+        local scale=math.min(1.08*sizeFactor,view.X*0.90/baseWidth,view.Y*0.88/baseHeight)
+        scale=math.max(0.42,scale)
         responsiveScale.Scale=scale
-        panel.Size=UDim2.fromOffset(402,height/scale)
+        panel.AnchorPoint=Vector2.new(0.5,0.5)
+        panel.Position=UDim2.fromScale(0.5,0.5)
+        panel.Size=UDim2.fromOffset(baseWidth,baseHeight)
         launcherScale.Scale=math.min(0.8,math.max(0.5,math.min(view.X,view.Y)/650))
         local function keepVisible(target,caption)
             local size=target.AbsoluteSize
@@ -562,7 +564,7 @@ local function createFinder(D)
         if type(writefile)~='function' then return end
         pcall(function()
             local function coords(p) return {p.X.Scale,p.X.Offset,p.Y.Scale,p.Y.Offset} end
-            writefile(settingsPath,Http:JSONEncode({myServer=othersOnly,minRank=minRank,rarityMenu='mythic-up-v1',serversMinValue=serversMinValue,autoJoinMinValue=autoJoinMinValue,autoExecute=autoExecuteEnabled,autoSteal=autoStealEnabled,sizeFactor=sizeFactor,sizePercent=sizePercent,panel=coords(panel.Position),icon=coords(open.Position)}))
+            writefile(settingsPath,Http:JSONEncode({desktopLayoutVersion=2,myServer=othersOnly,minRank=minRank,rarityMenu='mythic-up-v1',serversMinValue=serversMinValue,autoJoinMinValue=autoJoinMinValue,autoExecute=autoExecuteEnabled,autoSteal=autoStealEnabled,sizeFactor=sizeFactor,sizePercent=sizePercent,panel=coords(panel.Position),icon=coords(open.Position)}))
         end)
     end
     local settingsButton=D.make('TextButton',{Name='SettingsButton',Text='SETTINGS',Position=UDim2.new(0,0,0,7),Size=UDim2.fromOffset(92,34),BackgroundColor3=Color3.fromRGB(42,44,52),BackgroundTransparency=0,TextColor3=Color3.fromRGB(255,255,255),TextSize=12,Font=Enum.Font.GothamBold,BorderSizePixel=0,ZIndex=20},panel)
@@ -763,133 +765,185 @@ local function createFinder(D)
     local list=D.make('ScrollingFrame',{Position=UDim2.fromOffset(14,92),Size=UDim2.new(1,-16,1,-278),BackgroundTransparency=1,BorderSizePixel=0,AutomaticCanvasSize=Enum.AutomaticSize.None,CanvasSize=UDim2.new(),ScrollBarThickness=6,ScrollBarImageColor3=Color3.fromRGB(150,132,190),ScrollBarImageTransparency=0.1},panel)
     
     --========================================================================--
-    --  [3] GLASS PREMIUM THEME (visual-only)
-    --  Translucent deep-space panels, purple/cyan gradient strokes, a soft
-    --  outer glow and a slow-twinkling starfield. Behavior is untouched.
+    --  [3] MARVIN DESKTOP THEME 2.0 (visual-only)
+    --  Wide midnight dashboard, animated energy sweep, moving nebulae and
+    --  restrained neon accents. No gameplay callbacks or data flow are changed.
     --========================================================================--
     local Theme = {
-        bg        = Color3.fromRGB(10, 7, 22),     -- panel base
-        bgDeep    = Color3.fromRGB(5, 3, 14),      -- title bar
-        glass     = Color3.fromRGB(27, 20, 48),    -- resting control surface
-        glassHigh = Color3.fromRGB(46, 33, 80),    -- raised / input surface
-        accent    = Color3.fromRGB(147, 92, 255),  -- signature purple
-        accentHot = Color3.fromRGB(213, 96, 255),  -- bright purple
-        cyan      = Color3.fromRGB(56, 205, 255),  -- secondary accent
-        text      = Color3.fromRGB(245, 240, 255),
-        muted     = Color3.fromRGB(176, 162, 210),
-        green     = Color3.fromRGB(52, 235, 150),
-        tabActive = Color3.fromRGB(96, 58, 170),
+        bg        = Color3.fromRGB(5, 10, 22),
+        bgDeep    = Color3.fromRGB(4, 8, 18),
+        glass     = Color3.fromRGB(13, 24, 42),
+        glassHigh = Color3.fromRGB(20, 38, 61),
+        accent    = Color3.fromRGB(53, 216, 255),
+        accentHot = Color3.fromRGB(159, 93, 255),
+        cyan      = Color3.fromRGB(92, 231, 255),
+        text      = Color3.fromRGB(239, 247, 255),
+        muted     = Color3.fromRGB(143, 166, 195),
+        green     = Color3.fromRGB(65, 238, 167),
+        tabActive = Color3.fromRGB(24, 93, 131),
     }
     D.theme = Theme
+    local starTweens = {}
+    local TweenService = game:GetService('TweenService')
 
-    --== Panel shell: glass gradient, gradient border, outer glow ==--
     panel.BackgroundColor3 = Theme.bg
-    panel.BackgroundTransparency = 0.05
+    panel.BackgroundTransparency = 0
+    panel.ClipsDescendants = true
     local glassCorner = panel:FindFirstChildOfClass('UICorner')
-    if glassCorner then glassCorner.CornerRadius = UDim.new(0, 12) end
-    D.make('UIGradient', {
-        Rotation = 95,
-        Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(150, 138, 190)),
+    if glassCorner then glassCorner.CornerRadius = UDim.new(0, 20) end
+
+    local panelGradient = D.make('UIGradient', {
+        Rotation = 24,
+        Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(5, 11, 25)),
+            ColorSequenceKeypoint.new(0.48, Color3.fromRGB(11, 18, 39)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(17, 10, 36)),
+        }),
     }, panel)
+    local panelMotion = TweenService:Create(panelGradient,
+        TweenInfo.new(26, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+        {Rotation = 204})
+    panelMotion:Play()
+    table.insert(starTweens, panelMotion)
+
     local glassStroke = panel:FindFirstChildOfClass('UIStroke')
     if glassStroke then
         glassStroke.Color = Theme.accent
-        glassStroke.Thickness = 1.5
-        glassStroke.Transparency = 0.22
+        glassStroke.Thickness = 2
+        glassStroke.Transparency = 0.08
         glassStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-        D.make('UIGradient', {Rotation = 55, Color = ColorSequence.new(Theme.accent, Theme.cyan)}, glassStroke)
+        local borderGradient = D.make('UIGradient', {
+            Rotation = 0,
+            Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, Theme.accent),
+                ColorSequenceKeypoint.new(0.48, Theme.accentHot),
+                ColorSequenceKeypoint.new(1, Theme.cyan),
+            }),
+        }, glassStroke)
+        local borderMotion = TweenService:Create(borderGradient,
+            TweenInfo.new(12, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1),
+            {Rotation = 360})
+        borderMotion:Play()
+        table.insert(starTweens, borderMotion)
     end
+
     local edgeGlow = D.make('Frame', {
-        Name = 'GlassEdgeGlow', BackgroundTransparency = 1, BorderSizePixel = 0,
-        Position = UDim2.fromOffset(-4, -4), Size = UDim2.new(1, 8, 1, 8),
+        Name = 'DesktopOuterGlow', BackgroundTransparency = 1, BorderSizePixel = 0,
+        Position = UDim2.fromOffset(2, 2), Size = UDim2.new(1, -4, 1, -4),
         Active = false, ZIndex = 1,
     }, panel)
-    D.make('UICorner', {CornerRadius = UDim.new(0, 16)}, edgeGlow)
+    D.make('UICorner', {CornerRadius = UDim.new(0, 18)}, edgeGlow)
     D.make('UIStroke', {
-        Color = Theme.accent, Thickness = 6, Transparency = 0.82,
+        Color = Theme.accent, Thickness = 2, Transparency = 0.72,
         ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
     }, edgeGlow)
 
-    --== Title bar: deep glass + fading gradient hairline ==--
     if bar then
+        bar.Size = UDim2.new(1, -2, 0, 88)
         bar.BackgroundColor3 = Theme.bgDeep
-        bar.BackgroundTransparency = 0.15
+        bar.BackgroundTransparency = 0.02
         local barCorner = bar:FindFirstChildOfClass('UICorner')
-        if barCorner then barCorner.CornerRadius = UDim.new(0, 12) end
+        if barCorner then barCorner.CornerRadius = UDim.new(0, 18) end
         D.make('UIGradient', {
-            Rotation = 90,
-            Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(130, 118, 170)),
+            Rotation = 0,
+            Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, Color3.fromRGB(6, 17, 34)),
+                ColorSequenceKeypoint.new(0.55, Color3.fromRGB(17, 22, 49)),
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(28, 13, 48)),
+            }),
         }, bar)
     end
-    local hairline = D.make('Frame', {
-        Name = 'HeaderHairline', BorderSizePixel = 0, Active = false,
-        BackgroundColor3 = Theme.accent, Position = UDim2.new(0, 12, 0, 45),
-        Size = UDim2.new(1, -24, 0, 1), ZIndex = 4,
+
+    local headerAccent = D.make('Frame', {
+        Name = 'DesktopHeaderAccent', BorderSizePixel = 0, Active = false,
+        Position = UDim2.new(0, 18, 0, 86), Size = UDim2.new(1, -36, 0, 2),
+        BackgroundColor3 = Theme.accent, ZIndex = 4,
     }, panel)
-    D.make('UIGradient', {Rotation = 0, Transparency = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 1),
-        NumberSequenceKeypoint.new(0.18, 0.25),
-        NumberSequenceKeypoint.new(0.82, 0.25),
-        NumberSequenceKeypoint.new(1, 1),
-    })}, hairline)
+    D.make('UIGradient', {
+        Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Theme.accent),
+            ColorSequenceKeypoint.new(0.5, Theme.accentHot),
+            ColorSequenceKeypoint.new(1, Theme.cyan),
+        }),
+    }, headerAccent)
 
     if heading then
         heading.TextColor3 = Theme.text
         heading.TextStrokeColor3 = Theme.accent
-        heading.TextStrokeTransparency = 0.35
+        heading.TextStrokeTransparency = 0.55
     end
     if status then
         status.TextColor3 = Theme.cyan
+        status.TextStrokeTransparency = 1
     end
 
-    --== Starfield: fine twinkling stars over three breathing nebula glows ==--
     local starfield = D.make('Frame', {
-        Name = 'UNKNOWN_GlassStarfield', BackgroundTransparency = 1, BorderSizePixel = 0,
-        Size = UDim2.fromScale(1, 1), Position = UDim2.fromScale(0, 0), Active = false, ZIndex = 2,
+        Name = 'MARVIN_DesktopAmbient', BackgroundTransparency = 1, BorderSizePixel = 0,
+        Size = UDim2.fromScale(1, 1), Position = UDim2.fromScale(0, 0),
+        Active = false, ZIndex = 2,
     }, panel)
     local starRandom = Random.new(7319)
-    local starTweens = {}
-    local TweenService = game:GetService('TweenService')
-    for i = 1, 30 do
+
+    for i = 1, 38 do
         local dot = D.make('Frame', {
-            Name = 'Star' .. i, BorderSizePixel = 0, Active = false, ZIndex = 2,
-            Position = UDim2.fromScale(starRandom:NextNumber(0.03, 0.97), starRandom:NextNumber(0.10, 0.96)),
-            BackgroundColor3 = (i % 7 == 0) and Theme.cyan or (i % 3 == 0) and Theme.accentHot or Color3.fromRGB(232, 226, 255),
+            Name = 'DesktopStar' .. i, BorderSizePixel = 0, Active = false, ZIndex = 2,
+            Position = UDim2.fromScale(starRandom:NextNumber(0.02, 0.98), starRandom:NextNumber(0.12, 0.98)),
+            BackgroundColor3 = (i % 5 == 0) and Theme.cyan or (i % 3 == 0) and Theme.accentHot or Color3.fromRGB(210, 232, 255),
         }, starfield)
-        local size = starRandom:NextInteger(2, 3)
-        dot.Size = UDim2.fromOffset(size, size)
-        dot.BackgroundTransparency = starRandom:NextNumber(0.30, 0.62)
+        local dotSize = starRandom:NextInteger(2, 4)
+        dot.Size = UDim2.fromOffset(dotSize, dotSize)
+        dot.BackgroundTransparency = starRandom:NextNumber(0.36, 0.72)
         D.make('UICorner', {CornerRadius = UDim.new(1, 0)}, dot)
-        local glow = TweenService:Create(dot, TweenInfo.new(starRandom:NextNumber(1.4, 3.4), Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {
-            BackgroundTransparency = 0.88,
-            Size = UDim2.fromOffset(size + 1, size + 1),
-        })
-        glow:Play()
-        table.insert(starTweens, glow)
+        local pulse = TweenService:Create(dot,
+            TweenInfo.new(starRandom:NextNumber(1.8, 4.2), Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+            {BackgroundTransparency = 0.9, Size = UDim2.fromOffset(dotSize + 2, dotSize + 2)})
+        pulse:Play()
+        table.insert(starTweens, pulse)
     end
+
     for i, spec in ipairs({
-        {132, Theme.accent, 0.94},
-        {96, Theme.cyan, 0.95},
-        {72, Theme.accentHot, 0.95},
+        {210, Theme.accent, 0.965, 0.10, 0.24},
+        {170, Theme.accentHot, 0.968, 0.68, 0.62},
+        {125, Theme.cyan, 0.972, 0.42, 0.78},
     }) do
         local nebula = D.make('Frame', {
-            Name = 'Nebula' .. i, BorderSizePixel = 0, Active = false, ZIndex = 2,
-            Position = UDim2.fromScale(starRandom:NextNumber(0.08, 0.78), starRandom:NextNumber(0.14, 0.70)),
+            Name = 'DesktopNebula' .. i, BorderSizePixel = 0, Active = false, ZIndex = 2,
+            Position = UDim2.fromScale(spec[4], spec[5]),
             Size = UDim2.fromOffset(spec[1], spec[1]),
             BackgroundColor3 = spec[2], BackgroundTransparency = spec[3],
         }, starfield)
         D.make('UICorner', {CornerRadius = UDim.new(1, 0)}, nebula)
-        local breathe = TweenService:Create(nebula, TweenInfo.new(4 + i, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {
-            BackgroundTransparency = math.min(0.985, spec[3] + 0.03),
-        })
-        breathe:Play()
-        table.insert(starTweens, breathe)
+        local drift = TweenService:Create(nebula,
+            TweenInfo.new(9 + i * 2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+            {Position = UDim2.fromScale(math.clamp(spec[4] + 0.08, 0.02, 0.82), math.clamp(spec[5] + 0.06, 0.12, 0.82)),
+             BackgroundTransparency = 0.982})
+        drift:Play()
+        table.insert(starTweens, drift)
     end
 
-    --== Z-order: real content always floats above the stars and the glow ==--
+    local energySweep = D.make('Frame', {
+        Name = 'DesktopEnergySweep', BorderSizePixel = 0, Active = false,
+        Position = UDim2.new(0, 0, 0.12, 0), Size = UDim2.new(1, 0, 0, 2),
+        BackgroundColor3 = Theme.cyan, BackgroundTransparency = 0.55, ZIndex = 2,
+    }, starfield)
+    D.make('UIGradient', {
+        Transparency = NumberSequence.new({
+            NumberSequenceKeypoint.new(0, 1),
+            NumberSequenceKeypoint.new(0.18, 0.35),
+            NumberSequenceKeypoint.new(0.82, 0.35),
+            NumberSequenceKeypoint.new(1, 1),
+        }),
+    }, energySweep)
+    local sweepMotion = TweenService:Create(energySweep,
+        TweenInfo.new(8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+        {Position = UDim2.new(0, 0, 0.94, 0)})
+    sweepMotion:Play()
+    table.insert(starTweens, sweepMotion)
+
     local function liftAboveBackdrop(obj)
-        if obj:IsA('GuiObject') and obj ~= starfield and obj ~= edgeGlow and not obj:IsDescendantOf(starfield) then
-            if obj.ZIndex <= 2 then obj.ZIndex = 3 end
+        if obj:IsA('GuiObject') and obj ~= starfield and obj ~= edgeGlow
+            and not obj:IsDescendantOf(starfield) and obj.ZIndex <= 2 then
+            obj.ZIndex = 3
         end
     end
     for _, obj in ipairs(panel:GetDescendants()) do liftAboveBackdrop(obj) end
@@ -901,13 +955,11 @@ local function createFinder(D)
         end
     end)
 
-    --== Control skinning: current and future panel controls share one look ==--
     local function styleGlassControl(obj)
         if obj:IsA('TextButton') then
-            -- Server status buttons own their colors (JOIN green, FULL/TAKEN red, HERE gray).
             if obj.Name ~= 'JoinStatusButton' and obj.Name ~= 'AutoJoin' then
                 obj.BackgroundColor3 = Theme.glass
-                obj.BackgroundTransparency = 0.04
+                obj.BackgroundTransparency = 0.02
             end
             obj.TextColor3 = Theme.text
             obj.Font = Enum.Font.GothamBold
@@ -919,28 +971,28 @@ local function createFinder(D)
                 stroke.Parent = obj
             end
             stroke.Color = Theme.accent
-            stroke.Transparency = 0.30
+            stroke.Transparency = 0.34
             stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
             local corner = obj:FindFirstChildOfClass('UICorner')
             if not corner then
                 corner = Instance.new('UICorner')
                 corner.Parent = obj
             end
-            corner.CornerRadius = UDim.new(0, 8)
+            corner.CornerRadius = UDim.new(0, 10)
             if obj == refreshButton then
-                obj.BackgroundColor3 = Color3.fromRGB(112, 34, 200)
-                obj.BackgroundTransparency = 0.06
-                stroke.Color = Theme.accentHot
-                stroke.Transparency = 0.12
-                stroke.Thickness = 1.5
+                obj.BackgroundColor3 = Color3.fromRGB(33, 114, 160)
+                stroke.Color = Theme.cyan
+                stroke.Transparency = 0.08
+                stroke.Thickness = 1.6
             elseif obj == settingsButton then
                 obj.BackgroundColor3 = Theme.glassHigh
-            elseif obj == rarity then
+            elseif obj == scope or obj == myScope then
                 obj.BackgroundColor3 = Theme.glass
             end
         elseif obj:IsA('TextBox') then
             obj.BackgroundColor3 = Theme.glassHigh
             obj.TextColor3 = Theme.text
+            obj.Font = Enum.Font.GothamBold
             local stroke = obj:FindFirstChildOfClass('UIStroke')
             if not stroke then
                 stroke = Instance.new('UIStroke')
@@ -948,7 +1000,7 @@ local function createFinder(D)
                 stroke.Parent = obj
             end
             stroke.Color = Theme.accent
-            stroke.Transparency = 0.45
+            stroke.Transparency = 0.38
             stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
             local corner = obj:FindFirstChildOfClass('UICorner')
             if corner then corner.CornerRadius = UDim.new(0, 8) end
@@ -958,27 +1010,23 @@ local function createFinder(D)
                 local corner = obj:FindFirstChildOfClass('UICorner')
                 if corner then corner.CornerRadius = UDim.new(0, 10) end
                 D.make('UIStroke', {
-                    Color = Theme.accent, Thickness = 1, Transparency = 0.55,
+                    Color = Theme.accent, Thickness = 1, Transparency = 0.52,
                     ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-                }, obj)
-                D.make('UIGradient', {
-                    Rotation = 90,
-                    Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(168, 156, 205)),
                 }, obj)
             elseif obj.Name == 'SettingsOverlay' then
                 obj.BackgroundColor3 = Theme.bg
-                obj.BackgroundTransparency = 0.02
+                obj.BackgroundTransparency = 0.01
                 local corner = obj:FindFirstChildOfClass('UICorner')
-                if corner then corner.CornerRadius = UDim.new(0, 12) end
+                if corner then corner.CornerRadius = UDim.new(0, 18) end
                 D.make('UIStroke', {
-                    Color = Theme.accent, Thickness = 1.5, Transparency = 0.30,
+                    Color = Theme.accent, Thickness = 2, Transparency = 0.18,
                     ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
                 }, obj)
             end
         elseif obj:IsA('TextLabel') then
             if obj.TextColor3 ~= Theme.green then
-                obj.TextStrokeColor3 = Color3.fromRGB(14, 5, 28)
-                obj.TextStrokeTransparency = math.min(obj.TextStrokeTransparency, 0.55)
+                obj.TextStrokeColor3 = Color3.fromRGB(1, 5, 16)
+                obj.TextStrokeTransparency = math.min(obj.TextStrokeTransparency, 0.72)
             end
         end
     end
@@ -991,36 +1039,31 @@ local function createFinder(D)
         end
     end)
 
-    --== Scope tabs: the active side carries the accent, the rest stays glass ==--
     local function refreshGlassScope()
-        if scope then
-            scope.BackgroundColor3 = othersOnly and Theme.glass or Theme.tabActive
-        end
-        if myScope then
-            myScope.BackgroundColor3 = othersOnly and Theme.tabActive or Theme.glass
-        end
+        if scope then scope.BackgroundColor3 = othersOnly and Theme.glass or Theme.tabActive end
+        if myScope then myScope.BackgroundColor3 = othersOnly and Theme.tabActive or Theme.glass end
     end
     if scope then scope.Activated:Connect(function() task.defer(refreshGlassScope) end) end
     if myScope then myScope.Activated:Connect(function() task.defer(refreshGlassScope) end) end
     refreshGlassScope()
 
-    --== Launcher ring: a thin accent circle around the floating icon ==--
     if open then
         D.make('UIStroke', {
-            Color = Theme.accent, Thickness = 2, Transparency = 0.15,
+            Color = Theme.cyan, Thickness = 2.5, Transparency = 0.08,
             ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
         }, open)
     end
 
-    --== Soft pop whenever the panel opens ==--
     local popTween
     panel:GetPropertyChangedSignal('Visible'):Connect(function()
         if not panel.Visible then return end
         local target = responsiveScale.Scale
         if type(target) ~= 'number' or target <= 0 then return end
-        responsiveScale.Scale = target * 0.94
+        responsiveScale.Scale = target * 0.965
         if popTween then popTween:Cancel() end
-        popTween = TweenService:Create(responsiveScale, TweenInfo.new(0.32, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = target})
+        popTween = TweenService:Create(responsiveScale,
+            TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+            {Scale = target})
         popTween:Play()
     end)
 
@@ -2229,7 +2272,7 @@ local function createFinder(D)
         local bucket=mutationGradients[key];bucket[#bucket+1]=gradient
     end
     mutationStyle(discordSubtitle,'discord')
-    mutationStyle(heading,'discord')
+    heading.TextColor3=Theme.cyan
     local filterPalettes={
         cosmic={Color3.fromRGB(67,37,239),Color3.fromRGB(113,29,255),Color3.fromRGB(90,37,230),Color3.fromRGB(67,44,204),Color3.fromRGB(63,44,244),Color3.fromRGB(41,12,217)},
         secret={Color3.fromRGB(40,40,40),Color3.fromRGB(66,62,59),Color3.fromRGB(90,90,87),Color3.fromRGB(118,124,118),Color3.fromRGB(144,152,152),Color3.fromRGB(195,195,201)},
@@ -2359,7 +2402,7 @@ local function createFinder(D)
     local joinRetryAt=0
     local cardsByKey={}
     local function compactCardHeight()
-        return math.clamp(math.floor((panel.Size.Y.Offset-238-16)/5),76,112)
+        return math.clamp(math.floor((panel.Size.Y.Offset-238-16)/5),96,108)
     end
     local function joinPresentation(entry)
         local here=entry.isLocal or entry.jobId==game.JobId
@@ -2407,7 +2450,7 @@ local function createFinder(D)
             card.compactHeight=height;card.row.Size=UDim2.new(1,-12,0,height)
             local renderScale=responsiveScale.Scale
             if type(renderScale)~='number' or renderScale<=0 then renderScale=1 end
-            local iconSize=math.floor(math.min(80,height-22)*renderScale)/renderScale
+            local iconSize=math.floor(math.min(88,height-16)*renderScale)/renderScale
             card.icon.Size=UDim2.fromOffset(iconSize,iconSize);card.icon.Position=UDim2.fromOffset(math.floor((4+(78-iconSize)/2)*renderScale)/renderScale,0)
             card.spotlight.Position=card.icon.Position
             card.spotlight.Size=card.icon.Size
@@ -2708,13 +2751,25 @@ local function createFinder(D)
             if not card or not card.row.Parent or card.signature~=signature then
             if card and card.row.Parent then card.row:Destroy() end
             card={entry=entry,signature=signature}
-            local row=D.make('Frame',{Size=UDim2.new(1,-12,0,90),LayoutOrder=i,BackgroundColor3=Color3.fromRGB(26,18,46),BackgroundTransparency=0.10,BorderSizePixel=0},list)
+            local row=D.make('Frame',{Size=UDim2.new(1,-12,0,108),LayoutOrder=i,BackgroundColor3=Color3.fromRGB(11,23,42),BackgroundTransparency=0.035,BorderSizePixel=0},list)
             card.row=row
             row.ClipsDescendants=true
-            -- Glass card: deep indigo surface, soft vertical gradient, purple hairline border.
-            D.make('UICorner',{CornerRadius=UDim.new(0,8)},row)
-            D.make('UIGradient',{Color=ColorSequence.new(Color3.new(1,1,1),Color3.fromRGB(168,158,200)),Rotation=90},row)
-            D.make('UIStroke',{Color=Color3.fromRGB(110,80,185),Transparency=0.3,Thickness=1,ApplyStrokeMode=Enum.ApplyStrokeMode.Border},row)
+            D.make('UICorner',{CornerRadius=UDim.new(0,13)},row)
+            local cardGradient=D.make('UIGradient',{
+                Color=ColorSequence.new({
+                    ColorSequenceKeypoint.new(0,Color3.fromRGB(13,30,52)),
+                    ColorSequenceKeypoint.new(0.55,Color3.fromRGB(16,23,48)),
+                    ColorSequenceKeypoint.new(1,Color3.fromRGB(28,17,48)),
+                }),
+                Rotation=0
+            },row)
+            local cardMotion=TweenService:Create(cardGradient,
+                TweenInfo.new(22,Enum.EasingStyle.Sine,Enum.EasingDirection.InOut,-1,true),
+                {Rotation=180})
+            cardMotion:Play()
+            table.insert(starTweens,cardMotion)
+            D.make('UIStroke',{Color=Theme.accent,Transparency=0.48,Thickness=1.2,ApplyStrokeMode=Enum.ApplyStrokeMode.Border},row)
+            D.make('Frame',{Name='CardAccentRail',Position=UDim2.fromOffset(0,12),Size=UDim2.fromOffset(3,84),BackgroundColor3=Theme.cyan,BackgroundTransparency=0.08,BorderSizePixel=0,Active=false},row)
             D.make('Frame',{Name='CardBevelTop',Position=UDim2.fromOffset(3,1),Size=UDim2.new(1,-6,0,1),BackgroundColor3=Color3.fromRGB(235,230,255),BackgroundTransparency=0.55,BorderSizePixel=0,Active=false},row)
             D.make('Frame',{Name='CardBevelBottom',Position=UDim2.new(0,3,1,-2),Size=UDim2.new(1,-6,0,1),BackgroundColor3=Color3.fromRGB(10,6,22),BackgroundTransparency=0,BorderSizePixel=0,Active=false},row)
             -- Static native UI rays: no downloads, image compression or animation work.
@@ -2770,6 +2825,7 @@ local function createFinder(D)
             card.incomeLabel=incomeLabel
             incomeLabel.TextStrokeColor3=Color3.new(0,0,0);incomeLabel.TextStrokeTransparency=1
             incomeLabel.Font=Enum.Font.GothamBlack
+            incomeLabel.TextXAlignment=Enum.TextXAlignment.Center
             D.make('UIStroke',{Color=Color3.new(0,0,0),Thickness=1.1},incomeLabel)
             incomeLabel.TextTruncate=Enum.TextTruncate.None
             incomeLabel.TextScaled=false
@@ -2783,6 +2839,7 @@ local function createFinder(D)
             D.make('UIStroke',{Color=Color3.new(0,0,0),Thickness=1.1},weightLabel)
             weightLabel.TextStrokeColor3=Color3.new(0,0,0);weightLabel.TextStrokeTransparency=1
             weightLabel.Font=Enum.Font.GothamBlack
+            weightLabel.TextXAlignment=Enum.TextXAlignment.Center
             weightLabel.TextTruncate=Enum.TextTruncate.None
             weightLabel.TextScaled=false
             weightLabel.TextWrapped=false
@@ -3054,7 +3111,44 @@ local function createFinder(D)
         paint()
     end
 
+    local function applyDesktopLayout()
+        settingsButton.Position=UDim2.fromOffset(16,18)
+        settingsButton.Size=UDim2.fromOffset(112,42)
+        status.Position=UDim2.fromOffset(18,52)
+        status.Size=UDim2.new(1,-250,0,28)
+        status.TextSize=14
+        status.TextXAlignment=Enum.TextXAlignment.Left
+        refreshButton.Position=UDim2.new(1,-218,0,48)
+        refreshButton.Size=UDim2.fromOffset(200,38)
+        refreshButton.TextSize=16
+
+        scope.Position=UDim2.new(0,14,1,-84)
+        scope.Size=UDim2.fromOffset(260,54)
+        myScope.Position=UDim2.new(0,284,1,-84)
+        myScope.Size=UDim2.fromOffset(260,54)
+        serversValueFrame.Position=UDim2.new(0,554,1,-84)
+        serversValueFrame.Size=UDim2.fromOffset(270,54)
+        serversValueInput.Position=UDim2.new(0.64,0,0,4)
+        serversValueInput.Size=UDim2.new(0.36,-8,1,-8)
+        serversValueLabel.TextSize=12
+        minValueFrame.Position=UDim2.new(0,834,1,-84)
+        minValueFrame.Size=UDim2.fromOffset(270,54)
+        minValueInput.Position=UDim2.new(0.64,0,0,4)
+        minValueInput.Size=UDim2.new(0.36,-8,1,-8)
+        minValueLabel.TextSize=12
+        autoJoinButton.Position=UDim2.new(0,1114,1,-84)
+        autoJoinButton.Size=UDim2.new(1,-1128,0,54)
+        autoJoinButton.TextSize=16
+
+        list.Position=UDim2.fromOffset(14,100)
+        list.Size=UDim2.new(1,-28,1,-206)
+        list.ScrollBarThickness=8
+        list.ScrollBarImageColor3=Theme.cyan
+        list.BackgroundTransparency=1
+    end
+
     fitFinder()
+    applyDesktopLayout()
     panel.Visible=true
     local failed=Teleports.TeleportInitFailed:Connect(function(who,_,message)
         if who==D.player then
