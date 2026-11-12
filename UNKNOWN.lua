@@ -91,7 +91,30 @@ pcall(function() gui.ScreenInsets = Enum.ScreenInsets.None end)
 pcall(function() gui.ClipToDeviceSafeArea = false end)
 gui.DisplayOrder = 1200
 gui.Parent = parent
+
+-- Visible startup feedback while Roblox finishes loading its client modules.
+local startupNotice = Instance.new("TextLabel")
+startupNotice.Name = "MARVIN_StartupNotice"
+startupNotice.AnchorPoint = Vector2.new(0.5, 0.5)
+startupNotice.Position = UDim2.fromScale(0.5, 0.5)
+startupNotice.Size = UDim2.fromOffset(380, 54)
+startupNotice.BackgroundColor3 = Color3.fromRGB(12, 9, 24)
+startupNotice.BackgroundTransparency = 0.08
+startupNotice.BorderSizePixel = 0
+startupNotice.Text = "MARVIN • WAITING FOR GAME DATA"
+startupNotice.TextColor3 = Color3.fromRGB(220, 230, 255)
+startupNotice.Font = Enum.Font.GothamBold
+startupNotice.TextSize = 16
+startupNotice.ZIndex = 100
+startupNotice.Parent = gui
+Instance.new("UICorner", startupNotice).CornerRadius = UDim.new(0, 12)
+local startupStroke = Instance.new("UIStroke")
+startupStroke.Color = Color3.fromRGB(147, 92, 255)
+startupStroke.Thickness = 1.5
+startupStroke.Parent = startupNotice
+
 local alive = true
+local finderCreating = false
 local sharedRuntime = _G
 pcall(function()
     if type(getgenv) == "function" then sharedRuntime = getgenv() end
@@ -116,8 +139,12 @@ end
 local function module(path)
     local obj = RS
     for part in path:gmatch('[^.]+') do
-        obj = obj:FindFirstChild(part)
-        assert(obj, 'Missing game module: '..path)
+        local child = obj:FindFirstChild(part)
+        if not child then
+            child = obj:WaitForChild(part, 45)
+        end
+        assert(child, 'Missing game module after waiting: '..path..' ['..part..']')
+        obj = child
     end
     return require(obj)
 end
@@ -3093,6 +3120,11 @@ end
 --      feeds both the UI renderer and the shared broadcast worker.
 --============================================================================--
 local function run()
+    if not game:IsLoaded() then
+        startupNotice.Text = "MARVIN • WAITING FOR ROBLOX TO FINISH LOADING"
+        game.Loaded:Wait()
+    end
+
     local EggState=module('Client.EggState')
     local Assets=module('Data.Assets')
     local States=module('Shared.Types.AreaEggs').States
@@ -3114,7 +3146,9 @@ local function run()
         return valid(value) and value or nil
     end
     local lastScan=0
+    finderCreating = true
     createFinder({gui=gui,localPanel={Visible=false},player=player,make=make,label=label,entries=function() return os.clock()-lastScan<10 and latestEntries or {} end,metadata=function() return latestMetadata end,ready=function() return lastScan>0 and os.clock()-lastScan<10 end,parseValue=parseValue,money=money,stopFarm=function() end})
+    if startupNotice and startupNotice.Parent then startupNotice:Destroy() end
     local notified={}
     while alive do
         local ok,err=pcall(function()
@@ -3168,8 +3202,22 @@ local function run()
     end
 end
  task.spawn(function()
-    local ok,err=pcall(run)
-    if not ok then warn('NYX Finder startup:',err) end
+    local attempt = 0
+    while alive do
+        attempt += 1
+        local ok,err = pcall(run)
+        if ok then return end
+
+        warn('NYX Finder startup attempt '..tostring(attempt)..': '..tostring(err))
+        if startupNotice and startupNotice.Parent then
+            if finderCreating then
+                startupNotice.Text = 'MARVIN STARTUP ERROR • '..tostring(err):sub(1, 140)
+                break
+            end
+            startupNotice.Text = 'MARVIN • WAITING FOR GAME MODULES (RETRY '..tostring(attempt)..')'
+        end
+        task.wait(math.min(8, 1 + attempt))
+    end
 end)
 end
 
@@ -3189,13 +3237,13 @@ local function launchUnknown()
     pcall(function()
         if type(getgenv) == "function" then runtimeEnv = getgenv() end
     end)
-    if type(runtimeEnv) == "table" then
-        local runningJob = "__UNKNOWN_RUNNING_JOB"
-        if runtimeEnv[runningJob] == game.JobId then return end
-        runtimeEnv[runningJob] = game.JobId
-    end
+    local runningJob = "__UNKNOWN_RUNNING_JOB"
+    if type(runtimeEnv) == "table" and runtimeEnv[runningJob] == game.JobId then return end
+    if type(runtimeEnv) == "table" then runtimeEnv[runningJob] = game.JobId end
+
     local loadOk, loadError = pcall(startUnknown)
     if not loadOk then
+        if type(runtimeEnv) == "table" then runtimeEnv[runningJob] = nil end
         warn("[UNKNOWN] Finder startup failed: " .. tostring(loadError))
     end
 end
