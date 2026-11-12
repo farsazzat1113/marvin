@@ -1,11 +1,27 @@
 # UNKNOWN
 
 **Shared Egg Finder + Cloudflare Key Gate** — a single-file Roblox UI script with a
-premium glass interface, live shared feed, and auto-join.
+compact animated glassmorphism interface, live shared feed, and auto-steal / auto-join.
 
-![Build](https://img.shields.io/badge/build-Public%20v0.4.3%20%2F%20UI20-935CFF)
-![Theme](https://img.shields.io/badge/theme-Glass%20Premium-38CDFF)
+![Build](https://img.shields.io/badge/build-Public%20v0.4.4%20%2F%20UI21-935CFF)
+![Theme](https://img.shields.io/badge/theme-Glass%20Premium%20Animated-38CDFF)
 ![File](https://img.shields.io/badge/format-single--file%20Lua-success)
+
+## Executor Loadstrings
+
+To run MARVIN directly in your executor:
+
+### 🚀 Obfuscated Build (Protected & Recommended)
+```lua
+loadstring(game:HttpGet("https://raw.githubusercontent.com/farsazzat1113/marvin/arena/14f69693-marvin/UNKNOWN.obfuscated.lua"))()
+```
+
+### 💻 Clean Source Build
+```lua
+loadstring(game:HttpGet("https://raw.githubusercontent.com/farsazzat1113/marvin/arena/14f69693-marvin/UNKNOWN.lua"))()
+```
+
+---
 
 ## Live design preview
 
@@ -24,6 +40,17 @@ with one-click join and an automatic "join the best server" mode.
 The Finder only boots **after the key-validation endpoint returns `valid=true`**
 and revalidates the key every 60 seconds while running.
 
+## What's new in UI21 — Sleek Compact Animated Redesign
+
+- **Compact Glass Design** — Removed oversized 1500x850 desktop dashboard and unwanted portrait frame. Returned to a lightweight, compact floating window (~402px) that never obstructs gameplay.
+- **Continuous Rotating Neon Glow** — Multi-stop gradient border (`UIStroke`) with smooth continuous 360° rotation.
+- **Dynamic Starfield & Breathing Nebulae** — 32 twinkling micro-stars with randomized sine pulsation and 3 drifting nebula blurs.
+- **Shimmering MARVIN Wordmark** — Animated metallic gradient sweep flowing across the bold header title.
+- **Tactile Button Physics** — Smooth hover scaling (1.035x) and click spring bounce (0.965x → 1.0x with Back easing) on all interactive buttons.
+- **Glowing Launcher Orb** — Floating draggable circle launcher with continuous rotating neon border ring and pulsing halo.
+- **Smooth Pop Entrance** — Energetic Back-eased pop animation when opening or toggling the panel.
+- **Clean Layout** — Fixed overlapping status and discord texts into clean dedicated vertical zones.
+
 ## What's new in UI20 — Auto Steal
 
 - **AUTO STEAL** — hands-free carry + plant for the egg a join tracked:
@@ -32,20 +59,6 @@ and revalidates the key every 60 seconds while running.
 - While **Auto Join** is armed, the best local egg over your minimum gets
   picked up automatically too - no buttons pressed.
 - New persisted settings toggle: **SETTINGS → AUTO STEAL: ON/OFF** (default ON).
-
-## What's new in UI19 — "Glass Premium"
-
-- **Glass Premium theme** — translucent deep-space panel, purple→cyan gradient
-  borders, soft outer glow, fading header hairline.
-- **Animated starfield v2** — fine twinkling stars plus three slow-breathing
-  nebula glows, always behind the real content (managed Z-order).
-- **Glass cards** — deep indigo egg cards with soft gradients and purple
-  hairline borders; consistent 8 px rounding everywhere.
-- **Panel pop** — the window opens with a short Back-eased scale animation.
-- **Key gate redesign** — centered glass card, accent underline, focus-lit input
-  border, gradient verify button with hover/press feedback, entrance animation.
-- **Encoding cleanup** — fixed mojibake strings (`â¦` → `…`, `Ã—` → `×`, `—`).
-- **Organized source** — numbered section banners ([1]–[7]) and a header map.
 
 ## Source map
 

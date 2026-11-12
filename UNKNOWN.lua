@@ -506,7 +506,7 @@ local function createFinder(D)
         for i=1,4 do if type(value[i])~='number' or value[i]~=value[i] or math.abs(value[i])>5000 then return end end
         target.Position=UDim2.new(value[1],value[2],value[3],value[4])
     end
-    if settings.desktopLayoutVersion==2 then restorePosition(panel,settings.panel) end
+    restorePosition(panel,settings.panel)
     restorePosition(open,settings.icon)
     D.publicGuiPercent=function(value,factor)
         local n=tonumber(value) or (tonumber(factor) or 1)*100
@@ -533,13 +533,12 @@ local function createFinder(D)
     local function fitFinder()
         local view=D.gui.AbsoluteSize
         if view.X<=0 or view.Y<=0 then return end
-        local baseWidth,baseHeight=1500,850
-        local scale=math.min(1.08*sizeFactor,view.X*0.90/baseWidth,view.Y*0.88/baseHeight)
-        scale=math.max(0.42,scale)
+        local landscape=view.X>view.Y
+        local width=math.min(321.6*sizeFactor,view.X*(landscape and 0.40 or 0.92),view.X-16)
+        local height=math.min(592*sizeFactor,view.Y*0.90)
+        local scale=math.min(0.8*sizeFactor,width/402,height/680)
         responsiveScale.Scale=scale
-        panel.AnchorPoint=Vector2.new(0.5,0.5)
-        panel.Position=UDim2.fromScale(0.5,0.5)
-        panel.Size=UDim2.fromOffset(baseWidth,baseHeight)
+        panel.Size=UDim2.fromOffset(402,height/scale)
         launcherScale.Scale=math.min(0.8,math.max(0.5,math.min(view.X,view.Y)/650))
         local function keepVisible(target,caption)
             local size=target.AbsoluteSize
@@ -564,10 +563,10 @@ local function createFinder(D)
         if type(writefile)~='function' then return end
         pcall(function()
             local function coords(p) return {p.X.Scale,p.X.Offset,p.Y.Scale,p.Y.Offset} end
-            writefile(settingsPath,Http:JSONEncode({desktopLayoutVersion=2,myServer=othersOnly,minRank=minRank,rarityMenu='mythic-up-v1',serversMinValue=serversMinValue,autoJoinMinValue=autoJoinMinValue,autoExecute=autoExecuteEnabled,autoSteal=autoStealEnabled,sizeFactor=sizeFactor,sizePercent=sizePercent,panel=coords(panel.Position),icon=coords(open.Position)}))
+            writefile(settingsPath,Http:JSONEncode({myServer=othersOnly,minRank=minRank,rarityMenu='mythic-up-v1',serversMinValue=serversMinValue,autoJoinMinValue=autoJoinMinValue,autoExecute=autoExecuteEnabled,autoSteal=autoStealEnabled,sizeFactor=sizeFactor,sizePercent=sizePercent,panel=coords(panel.Position),icon=coords(open.Position)}))
         end)
     end
-    local settingsButton=D.make('TextButton',{Name='SettingsButton',Text='SETTINGS',Position=UDim2.new(0,0,0,7),Size=UDim2.fromOffset(92,34),BackgroundColor3=Color3.fromRGB(42,44,52),BackgroundTransparency=0,TextColor3=Color3.fromRGB(255,255,255),TextSize=12,Font=Enum.Font.GothamBold,BorderSizePixel=0,ZIndex=20},panel)
+    local settingsButton=D.make('TextButton',{Name='SettingsButton',Text='SETTINGS',Position=UDim2.new(0,8,0,7),Size=UDim2.fromOffset(80,30),BackgroundColor3=Color3.fromRGB(42,44,52),BackgroundTransparency=0,TextColor3=Color3.fromRGB(255,255,255),TextSize=12,Font=Enum.Font.GothamBold,BorderSizePixel=0,ZIndex=20},panel)
     D.make('UICorner',{CornerRadius=UDim.new(0,5)},settingsButton)
     local settingsOverlay=D.make('Frame',{Name='SettingsOverlay',Position=UDim2.fromScale(0,0),Size=UDim2.fromScale(1,1),BackgroundColor3=Color3.fromRGB(18,20,26),BackgroundTransparency=0.04,BorderSizePixel=0,Visible=false,ZIndex=30},panel)
     D.make('UICorner',{CornerRadius=UDim.new(0,5)},settingsOverlay)
@@ -711,12 +710,14 @@ local function createFinder(D)
         end
     end)
     D.gui.Destroying:Connect(function() moveConnection:Disconnect();endConnection:Disconnect();drag=nil end)
-    local status=D.label(panel,'Connecting…',UDim2.fromOffset(14,52),UDim2.new(1,-28,0,48),Color3.fromRGB(210,218,240),14)
+    local status=D.label(panel,'Connecting…',UDim2.fromOffset(10,82),UDim2.new(1,-20,0,18),Color3.fromRGB(210,218,240),11)
     status.Visible=true
     status.TextWrapped=true
+    status.TextScaled=false
+    status.TextXAlignment=Enum.TextXAlignment.Center
     local discordSubtitle=D.label(panel,DISCORD,UDim2.fromOffset(10,27),UDim2.fromOffset(205,14),Color3.new(1,1,1),11)
     discordSubtitle.TextSize=11
-    discordSubtitle.TextScaled=true;discordSubtitle.TextWrapped=false;discordSubtitle.Visible=true
+    discordSubtitle.TextScaled=true;discordSubtitle.TextWrapped=false;discordSubtitle.Visible=false
     D.make('UITextSizeConstraint',{MinTextSize=1,MaxTextSize=11},discordSubtitle)
     local page={Text=''}
     local scope=D.make('TextButton',{Name='AllServers',Text='ALL SERVERS',Position=UDim2.new(0,10,1,-176),Size=UDim2.new(0.5,-15,0,34),BackgroundColor3=Color3.fromRGB(67,70,80),TextColor3=Color3.new(1,1,1),TextSize=14},panel)
@@ -756,31 +757,32 @@ local function createFinder(D)
         rarity.Text=rarityButtonText()
         queryEpoch+=1;feed={};pageOffset=0;feedAt=-math.huge;saveSettings()
     end)
-    local refreshButton=D.make('TextButton',{Text='REFRESH',Position=UDim2.fromOffset(10,54),Size=UDim2.new(1,-20,0,30),BackgroundColor3=Color3.fromRGB(115,215,45),BackgroundTransparency=0.15,TextColor3=Color3.new(1,1,1),TextSize=14},panel)
-    local resetTimer=D.label(refreshButton,'RESET --:--',UDim2.fromOffset(8,0),UDim2.new(0.28,-8,1,0),Color3.fromRGB(230,245,255),13)
+    local refreshButton=D.make('TextButton',{Text='REFRESH',Position=UDim2.fromOffset(10,48),Size=UDim2.new(1,-20,0,30),BackgroundColor3=Color3.fromRGB(115,215,45),BackgroundTransparency=0.15,TextColor3=Color3.new(1,1,1),TextSize=14},panel)
+    local resetTimer=D.label(refreshButton,'RESET --:--',UDim2.fromOffset(8,0),UDim2.new(0.32,-8,1,0),Color3.fromRGB(230,245,255),12)
     resetTimer.TextXAlignment=Enum.TextXAlignment.Left
     resetTimer.TextTruncate=Enum.TextTruncate.AtEnd
     resetTimer.Active=false
     local refreshing=false
-    local list=D.make('ScrollingFrame',{Position=UDim2.fromOffset(14,92),Size=UDim2.new(1,-16,1,-278),BackgroundTransparency=1,BorderSizePixel=0,AutomaticCanvasSize=Enum.AutomaticSize.None,CanvasSize=UDim2.new(),ScrollBarThickness=6,ScrollBarImageColor3=Color3.fromRGB(150,132,190),ScrollBarImageTransparency=0.1},panel)
+    local list=D.make('ScrollingFrame',{Position=UDim2.fromOffset(10,102),Size=UDim2.new(1,-20,1,-284),BackgroundTransparency=1,BorderSizePixel=0,AutomaticCanvasSize=Enum.AutomaticSize.None,CanvasSize=UDim2.new(),ScrollBarThickness=6,ScrollBarImageColor3=Color3.fromRGB(56,205,255),ScrollBarImageTransparency=0.1},panel)
     
     --========================================================================--
-    --  [3] MARVIN DESKTOP THEME 2.0 (visual-only)
-    --  Wide midnight dashboard, animated energy sweep, moving nebulae and
-    --  restrained neon accents. No gameplay callbacks or data flow are changed.
+    --  [3] MARVIN GLASS PREMIUM ANIMATED THEME
+    --  Sleek, compact glassmorphism panel (~402px) with continuous rotating
+    --  neon gradient border, breathing nebulae, twinkling starfield, animated
+    --  wordmark shimmer, tactile button physics, and responsive entrance pop.
     --========================================================================--
     local Theme = {
-        bg        = Color3.fromRGB(5, 10, 22),
-        bgDeep    = Color3.fromRGB(4, 8, 18),
-        glass     = Color3.fromRGB(13, 24, 42),
-        glassHigh = Color3.fromRGB(20, 38, 61),
-        accent    = Color3.fromRGB(53, 216, 255),
-        accentHot = Color3.fromRGB(159, 93, 255),
-        cyan      = Color3.fromRGB(92, 231, 255),
-        text      = Color3.fromRGB(239, 247, 255),
-        muted     = Color3.fromRGB(143, 166, 195),
-        green     = Color3.fromRGB(65, 238, 167),
-        tabActive = Color3.fromRGB(24, 93, 131),
+        bg        = Color3.fromRGB(12, 9, 24),     -- panel base obsidian purple
+        bgDeep    = Color3.fromRGB(7, 5, 16),      -- title bar
+        glass     = Color3.fromRGB(24, 18, 44),    -- resting control surface
+        glassHigh = Color3.fromRGB(38, 28, 68),    -- raised / input surface
+        accent    = Color3.fromRGB(147, 92, 255),  -- signature neon purple
+        accentHot = Color3.fromRGB(213, 96, 255),  -- bright hot magenta/purple
+        cyan      = Color3.fromRGB(56, 205, 255),  -- electric cyan
+        text      = Color3.fromRGB(245, 240, 255),
+        muted     = Color3.fromRGB(176, 162, 210),
+        green     = Color3.fromRGB(52, 235, 150),
+        tabActive = Color3.fromRGB(96, 58, 170),
     }
     D.theme = Theme
     local starTweens = {}
@@ -790,73 +792,75 @@ local function createFinder(D)
     panel.BackgroundTransparency = 0
     panel.ClipsDescendants = true
     local glassCorner = panel:FindFirstChildOfClass('UICorner')
-    if glassCorner then glassCorner.CornerRadius = UDim.new(0, 20) end
+    if glassCorner then glassCorner.CornerRadius = UDim.new(0, 16) end
 
     local panelGradient = D.make('UIGradient', {
         Rotation = 24,
         Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, Color3.fromRGB(5, 11, 25)),
-            ColorSequenceKeypoint.new(0.48, Color3.fromRGB(11, 18, 39)),
-            ColorSequenceKeypoint.new(1, Color3.fromRGB(17, 10, 36)),
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(12, 8, 26)),
+            ColorSequenceKeypoint.new(0.50, Color3.fromRGB(18, 12, 38)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(10, 6, 22)),
         }),
     }, panel)
     local panelMotion = TweenService:Create(panelGradient,
-        TweenInfo.new(26, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+        TweenInfo.new(24, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
         {Rotation = 204})
     panelMotion:Play()
     table.insert(starTweens, panelMotion)
 
     local glassStroke = panel:FindFirstChildOfClass('UIStroke')
-    if glassStroke then
-        glassStroke.Color = Theme.accent
-        glassStroke.Thickness = 2
-        glassStroke.Transparency = 0.08
-        glassStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-        local borderGradient = D.make('UIGradient', {
-            Rotation = 0,
-            Color = ColorSequence.new({
-                ColorSequenceKeypoint.new(0, Theme.accent),
-                ColorSequenceKeypoint.new(0.48, Theme.accentHot),
-                ColorSequenceKeypoint.new(1, Theme.cyan),
-            }),
-        }, glassStroke)
-        local borderMotion = TweenService:Create(borderGradient,
-            TweenInfo.new(12, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1),
-            {Rotation = 360})
-        borderMotion:Play()
-        table.insert(starTweens, borderMotion)
+    if not glassStroke then
+        glassStroke = Instance.new('UIStroke')
+        glassStroke.Parent = panel
     end
+    glassStroke.Thickness = 2
+    glassStroke.Transparency = 0.08
+    glassStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    local borderGradient = D.make('UIGradient', {
+        Rotation = 0,
+        Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Theme.accent),
+            ColorSequenceKeypoint.new(0.33, Theme.accentHot),
+            ColorSequenceKeypoint.new(0.66, Theme.cyan),
+            ColorSequenceKeypoint.new(1, Theme.accent),
+        }),
+    }, glassStroke)
+    local borderMotion = TweenService:Create(borderGradient,
+        TweenInfo.new(10, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1),
+        {Rotation = 360})
+    borderMotion:Play()
+    table.insert(starTweens, borderMotion)
 
     local edgeGlow = D.make('Frame', {
-        Name = 'DesktopOuterGlow', BackgroundTransparency = 1, BorderSizePixel = 0,
-        Position = UDim2.fromOffset(2, 2), Size = UDim2.new(1, -4, 1, -4),
+        Name = 'MarvinOuterGlow', BackgroundTransparency = 1, BorderSizePixel = 0,
+        Position = UDim2.fromOffset(1, 1), Size = UDim2.new(1, -2, 1, -2),
         Active = false, ZIndex = 1,
     }, panel)
-    D.make('UICorner', {CornerRadius = UDim.new(0, 18)}, edgeGlow)
+    D.make('UICorner', {CornerRadius = UDim.new(0, 15)}, edgeGlow)
     D.make('UIStroke', {
-        Color = Theme.accent, Thickness = 2, Transparency = 0.72,
+        Color = Theme.accent, Thickness = 1.5, Transparency = 0.75,
         ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
     }, edgeGlow)
 
     if bar then
-        bar.Size = UDim2.new(1, -2, 0, 88)
+        bar.Size = UDim2.new(1, -2, 0, 44)
         bar.BackgroundColor3 = Theme.bgDeep
         bar.BackgroundTransparency = 0.02
         local barCorner = bar:FindFirstChildOfClass('UICorner')
-        if barCorner then barCorner.CornerRadius = UDim.new(0, 18) end
+        if barCorner then barCorner.CornerRadius = UDim.new(0, 14) end
         D.make('UIGradient', {
             Rotation = 0,
             Color = ColorSequence.new({
-                ColorSequenceKeypoint.new(0, Color3.fromRGB(6, 17, 34)),
-                ColorSequenceKeypoint.new(0.55, Color3.fromRGB(17, 22, 49)),
-                ColorSequenceKeypoint.new(1, Color3.fromRGB(28, 13, 48)),
+                ColorSequenceKeypoint.new(0, Color3.fromRGB(8, 5, 18)),
+                ColorSequenceKeypoint.new(0.55, Color3.fromRGB(18, 12, 36)),
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(26, 11, 44)),
             }),
         }, bar)
     end
 
     local headerAccent = D.make('Frame', {
-        Name = 'DesktopHeaderAccent', BorderSizePixel = 0, Active = false,
-        Position = UDim2.new(0, 18, 0, 86), Size = UDim2.new(1, -36, 0, 2),
+        Name = 'MarvinHeaderAccent', BorderSizePixel = 0, Active = false,
+        Position = UDim2.new(0, 10, 0, 44), Size = UDim2.new(1, -20, 0, 1.5),
         BackgroundColor3 = Theme.accent, ZIndex = 4,
     }, panel)
     D.make('UIGradient', {
@@ -867,150 +871,79 @@ local function createFinder(D)
         }),
     }, headerAccent)
 
-    if heading then
+    if heading and heading:IsA('TextLabel') then
+        heading.Font = Enum.Font.GothamBlack
+        heading.TextSize = 22
         heading.TextColor3 = Theme.text
         heading.TextStrokeColor3 = Theme.accent
-        heading.TextStrokeTransparency = 0.55
+        heading.TextStrokeTransparency = 0.6
+        local wordmarkGradient = D.make('UIGradient', {
+            Rotation = 0,
+            Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, Theme.text),
+                ColorSequenceKeypoint.new(0.40, Theme.accentHot),
+                ColorSequenceKeypoint.new(0.70, Theme.cyan),
+                ColorSequenceKeypoint.new(1, Theme.text),
+            }),
+        }, heading)
+        local wordmarkMotion = TweenService:Create(wordmarkGradient,
+            TweenInfo.new(5.0, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1),
+            {Rotation = 360})
+        wordmarkMotion:Play()
+        table.insert(starTweens, wordmarkMotion)
     end
+
     if status then
         status.TextColor3 = Theme.cyan
         status.TextStrokeTransparency = 1
+        status.Font = Enum.Font.GothamMedium
+        status.TextSize = 11
+        status.TextXAlignment = Enum.TextXAlignment.Center
     end
 
     local starfield = D.make('Frame', {
-        Name = 'MARVIN_DesktopAmbient', BackgroundTransparency = 1, BorderSizePixel = 0,
+        Name = 'MARVIN_AmbientField', BackgroundTransparency = 1, BorderSizePixel = 0,
         Size = UDim2.fromScale(1, 1), Position = UDim2.fromScale(0, 0),
         Active = false, ZIndex = 2,
     }, panel)
     local starRandom = Random.new(7319)
 
-    for i = 1, 38 do
+    for i = 1, 32 do
         local dot = D.make('Frame', {
-            Name = 'DesktopStar' .. i, BorderSizePixel = 0, Active = false, ZIndex = 2,
-            Position = UDim2.fromScale(starRandom:NextNumber(0.02, 0.98), starRandom:NextNumber(0.12, 0.98)),
-            BackgroundColor3 = (i % 5 == 0) and Theme.cyan or (i % 3 == 0) and Theme.accentHot or Color3.fromRGB(210, 232, 255),
+            Name = 'MarvinStar' .. i, BorderSizePixel = 0, Active = false, ZIndex = 2,
+            Position = UDim2.fromScale(starRandom:NextNumber(0.02, 0.98), starRandom:NextNumber(0.08, 0.98)),
+            BackgroundColor3 = (i % 4 == 0) and Theme.cyan or (i % 3 == 0) and Theme.accentHot or Color3.fromRGB(225, 235, 255),
         }, starfield)
-        local dotSize = starRandom:NextInteger(2, 4)
+        local dotSize = starRandom:NextInteger(2, 3)
         dot.Size = UDim2.fromOffset(dotSize, dotSize)
-        dot.BackgroundTransparency = starRandom:NextNumber(0.36, 0.72)
+        dot.BackgroundTransparency = starRandom:NextNumber(0.35, 0.72)
         D.make('UICorner', {CornerRadius = UDim.new(1, 0)}, dot)
         local pulse = TweenService:Create(dot,
-            TweenInfo.new(starRandom:NextNumber(1.8, 4.2), Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
-            {BackgroundTransparency = 0.9, Size = UDim2.fromOffset(dotSize + 2, dotSize + 2)})
+            TweenInfo.new(starRandom:NextNumber(1.8, 3.8), Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+            {BackgroundTransparency = 0.92, Size = UDim2.fromOffset(dotSize + 2, dotSize + 2)})
         pulse:Play()
         table.insert(starTweens, pulse)
     end
 
     for i, spec in ipairs({
-        {210, Theme.accent, 0.965, 0.10, 0.24},
-        {170, Theme.accentHot, 0.968, 0.68, 0.62},
-        {125, Theme.cyan, 0.972, 0.42, 0.78},
+        {190, Theme.accent, 0.955, 0.08, 0.22},
+        {160, Theme.accentHot, 0.962, 0.65, 0.60},
+        {130, Theme.cyan, 0.968, 0.35, 0.76},
     }) do
         local nebula = D.make('Frame', {
-            Name = 'DesktopNebula' .. i, BorderSizePixel = 0, Active = false, ZIndex = 2,
+            Name = 'MarvinNebula' .. i, BorderSizePixel = 0, Active = false, ZIndex = 2,
             Position = UDim2.fromScale(spec[4], spec[5]),
             Size = UDim2.fromOffset(spec[1], spec[1]),
             BackgroundColor3 = spec[2], BackgroundTransparency = spec[3],
         }, starfield)
         D.make('UICorner', {CornerRadius = UDim.new(1, 0)}, nebula)
         local drift = TweenService:Create(nebula,
-            TweenInfo.new(9 + i * 2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
-            {Position = UDim2.fromScale(math.clamp(spec[4] + 0.08, 0.02, 0.82), math.clamp(spec[5] + 0.06, 0.12, 0.82)),
-             BackgroundTransparency = 0.982})
+            TweenInfo.new(8 + i * 2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+            {Position = UDim2.fromScale(math.clamp(spec[4] + 0.06, 0.02, 0.85), math.clamp(spec[5] + 0.05, 0.10, 0.85)),
+             BackgroundTransparency = 0.985})
         drift:Play()
         table.insert(starTweens, drift)
     end
-
-    -- User-supplied portrait panel. Kept in its natural portrait ratio rather
-    -- than cropping it across the entire 16:9 desktop dashboard.
-    local portraitPanel = D.make('Frame', {
-        Name = 'MARVIN_PortraitPanel',
-        Position = UDim2.new(0.70, 0, 0, 100),
-        Size = UDim2.new(0.28, -14, 1, -206),
-        BackgroundColor3 = Color3.fromRGB(5, 12, 25),
-        BackgroundTransparency = 0.02,
-        BorderSizePixel = 0,
-        ClipsDescendants = true,
-        ZIndex = 3,
-    }, panel)
-    D.make('UICorner', {CornerRadius = UDim.new(0, 16)}, portraitPanel)
-    local portraitStroke = D.make('UIStroke', {
-        Color = Theme.cyan, Thickness = 1.5, Transparency = 0.18,
-        ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-    }, portraitPanel)
-
-    local portraitImage = D.make('ImageLabel', {
-        Name = 'UserPortrait',
-        Position = UDim2.fromScale(0, 0),
-        Size = UDim2.fromScale(1, 1),
-        BackgroundTransparency = 1,
-        Image = '',
-        ImageTransparency = 0.08,
-        ScaleType = Enum.ScaleType.Fit,
-        ZIndex = 3,
-    }, portraitPanel)
-
-    local portraitTint = D.make('Frame', {
-        Name = 'PortraitGlassTint',
-        Position = UDim2.fromScale(0, 0),
-        Size = UDim2.fromScale(1, 1),
-        BackgroundColor3 = Color3.fromRGB(4, 12, 28),
-        BackgroundTransparency = 0.60,
-        BorderSizePixel = 0,
-        ZIndex = 4,
-    }, portraitPanel)
-    D.make('UICorner', {CornerRadius = UDim.new(0, 16)}, portraitTint)
-    D.make('UIGradient', {
-        Rotation = 90,
-        Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, Color3.fromRGB(4, 9, 20)),
-            ColorSequenceKeypoint.new(0.48, Color3.fromRGB(5, 22, 42)),
-            ColorSequenceKeypoint.new(1, Color3.fromRGB(4, 8, 18)),
-        }),
-        Transparency = NumberSequence.new({
-            NumberSequenceKeypoint.new(0, 0.24),
-            NumberSequenceKeypoint.new(0.50, 0.62),
-            NumberSequenceKeypoint.new(1, 0.18),
-        }),
-    }, portraitTint)
-
-    task.spawn(function()
-        local customAsset = getcustomasset or getsynasset
-        if type(customAsset) ~= 'function' or type(writefile) ~= 'function' then
-            warn('[MARVIN] Portrait needs getcustomasset/getsynasset and writefile support.')
-            return
-        end
-        local ok, assetOrError = pcall(function()
-            local bytes = game:HttpGet('https://raw.githubusercontent.com/farsazzat1113/marvin/Marvin/assets/marvin_photo_background.jpg')
-            assert(type(bytes) == 'string' and #bytes > 1000, 'Portrait download was empty')
-            writefile('marvin_desktop_photo_v1.jpg', bytes)
-            return customAsset('marvin_desktop_photo_v1.jpg')
-        end)
-        if ok and type(assetOrError) == 'string' and portraitImage.Parent then
-            portraitImage.Image = assetOrError
-        else
-            warn('[MARVIN] Could not load portrait: '..tostring(assetOrError))
-        end
-    end)
-
-    local energySweep = D.make('Frame', {
-        Name = 'DesktopEnergySweep', BorderSizePixel = 0, Active = false,
-        Position = UDim2.new(0, 0, 0.12, 0), Size = UDim2.new(1, 0, 0, 2),
-        BackgroundColor3 = Theme.cyan, BackgroundTransparency = 0.55, ZIndex = 2,
-    }, starfield)
-    D.make('UIGradient', {
-        Transparency = NumberSequence.new({
-            NumberSequenceKeypoint.new(0, 1),
-            NumberSequenceKeypoint.new(0.18, 0.35),
-            NumberSequenceKeypoint.new(0.82, 0.35),
-            NumberSequenceKeypoint.new(1, 1),
-        }),
-    }, energySweep)
-    local sweepMotion = TweenService:Create(energySweep,
-        TweenInfo.new(8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
-        {Position = UDim2.new(0, 0, 0.94, 0)})
-    sweepMotion:Play()
-    table.insert(starTweens, sweepMotion)
 
     local function liftAboveBackdrop(obj)
         if obj:IsA('GuiObject') and obj ~= starfield and obj ~= edgeGlow
@@ -1043,19 +976,19 @@ local function createFinder(D)
                 stroke.Parent = obj
             end
             stroke.Color = Theme.accent
-            stroke.Transparency = 0.34
+            stroke.Transparency = 0.35
             stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
             local corner = obj:FindFirstChildOfClass('UICorner')
             if not corner then
                 corner = Instance.new('UICorner')
                 corner.Parent = obj
             end
-            corner.CornerRadius = UDim.new(0, 10)
+            corner.CornerRadius = UDim.new(0, 8)
             if obj == refreshButton then
-                obj.BackgroundColor3 = Color3.fromRGB(33, 114, 160)
+                obj.BackgroundColor3 = Theme.tabActive
                 stroke.Color = Theme.cyan
-                stroke.Transparency = 0.08
-                stroke.Thickness = 1.6
+                stroke.Transparency = 0.12
+                stroke.Thickness = 1.4
             elseif obj == settingsButton then
                 obj.BackgroundColor3 = Theme.glassHigh
             elseif obj == scope or obj == myScope then
@@ -1080,16 +1013,16 @@ local function createFinder(D)
             if obj.Name == 'ValueOfServers' or obj.Name == 'MinAutoJoinValue' then
                 obj.BackgroundColor3 = Theme.glass
                 local corner = obj:FindFirstChildOfClass('UICorner')
-                if corner then corner.CornerRadius = UDim.new(0, 10) end
+                if corner then corner.CornerRadius = UDim.new(0, 8) end
                 D.make('UIStroke', {
                     Color = Theme.accent, Thickness = 1, Transparency = 0.52,
                     ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
                 }, obj)
             elseif obj.Name == 'SettingsOverlay' then
                 obj.BackgroundColor3 = Theme.bg
-                obj.BackgroundTransparency = 0.01
+                obj.BackgroundTransparency = 0.02
                 local corner = obj:FindFirstChildOfClass('UICorner')
-                if corner then corner.CornerRadius = UDim.new(0, 18) end
+                if corner then corner.CornerRadius = UDim.new(0, 16) end
                 D.make('UIStroke', {
                     Color = Theme.accent, Thickness = 2, Transparency = 0.18,
                     ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
@@ -1111,6 +1044,71 @@ local function createFinder(D)
         end
     end)
 
+    -- Tactile button hover and click spring feedback
+    local function addButtonFeedback(button)
+        if not button:IsA('TextButton') or button:GetAttribute('MarvinFeedbackReady') then return end
+        button:SetAttribute('MarvinFeedbackReady', true)
+        local scale = button:FindFirstChildOfClass('UIScale')
+        if not scale then
+            scale = Instance.new('UIScale')
+            scale.Scale = 1
+            scale.Parent = button
+        end
+        local hoverTween
+        local function animateScale(value, duration, style)
+            if hoverTween then hoverTween:Cancel() end
+            hoverTween = TweenService:Create(scale,
+                TweenInfo.new(duration, style or Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                {Scale = value})
+            hoverTween:Play()
+        end
+        button.MouseEnter:Connect(function()
+            animateScale(1.035, 0.14)
+        end)
+        button.MouseLeave:Connect(function()
+            animateScale(1, 0.18)
+        end)
+        button.Activated:Connect(function()
+            animateScale(0.965, 0.07, Enum.EasingStyle.Quad)
+            task.delay(0.08, function()
+                if button.Parent then animateScale(1, 0.22, Enum.EasingStyle.Back) end
+            end)
+        end)
+        table.insert(starTweens, {
+            Cancel = function()
+                if hoverTween then hoverTween:Cancel() end
+            end
+        })
+    end
+    for _, obj in ipairs(panel:GetDescendants()) do addButtonFeedback(obj) end
+    panel.DescendantAdded:Connect(function(obj)
+        task.defer(function()
+            if obj.Parent then addButtonFeedback(obj) end
+        end)
+    end)
+
+    if refreshButton then
+        refreshButton.Font = Enum.Font.GothamBlack
+        refreshButton.TextSize = 13
+        refreshButton.BackgroundTransparency = 0
+        local refreshGradient = refreshButton:FindFirstChildOfClass('UIGradient')
+        if not refreshGradient then
+            refreshGradient = D.make('UIGradient', {
+                Rotation = 0,
+                Color = ColorSequence.new({
+                    ColorSequenceKeypoint.new(0, Theme.accent),
+                    ColorSequenceKeypoint.new(0.5, Theme.accentHot),
+                    ColorSequenceKeypoint.new(1, Theme.cyan),
+                }),
+            }, refreshButton)
+        end
+        local refreshMotion = TweenService:Create(refreshGradient,
+            TweenInfo.new(4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+            {Rotation = 20})
+        refreshMotion:Play()
+        table.insert(starTweens, refreshMotion)
+    end
+
     local function refreshGlassScope()
         if scope then scope.BackgroundColor3 = othersOnly and Theme.glass or Theme.tabActive end
         if myScope then myScope.BackgroundColor3 = othersOnly and Theme.tabActive or Theme.glass end
@@ -1120,10 +1118,58 @@ local function createFinder(D)
     refreshGlassScope()
 
     if open then
-        D.make('UIStroke', {
-            Color = Theme.cyan, Thickness = 2.5, Transparency = 0.08,
-            ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+        open.Size = UDim2.fromOffset(52, 52)
+        local openCorner = open:FindFirstChildOfClass('UICorner')
+        if openCorner then openCorner.CornerRadius = UDim.new(1, 0) end
+        open.BackgroundColor3 = Theme.bgDeep
+        local openStroke = open:FindFirstChildOfClass('UIStroke')
+        if not openStroke then
+            openStroke = Instance.new('UIStroke')
+            openStroke.Parent = open
+        end
+        openStroke.Color = Theme.accent
+        openStroke.Thickness = 2.5
+        openStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+        local openGrad = D.make('UIGradient', {
+            Rotation = 0,
+            Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, Theme.cyan),
+                ColorSequenceKeypoint.new(0.5, Theme.accentHot),
+                ColorSequenceKeypoint.new(1, Theme.accent),
+            }),
+        }, openStroke)
+        local openMotion = TweenService:Create(openGrad,
+            TweenInfo.new(6, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1),
+            {Rotation = 360})
+        openMotion:Play()
+        table.insert(starTweens, openMotion)
+
+        local halo = D.make('Frame', {
+            Name = 'LauncherHalo',
+            Position = UDim2.fromScale(0.5, 0.5),
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            Size = UDim2.fromScale(1, 1),
+            BackgroundTransparency = 1,
+            BorderSizePixel = 0,
+            ZIndex = 1,
         }, open)
+        D.make('UICorner', {CornerRadius = UDim.new(1, 0)}, halo)
+        local haloStroke = D.make('UIStroke', {
+            Color = Theme.cyan,
+            Thickness = 2,
+            Transparency = 0.5,
+            ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+        }, halo)
+        local haloPulse = TweenService:Create(halo,
+            TweenInfo.new(1.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+            {Size = UDim2.fromScale(1.3, 1.3)})
+        local haloFade = TweenService:Create(haloStroke,
+            TweenInfo.new(1.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+            {Transparency = 0.95})
+        haloPulse:Play()
+        haloFade:Play()
+        table.insert(starTweens, haloPulse)
+        table.insert(starTweens, haloFade)
     end
 
     local popTween
@@ -1131,16 +1177,20 @@ local function createFinder(D)
         if not panel.Visible then return end
         local target = responsiveScale.Scale
         if type(target) ~= 'number' or target <= 0 then return end
-        responsiveScale.Scale = target * 0.965
+        responsiveScale.Scale = target * 0.92
         if popTween then popTween:Cancel() end
         popTween = TweenService:Create(responsiveScale,
-            TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+            TweenInfo.new(0.28, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
             {Scale = target})
         popTween:Play()
     end)
 
     gui.Destroying:Connect(function()
-        for _, tween in ipairs(starTweens) do pcall(function() tween:Cancel() end) end
+        for _, tween in ipairs(starTweens) do
+            if type(tween) == 'table' and type(tween.Cancel) == 'function' then
+                pcall(function() tween:Cancel() end)
+            end
+        end
         if popTween then pcall(function() popTween:Cancel() end) end
     end)
     D.make('UIListLayout',{Padding=UDim.new(0,4),SortOrder=Enum.SortOrder.LayoutOrder},list)
@@ -1183,7 +1233,7 @@ local function createFinder(D)
         return decoded
     end
     -- Roblox public-server directory, independent of the Finder report feed.
-    status.Size=UDim2.new(0.53,-14,0,24)
+    status.Size=UDim2.new(1,-20,0,18);status.Position=UDim2.fromOffset(10,82);status.TextSize=11
     status.TextSize=11
     -- Independent minimum income shown in ALL SERVERS; Auto Join keeps its own threshold.
     local serversValueFrame=D.make('Frame',{Name='ValueOfServers',Position=UDim2.new(0,10,1,-136),Size=UDim2.new(1,-20,0,34),BackgroundColor3=Color3.fromRGB(67,70,80),BorderSizePixel=0},panel)
@@ -1909,32 +1959,11 @@ local function createFinder(D)
     -- Header title and subtitle styling.
     heading.Text='MARVIN'
     heading.AnchorPoint=Vector2.new(0.5,0)
-    heading.Position=UDim2.new(0.5,-10,0,2);heading.Size=UDim2.new(1,-112,0,24)
+    heading.Position=UDim2.new(0.5,0,0,8);heading.Size=UDim2.fromOffset(130,28)
     heading.TextXAlignment=Enum.TextXAlignment.Center
-    heading.Font=Enum.Font.Arcade;heading.TextTransparency=0
-    discordSubtitle.AnchorPoint=Vector2.new(0,0)
-    discordSubtitle.Position=UDim2.fromOffset(100,27);discordSubtitle.Size=UDim2.new(1,-112,0,14)
-    discordSubtitle.TextXAlignment=Enum.TextXAlignment.Left
-    do
-        local service=game:GetService('TextService')
-        heading.Font=discordSubtitle.Font
-        local available=(panel.Size.X.Offset>0 and panel.Size.X.Offset or 402)-100
-        local fontSize=22
-        local textWidth
-        repeat
-            textWidth=math.ceil(service:GetTextSize(heading.Text,fontSize,discordSubtitle.Font,Vector2.new(1000,1000)).X)+4
-            if textWidth<=available or fontSize<=14 then break end
-            fontSize-=1
-        until false
-        heading.AnchorPoint=Vector2.new(0.5,0);heading.Position=UDim2.new(0.5,0,0,1);heading.Size=UDim2.fromOffset(textWidth,26)
-        heading.TextSize=fontSize;heading.TextScaled=false;heading.TextXAlignment=Enum.TextXAlignment.Center;heading.TextStrokeTransparency=1
-        local limit=heading:FindFirstChildOfClass('UITextSizeConstraint');if limit then limit.MaxTextSize=22 end
-        D.make('UIStroke',{Color=Color3.new(0,0,0),Thickness=1.4},heading)
-        discordSubtitle.TextSize=14;discordSubtitle.TextScaled=true;discordSubtitle.Size=UDim2.new(1,-112,0,16)
-        discordSubtitle.AnchorPoint=Vector2.new(0,0);discordSubtitle.Position=UDim2.fromOffset(100,27);discordSubtitle.TextXAlignment=Enum.TextXAlignment.Left;discordSubtitle.TextStrokeTransparency=1
-        local discordLimit=discordSubtitle:FindFirstChildOfClass('UITextSizeConstraint');if discordLimit then discordLimit.MaxTextSize=14 end
-        D.make('UIStroke',{Color=Color3.new(0,0,0),Thickness=1.3},discordSubtitle)
-    end
+    heading.Font=Enum.Font.GothamBlack;heading.TextTransparency=0
+    heading.TextSize=22;heading.TextScaled=false;heading.TextStrokeTransparency=1
+    discordSubtitle.Visible=false
     refreshButton.Font=Enum.Font.FredokaOne
     local refreshCaption=refreshButton:FindFirstChild('RaisedCaption')
     if refreshCaption then
@@ -2143,9 +2172,8 @@ local function createFinder(D)
         return result
     end
     local function fitFinanceText(card)
-        local listWidth=list.AbsoluteSize.X>0 and list.AbsoluteSize.X or panel.Size.X.Offset*0.68
-        local rowWidth=listWidth-28
-        local width=rowWidth-220
+        local rowWidth=panel.Size.X.Offset-28
+        local width=rowWidth-184
         local service=game:GetService('TextService')
         local weightSize=type(card.entry.weight)=='number' and 16 or 19
         local weightAvailable=width*0.46-10
@@ -2566,8 +2594,7 @@ local function createFinder(D)
             end
 
             local names=mutationNames(entry)
-            local listWidth=list.AbsoluteSize.X>0 and list.AbsoluteSize.X or panel.Size.X.Offset*0.68
-            local available=math.max(100,listWidth-130)
+            local available=math.max(100,panel.Size.X.Offset-130)
             local widths,total={},0
             for i,name in ipairs(names) do widths[i]=mutationWidth(name,textService,available);total+=widths[i]+5 end
             local strip=D.make('Frame',{Name='MutationStrip',Position=UDim2.new(0,110,1,-29),Size=UDim2.new(1,-218,0,28),BackgroundTransparency=1,ClipsDescendants=true},row)
@@ -2826,45 +2853,7 @@ local function createFinder(D)
         paint()
     end
 
-    local function applyDesktopLayout()
-        settingsButton.Position=UDim2.fromOffset(16,18)
-        settingsButton.Size=UDim2.fromOffset(112,42)
-        status.Position=UDim2.fromOffset(18,52)
-        status.Size=UDim2.new(1,-250,0,28)
-        status.TextSize=14
-        status.TextXAlignment=Enum.TextXAlignment.Left
-        refreshButton.Position=UDim2.new(1,-218,0,48)
-        refreshButton.Size=UDim2.fromOffset(200,38)
-        refreshButton.TextSize=16
-
-        scope.Position=UDim2.new(0,14,1,-84)
-        scope.Size=UDim2.fromOffset(260,54)
-        myScope.Position=UDim2.new(0,284,1,-84)
-        myScope.Size=UDim2.fromOffset(260,54)
-        serversValueFrame.Position=UDim2.new(0,554,1,-84)
-        serversValueFrame.Size=UDim2.fromOffset(270,54)
-        serversValueInput.Position=UDim2.new(0.64,0,0,4)
-        serversValueInput.Size=UDim2.new(0.36,-8,1,-8)
-        serversValueLabel.TextSize=12
-        minValueFrame.Position=UDim2.new(0,834,1,-84)
-        minValueFrame.Size=UDim2.fromOffset(270,54)
-        minValueInput.Position=UDim2.new(0.64,0,0,4)
-        minValueInput.Size=UDim2.new(0.36,-8,1,-8)
-        minValueLabel.TextSize=12
-        autoJoinButton.Position=UDim2.new(0,1114,1,-84)
-        autoJoinButton.Size=UDim2.new(1,-1128,0,54)
-        autoJoinButton.TextSize=16
-
-        -- Keep the left data column clear and reserve the right column for the portrait.
-        list.Position=UDim2.fromOffset(14,100)
-        list.Size=UDim2.new(0.68,-24,1,-206)
-        list.ScrollBarThickness=8
-        list.ScrollBarImageColor3=Theme.cyan
-        list.BackgroundTransparency=1
-    end
-
     fitFinder()
-    applyDesktopLayout()
     panel.Visible=true
     local failed=Teleports.TeleportInitFailed:Connect(function(who,_,message)
         if who==D.player then
