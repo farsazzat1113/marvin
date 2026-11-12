@@ -1616,10 +1616,30 @@ local function createFinder(D)
         local reached,moveReason=walkToPoint(claimPoint,math.max(5,math.min(petArea.Size.X,petArea.Size.Z)*0.12),120)
         if not reached then return false,'could not enter your PetArea: '..tostring(moveReason) end
 
+        local function carryWasCleared()
+            if type(stealEggState.ReadCarryState)=='function' then
+                local stateOk,state=pcall(stealEggState.ReadCarryState)
+                if stateOk and type(state)=='table' then
+                    return state.IsCarrying~=true
+                end
+            end
+            if type(stealEggState.ReadFieldEggs)=='function' then
+                local stateOk,snapshot=pcall(stealEggState.ReadFieldEggs)
+                if stateOk and type(snapshot)=='table' and type(snapshot.Records)=='table' then
+                    for key,record in pairs(snapshot.Records) do
+                        if tostring(record.Uid or key)==uid and stealAreaStates and record.State==stealAreaStates.Slot then
+                            return true
+                        end
+                    end
+                end
+            end
+            return false
+        end
+
         local claimDeadline=os.clock()+12
         local claimed=false
         repeat
-            if readCarriedUid(uid)~=uid then claimed=true;break end
+            if carryWasCleared() then claimed=true;break end
             task.wait(0.25)
         until not alive or os.clock()>=claimDeadline
         if not claimed then return false,'PetArea did not confirm the egg claim' end
@@ -1709,14 +1729,17 @@ local function createFinder(D)
                 -- Auto Steal works on local field eggs by itself; Auto Join is
                 -- no longer a prerequisite for selecting a target.
                 if not target then
-                    local bestRate=autoJoinMinValue
+                    -- Auto Steal chooses the best currently available local egg.
+                    -- Auto Join's value/rank filters are separate settings and do
+                    -- not block Auto Steal from finding a valid target.
+                    local bestRate=0
                     for _,egg in ipairs(D.entries()) do
                         local rate=tonumber(egg.rate) or 0
-                        local rank=tonumber(egg.tier) or 0
                         local uid=tostring(egg.uid or '')
                         local model=egg.model or modelFor(uid)
+                        local hasPosition=typeof(egg.worldPos)=='Vector3'
                         if isAvailableFieldEgg(egg) and uid~='' and uid~=stealDoneFor
-                            and rate>=bestRate and rank>=minRank and model and model.Parent then
+                            and rate>bestRate and ((model and model.Parent) or hasPosition) then
                             target=egg
                             bestRate=rate
                         end
@@ -1730,8 +1753,8 @@ local function createFinder(D)
 
                 local uid=tostring(target.uid)
                 local model=target.model or modelFor(uid)
-                if not (model and model.Parent) then
-                    queryStatus='Auto Steal: target model is not loaded'
+                if not (model and model.Parent) and typeof(target.worldPos)~='Vector3' then
+                    queryStatus='Auto Steal: egg position is not replicated yet'
                     return
                 end
 
@@ -1742,7 +1765,7 @@ local function createFinder(D)
                     return
                 end
 
-                local targetPosition=model:GetPivot().Position
+                local targetPosition=(model and model.Parent and model:GetPivot().Position) or target.worldPos
                 local flat=Vector3.new(root.Position.X-targetPosition.X,0,root.Position.Z-targetPosition.Z)
                 if flat.Magnitude<0.1 then flat=Vector3.new(0,0,1) else flat=flat.Unit end
                 local approach=targetPosition+flat*4.5+Vector3.new(0,2.5,0)
