@@ -921,6 +921,78 @@ local function createFinder(D)
         table.insert(starTweens, drift)
     end
 
+    -- User-supplied portrait panel. Kept in its natural portrait ratio rather
+    -- than cropping it across the entire 16:9 desktop dashboard.
+    local portraitPanel = D.make('Frame', {
+        Name = 'MARVIN_PortraitPanel',
+        Position = UDim2.new(0.70, 0, 0, 100),
+        Size = UDim2.new(0.28, -14, 1, -206),
+        BackgroundColor3 = Color3.fromRGB(5, 12, 25),
+        BackgroundTransparency = 0.02,
+        BorderSizePixel = 0,
+        ClipsDescendants = true,
+        ZIndex = 3,
+    }, panel)
+    D.make('UICorner', {CornerRadius = UDim.new(0, 16)}, portraitPanel)
+    local portraitStroke = D.make('UIStroke', {
+        Color = Theme.cyan, Thickness = 1.5, Transparency = 0.18,
+        ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+    }, portraitPanel)
+
+    local portraitImage = D.make('ImageLabel', {
+        Name = 'UserPortrait',
+        Position = UDim2.fromScale(0, 0),
+        Size = UDim2.fromScale(1, 1),
+        BackgroundTransparency = 1,
+        Image = '',
+        ImageTransparency = 0.08,
+        ScaleType = Enum.ScaleType.Fit,
+        ZIndex = 3,
+    }, portraitPanel)
+
+    local portraitTint = D.make('Frame', {
+        Name = 'PortraitGlassTint',
+        Position = UDim2.fromScale(0, 0),
+        Size = UDim2.fromScale(1, 1),
+        BackgroundColor3 = Color3.fromRGB(4, 12, 28),
+        BackgroundTransparency = 0.60,
+        BorderSizePixel = 0,
+        ZIndex = 4,
+    }, portraitPanel)
+    D.make('UICorner', {CornerRadius = UDim.new(0, 16)}, portraitTint)
+    D.make('UIGradient', {
+        Rotation = 90,
+        Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(4, 9, 20)),
+            ColorSequenceKeypoint.new(0.48, Color3.fromRGB(5, 22, 42)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(4, 8, 18)),
+        }),
+        Transparency = NumberSequence.new({
+            NumberSequenceKeypoint.new(0, 0.24),
+            NumberSequenceKeypoint.new(0.50, 0.62),
+            NumberSequenceKeypoint.new(1, 0.18),
+        }),
+    }, portraitTint)
+
+    task.spawn(function()
+        local customAsset = getcustomasset or getsynasset
+        if type(customAsset) ~= 'function' or type(writefile) ~= 'function' then
+            warn('[MARVIN] Portrait needs getcustomasset/getsynasset and writefile support.')
+            return
+        end
+        local ok, assetOrError = pcall(function()
+            local bytes = game:HttpGet('https://raw.githubusercontent.com/farsazzat1113/marvin/Marvin/assets/marvin_photo_background.jpg')
+            assert(type(bytes) == 'string' and #bytes > 1000, 'Portrait download was empty')
+            writefile('marvin_desktop_photo_v1.jpg', bytes)
+            return customAsset('marvin_desktop_photo_v1.jpg')
+        end)
+        if ok and type(assetOrError) == 'string' and portraitImage.Parent then
+            portraitImage.Image = assetOrError
+        else
+            warn('[MARVIN] Could not load portrait: '..tostring(assetOrError))
+        end
+    end)
+
     local energySweep = D.make('Frame', {
         Name = 'DesktopEnergySweep', BorderSizePixel = 0, Active = false,
         Position = UDim2.new(0, 0, 0.12, 0), Size = UDim2.new(1, 0, 0, 2),
@@ -2430,7 +2502,8 @@ local function createFinder(D)
         return result
     end
     local function fitFinanceText(card)
-        local rowWidth=panel.Size.X.Offset-28
+        local listWidth=list.AbsoluteSize.X>0 and list.AbsoluteSize.X or panel.Size.X.Offset*0.68
+        local rowWidth=listWidth-28
         local width=rowWidth-220
         local service=game:GetService('TextService')
         local weightSize=type(card.entry.weight)=='number' and 16 or 19
@@ -2852,7 +2925,8 @@ local function createFinder(D)
             end
 
             local names=mutationNames(entry)
-            local available=math.max(100,panel.Size.X.Offset-230)
+            local listWidth=list.AbsoluteSize.X>0 and list.AbsoluteSize.X or panel.Size.X.Offset*0.68
+            local available=math.max(100,listWidth-130)
             local widths,total={},0
             for i,name in ipairs(names) do widths[i]=mutationWidth(name,textService,available);total+=widths[i]+5 end
             local strip=D.make('Frame',{Name='MutationStrip',Position=UDim2.new(0,110,1,-29),Size=UDim2.new(1,-218,0,28),BackgroundTransparency=1,ClipsDescendants=true},row)
@@ -3140,8 +3214,9 @@ local function createFinder(D)
         autoJoinButton.Size=UDim2.new(1,-1128,0,54)
         autoJoinButton.TextSize=16
 
+        -- Keep the left data column clear and reserve the right column for the portrait.
         list.Position=UDim2.fromOffset(14,100)
-        list.Size=UDim2.new(1,-28,1,-206)
+        list.Size=UDim2.new(0.68,-24,1,-206)
         list.ScrollBarThickness=8
         list.ScrollBarImageColor3=Theme.cyan
         list.BackgroundTransparency=1
