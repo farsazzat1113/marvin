@@ -7,6 +7,14 @@ premium glass interface, live shared feed, and auto-join.
 ![Theme](https://img.shields.io/badge/theme-Glass%20Premium-38CDFF)
 ![File](https://img.shields.io/badge/format-single--file%20Lua-success)
 
+## Live design preview
+
+[Open the animated MARVIN dashboard preview](https://html-preview.github.io/?url=https%3A%2F%2Fgithub.com%2Ffarsazzat1113%2Fmarvin%2Fblob%2Fmarvin-premium-purple-ui-2026-11-12%2Fdesign%2Fmarvin-dashboard-preview.html)
+
+This is a separate HTML/CSS/JavaScript visual prototype. Its starfield, nebula lighting,
+gradient title, orbital core, hover states, and preview-only controls animate in a browser.
+It is not connected to Roblox or the live Lua callbacks.
+
 ## Overview
 
 UNKNOWN scans the current server's field eggs, reports sightings to the shared
