@@ -1734,7 +1734,15 @@ local function createFinder(D)
                     attemptPendingPlant()
                     return
                 end
-                if not autoStealEnabled or not stealEggState then return end
+                if not autoStealEnabled then return end
+                if not stealEggState then
+                    queryStatus='Auto Steal: EggState module unavailable'
+                    return
+                end
+                if type(stealEggState.CarryFieldEgg)~='function' then
+                    queryStatus='Auto Steal: CarryFieldEgg API unavailable'
+                    return
+                end
                 if type(D.ready)=='function' and not D.ready() then
                     queryStatus='Auto Steal: waiting for fresh egg scan'
                     return
@@ -1820,9 +1828,25 @@ local function createFinder(D)
 
                 character=D.player.Character
                 root=character and character:FindFirstChild('HumanoidRootPart')
-                if not root or (root.Position-targetPosition).Magnitude>8 then
+                local humanoid=character and character:FindFirstChildOfClass('Humanoid')
+                if not (root and humanoid and humanoid.Health>0) or (root.Position-targetPosition).Magnitude>8 then
                     queryStatus='Auto Steal: egg is outside carry range'
                     return
+                end
+
+                -- Match the game's pickup sync: remain close and issue short
+                -- MoveTo updates before asking the server to carry the egg.
+                for _=1,4 do
+                    character=D.player.Character
+                    root=character and character:FindFirstChild('HumanoidRootPart')
+                    humanoid=character and character:FindFirstChildOfClass('Humanoid')
+                    if not (root and humanoid and humanoid.Health>0)
+                        or (root.Position-targetPosition).Magnitude>8 then
+                        queryStatus='Auto Steal: lost pickup range during sync'
+                        return
+                    end
+                    humanoid:MoveTo(targetPosition)
+                    task.wait(0.12)
                 end
 
                 local slotKey
