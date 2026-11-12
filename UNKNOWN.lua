@@ -1448,16 +1448,113 @@ local function createFinder(D)
     local pendingPlantSince=0
     local nextPlantAttemptAt=0
 
-    local function parkAt(cframe)
+    local stealPathfinding=game:GetService('PathfindingService')
+    local stealAreaStates
+    pcall(function() stealAreaStates=module('Shared.Types.AreaEggs').States end)
+
+    -- Use ordinary Humanoid movement and pathfinding. Direct HRP CFrame warps
+    -- are rejected by this game's movement checks and never count as a real trip.
+    local function walkToPoint(destination,tolerance,timeout)
+        tolerance=tolerance or 5
+        timeout=timeout or 90
         local character=D.player.Character
+        local humanoid=character and character:FindFirstChildOfClass('Humanoid')
         local root=character and character:FindFirstChild('HumanoidRootPart')
-        if not (root and root:IsA('BasePart')) then return false end
-        root.CFrame=cframe
-        return true
+        if not (humanoid and root and humanoid.Health>0) then return false,'character is not ready' end
+        if (root.Position-destination).Magnitude<=tolerance then return true end
+
+        local path=stealPathfinding:CreatePath({
+            AgentRadius=2,
+            AgentHeight=5,
+            AgentCanJump=true,
+            WaypointSpacing=6
+        })
+        local computed=pcall(function() path:ComputeAsync(root.Position,destination) end)
+        local waypoints={}
+        if computed and path.Status==Enum.PathStatus.Success then
+            local got,result=pcall(function() return path:GetWaypoints() end)
+            if got and type(result)=='table' then waypoints=result end
+        end
+        -- Some game areas are not fully represented in the navmesh. Keep a
+        -- bounded MoveTo fallback, but never teleport the character.
+        if #waypoints==0 then
+            waypoints={{Position=destination,Action=Enum.PathWaypointAction.Walk}}
+        end
+
+        local deadline=os.clock()+timeout
+        for _,waypoint in ipairs(waypoints) do
+            if not alive or os.clock()>=deadline then return false,'movement timed out' end
+            character=D.player.Character
+            humanoid=character and character:FindFirstChildOfClass('Humanoid')
+            root=character and character:FindFirstChild('HumanoidRootPart')
+            if not (humanoid and root and humanoid.Health>0) then return false,'character was lost during movement' end
+
+            local target=waypoint.Position
+            if (root.Position-target).Magnitude>tolerance then
+                if waypoint.Action==Enum.PathWaypointAction.Jump then humanoid.Jump=true end
+                local reached=false
+                local connection=humanoid.MoveToFinished:Connect(function(ok)
+                    if ok then reached=true end
+                end)
+                humanoid:MoveTo(target)
+                local distance=(root.Position-target).Magnitude
+                local moveDeadline=math.min(deadline,os.clock()+math.clamp(distance/math.max(humanoid.WalkSpeed,8)*2.5+2,3,12))
+                while alive and os.clock()<moveDeadline and not reached do
+                    if not root.Parent or humanoid.Health<=0 then break end
+                    if (root.Position-target).Magnitude<=tolerance then reached=true;break end
+                    task.wait(0.1)
+                end
+                connection:Disconnect()
+                if not reached then return false,'MoveTo did not reach the next waypoint' end
+            end
+        end
+
+        character=D.player.Character
+        root=character and character:FindFirstChild('HumanoidRootPart')
+        return root~=nil and (root.Position-destination).Magnitude<=tolerance,
+            'destination was not reached'
     end
 
-    -- Match the game's InventoryManager placement rules: raycast down onto
-    -- PetArea, ignore already placed eggs, then convert to CenterPoint-local CFrame.
+    local function readCarriedUid(expectedUid)
+        if not stealEggState then return nil end
+        local ok,value=pcall(function()
+            if type(stealEggState.ReadCarryState)=='function' then
+                local carry=stealEggState.ReadCarryState()
+                if type(carry)=='table' and carry.IsCarrying==true then
+                    local uid=tostring(carry.Uid or '')
+                    if uid~='' and (not expectedUid or uid==expectedUid) then return uid end
+                end
+            end
+            if type(stealEggState.ReadFieldEggs)~='function' then return nil end
+            local snapshot=stealEggState.ReadFieldEggs()
+            if type(snapshot)~='table' or type(snapshot.Records)~='table' then return nil end
+            for key,record in pairs(snapshot.Records) do
+                local stateName=tostring(record.State or ''):lower()
+                local carried=(stealAreaStates and record.State==stealAreaStates.Carried)
+                    or stateName:find('carried',1,true)~=nil
+                local uid=tostring(record.Uid or key)
+                local carrier=record.CarrierUserId
+                if carried and (carrier==nil or tonumber(carrier)==D.player.UserId)
+                    and (not expectedUid or uid==expectedUid) then
+                    return uid
+                end
+            end
+            return nil
+        end)
+        return ok and value or nil
+    end
+
+    local function waitForCarriedUid(uid,timeout)
+        local deadline=os.clock()+(timeout or 8)
+        repeat
+            if readCarriedUid(uid)==uid then return true end
+            task.wait(0.2)
+        until not alive or os.clock()>=deadline
+        return false,'server did not confirm that the egg is being carried'
+    end
+
+    -- Match the game's placement rules: raycast onto PetArea, ignore occupied
+    -- cells, then convert the selected point to CenterPoint-local coordinates.
     local function nextStealPlacementCFrame(plot)
         local petArea=plot and plot.PetArea
         if not (petArea and petArea:IsA('BasePart') and plot.CenterPoint) then return nil end
@@ -1500,21 +1597,39 @@ local function createFinder(D)
         end
 
         local plotOk,plot=pcall(stealPlot.ResolvePlot)
-        if not plotOk then return false,tostring(plot) end
-        if not (plot and plot.CenterPoint and plot.PetArea) then
-            return false,'your plot is not ready'
+        if not plotOk or not plot then return false,'your plot could not be resolved' end
+        local petArea=plot.PetArea
+        local centerPoint=plot.CenterPoint
+        if not (petArea and petArea:IsA('BasePart') and centerPoint and centerPoint:IsA('BasePart')) then
+            local update=plot.ToUpdate
+            if update and update.FindFirstChild then
+                petArea=petArea or update:FindFirstChild('PetArea')
+            end
+            if not (petArea and petArea:IsA('BasePart') and centerPoint and centerPoint:IsA('BasePart')) then
+                return false,'your plot PetArea or CenterPoint is unavailable'
+            end
         end
+
+        -- The server claims a carried egg only after the character enters its
+        -- own PetArea. Merely calling PlantEgg from CenterPoint skips this step.
+        local claimPoint=petArea.Position+Vector3.new(0,4,0)
+        local reached,moveReason=walkToPoint(claimPoint,math.max(5,math.min(petArea.Size.X,petArea.Size.Z)*0.12),120)
+        if not reached then return false,'could not enter your PetArea: '..tostring(moveReason) end
+
+        local claimDeadline=os.clock()+12
+        local claimed=false
+        repeat
+            if readCarriedUid(uid)~=uid then claimed=true;break end
+            task.wait(0.25)
+        until not alive or os.clock()>=claimDeadline
+        if not claimed then return false,'PetArea did not confirm the egg claim' end
 
         local placement=nextStealPlacementCFrame(plot)
         if not placement then return false,'no free placement spot found on your plot' end
-        if not parkAt(plot.CenterPoint.CFrame*CFrame.new(0,3,0)) then
-            return false,'character root is not ready'
-        end
 
-        task.wait(0.35)
         local callOk,placed,placeReason=pcall(stealEggState.PlantEgg,uid,placement)
         if not callOk then return false,tostring(placed) end
-        if placed~=true then return false,tostring(placeReason or 'game rejected the placement') end
+        if placed~=true then return false,tostring(placeReason or 'game did not confirm egg placement') end
         return true
     end
 
@@ -1531,25 +1646,6 @@ local function createFinder(D)
         if not pendingPlantUid or os.clock()<nextPlantAttemptAt then return end
         nextPlantAttemptAt=os.clock()+1.5
 
-        local carryState
-        if type(stealEggState.ReadCarryState)=='function' then
-            carryState=stealEggState.ReadCarryState()
-        end
-        local confirmed=carryState and carryState.IsCarrying==true
-            and tostring(carryState.Uid or '')==pendingPlantUid
-
-        if not confirmed then
-            if os.clock()-pendingPlantSince>6 then
-                pendingPlantUid=nil
-                pendingPlantSince=0
-                nextPlantAttemptAt=0
-                queryStatus='Auto Steal: carry was not confirmed; retrying'
-            else
-                queryStatus='Auto Steal: waiting for carry confirmation'
-            end
-            return
-        end
-
         local planted,reason=carryHome(pendingPlantUid)
         if planted then
             local completedUid=pendingPlantUid
@@ -1558,65 +1654,110 @@ local function createFinder(D)
             nextPlantAttemptAt=0
             stealDoneFor=completedUid
             markTrackedEggTaken(completedUid)
-            queryStatus='Auto Steal: planted at your plot'
+            queryStatus='Auto Steal: egg delivered and placed'
         else
-            -- Keep the pending UID; the worker will retry instead of abandoning
-            -- an egg that is already being carried.
-            queryStatus='Auto Steal: '..tostring(reason or 'placement pending')
+            -- Keep the confirmed carried UID pending so a temporary path or
+            -- placement failure can retry without attempting to steal another egg.
+            queryStatus='Auto Steal: '..tostring(reason or 'delivery pending')
         end
     end
 
     task.spawn(function()
         while active do
             local ok,err=pcall(function()
-                -- Finish an in-progress carry even if the user switches Auto Steal off.
+                -- Finish an in-progress carry even if the toggle is switched
+                -- off. Recover a carry left over from a previous execution too.
                 if pendingPlantUid then
                     attemptPendingPlant()
                     return
                 end
                 if not autoStealEnabled or not stealEggState then return end
-                if type(D.ready)=='function' and not D.ready() then return end
+                if type(D.ready)=='function' and not D.ready() then
+                    queryStatus='Auto Steal: waiting for fresh egg scan'
+                    return
+                end
 
-                local carrying=type(stealEggState.ReadCarryState)=='function' and stealEggState.ReadCarryState()
-                if carrying and carrying.IsCarrying==true then return end
+                local alreadyCarried=readCarriedUid()
+                if alreadyCarried then
+                    pendingPlantUid=alreadyCarried
+                    pendingPlantSince=os.clock()
+                    nextPlantAttemptAt=os.clock()+0.35
+                    queryStatus='Auto Steal: delivering egg already in hand'
+                    return
+                end
 
-                local target,trackedEgg
+                local function isAvailableFieldEgg(entry)
+                    if type(entry)~='table' or entry.uid==nil then return false end
+                    if entry.state==nil then return true end
+                    if stealAreaStates and stealAreaStates.Slot~=nil then
+                        return entry.state==stealAreaStates.Slot
+                    end
+                    return tostring(entry.state):lower():find('slot',1,true)~=nil
+                end
+
+                local target
                 if joinedEgg and not joinedEgg.takenAt and joinedEgg.placeId==game.PlaceId
                     and joinedEgg.jobId==game.JobId and stealDoneFor~=tostring(joinedEgg.uid) then
-                    trackedEgg=joinedEgg
                     for _,egg in ipairs(D.entries()) do
-                        if tostring(egg.uid)==trackedEgg.uid then target=egg break end
+                        if tostring(egg.uid)==tostring(joinedEgg.uid) and isAvailableFieldEgg(egg) then
+                            target=egg
+                            break
+                        end
                     end
                 end
 
-                if not target and autoJoinEnabled then
-                    local best,bestRate=nil,autoJoinMinValue
+                -- Auto Steal works on local field eggs by itself; Auto Join is
+                -- no longer a prerequisite for selecting a target.
+                if not target then
+                    local bestRate=autoJoinMinValue
                     for _,egg in ipairs(D.entries()) do
                         local rate=tonumber(egg.rate) or 0
-                        if rate>=bestRate and (egg.tier or 0)>=minRank
-                            and tostring(egg.uid)~=stealDoneFor then
-                            best,bestRate=egg,rate
+                        local rank=tonumber(egg.tier) or 0
+                        local uid=tostring(egg.uid or '')
+                        local model=egg.model or modelFor(uid)
+                        if isAvailableFieldEgg(egg) and uid~='' and uid~=stealDoneFor
+                            and rate>=bestRate and rank>=minRank and model and model.Parent then
+                            target=egg
+                            bestRate=rate
                         end
                     end
-                    target=best
                 end
-                if not target then return end
+
+                if not target then
+                    queryStatus='Auto Steal: waiting for eligible local egg'
+                    return
+                end
 
                 local uid=tostring(target.uid)
                 local model=target.model or modelFor(uid)
-                if not (model and model.Parent) then return end
+                if not (model and model.Parent) then
+                    queryStatus='Auto Steal: target model is not loaded'
+                    return
+                end
 
-                local pivot=model:GetPivot()
-                local targetPosition=pivot.Position
-                local targetCFrame=CFrame.new(
-                    targetPosition+Vector3.new(0,3,2),
-                    targetPosition
-                )
-                if not parkAt(targetCFrame) then
+                local character=D.player.Character
+                local root=character and character:FindFirstChild('HumanoidRootPart')
+                if not root then
                     queryStatus='Auto Steal: character is not ready'
                     return
                 end
-                task.wait(0.35)
+
+                local targetPosition=model:GetPivot().Position
+                local flat=Vector3.new(root.Position.X-targetPosition.X,0,root.Position.Z-targetPosition.Z)
+                if flat.Magnitude<0.1 then flat=Vector3.new(0,0,1) else flat=flat.Unit end
+                local approach=targetPosition+flat*4.5+Vector3.new(0,2.5,0)
+                local reached,moveReason=walkToPoint(approach,5,120)
+                if not reached then
+                    queryStatus='Auto Steal: could not reach egg: '..tostring(moveReason)
+                    return
+                end
+
+                character=D.player.Character
+                root=character and character:FindFirstChild('HumanoidRootPart')
+                if not root or (root.Position-targetPosition).Magnitude>8 then
+                    queryStatus='Auto Steal: egg is outside carry range'
+                    return
+                end
 
                 local slotKey
                 if stealIdentity and target.areaKey and target.nestId
@@ -1624,17 +1765,31 @@ local function createFinder(D)
                     slotKey=stealIdentity.SlotKey(target.areaKey,target.nestId)
                 end
 
-                local carried,carryReason=stealEggState.CarryFieldEgg(uid,slotKey)
-                if carried==true then
-                    pendingPlantUid=uid
-                    pendingPlantSince=os.clock()
-                    nextPlantAttemptAt=os.clock()+0.35
-                    queryStatus='Auto Steal: confirming carry...'
-                else
-                    queryStatus='Auto Steal: '..tostring(carryReason or 'carry request rejected')
+                local callOk,carried,carryReason=pcall(stealEggState.CarryFieldEgg,uid,slotKey)
+                if not callOk then
+                    queryStatus='Auto Steal: carry call failed: '..tostring(carried)
+                    return
                 end
+                if carried~=true then
+                    queryStatus='Auto Steal: '..tostring(carryReason or 'game rejected carry request')
+                    return
+                end
+
+                local confirmed,confirmReason=waitForCarriedUid(uid,8)
+                if not confirmed then
+                    queryStatus='Auto Steal: '..tostring(confirmReason)
+                    return
+                end
+
+                pendingPlantUid=uid
+                pendingPlantSince=os.clock()
+                nextPlantAttemptAt=os.clock()+0.35
+                queryStatus='Auto Steal: carrying confirmed; returning to PetArea'
             end)
-            if not ok then warn('UNKNOWN auto steal:',err) end
+            if not ok then
+                queryStatus='Auto Steal error: '..tostring(err)
+                warn('UNKNOWN auto steal:',err)
+            end
             task.wait(0.75)
         end
     end)
@@ -2885,7 +3040,7 @@ local function run()
                     fieldCount=fieldCount+1
                     seen[tostring(uid)]=true
                     local traits,traitsKnown=readTraitNames(record)
-                    table.insert(eggs,{key='field:'..tostring(uid),uid=uid,traitsKnown=traitsKnown,category=record.AssetCategory,areaKey=record.AreaId,nestId=record.NestId,worldPos=typeof(record.BottomCFrame)=='CFrame' and record.BottomCFrame.Position or nil,area=tostring(record.AreaId)..' | Mut: '..(#traits>0 and table.concat(traits,', ') or traitsKnown and 'None' or 'UNKNOWN'),model=model,icon=asset.Icon,name=asset.DisplayName or record.AssetCategory or 'Unknown',rarity=rarity.DisplayName or rarity._id or 'Unknown',tier=tonumber(rarity.Rank) or 0,color=typeof(rarity.Color)=='Color3' and rarity.Color or Color3.new(1,1,1),scale=scale,weight=weight,rate=rate,estimated=estimated})
+                    table.insert(eggs,{key='field:'..tostring(uid),uid=uid,state=record.State,traitsKnown=traitsKnown,category=record.AssetCategory,areaKey=record.AreaId,nestId=record.NestId,worldPos=typeof(record.BottomCFrame)=='CFrame' and record.BottomCFrame.Position or nil,area=tostring(record.AreaId)..' | Mut: '..(#traits>0 and table.concat(traits,', ') or traitsKnown and 'None' or 'UNKNOWN'),model=model,icon=asset.Icon,name=asset.DisplayName or record.AssetCategory or 'Unknown',rarity=rarity.DisplayName or rarity._id or 'Unknown',tier=tonumber(rarity.Rank) or 0,color=typeof(rarity.Color)=='Color3' and rarity.Color or Color3.new(1,1,1),scale=scale,weight=weight,rate=rate,estimated=estimated})
                 end
             end
             -- One numeric value drives both display and ordering.
