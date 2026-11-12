@@ -1,10 +1,11 @@
 # UNKNOWN
 
 **Shared Egg Finder + Cloudflare Key Gate** — a single-file Roblox UI script with a
-compact animated glassmorphism interface, live shared feed, and auto-steal / auto-join.
+compact animated glassmorphism interface, live shared feed, smart sniper auto-join, and auto-steal.
 
-![Build](https://img.shields.io/badge/build-Public%20v0.4.4%20%2F%20UI21-935CFF)
+![Build](https://img.shields.io/badge/build-Public%20v0.4.5%20%2F%20UI22-935CFF)
 ![Theme](https://img.shields.io/badge/theme-Glass%20Premium%20Animated-38CDFF)
+![Engine](https://img.shields.io/badge/engine-Smart%20Join%20Sniper-34EB96)
 ![File](https://img.shields.io/badge/format-single--file%20Lua-success)
 
 ## Executor Loadstrings
@@ -23,22 +24,14 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/farsazzat1113/marvin/
 
 ---
 
-## Live design preview
+## What's new in UI22 — Smart Auto Join & Zero-Latency Sniper
 
-[Open the animated MARVIN dashboard preview](https://html-preview.github.io/?url=https%3A%2F%2Fgithub.com%2Ffarsazzat1113%2Fmarvin%2Fblob%2Fmarvin-premium-purple-ui-2026-11-12%2Fdesign%2Fmarvin-dashboard-preview.html)
-
-This is a separate HTML/CSS/JavaScript visual prototype. Its starfield, nebula lighting,
-gradient title, orbital core, hover states, and preview-only controls animate in a browser.
-It is not connected to Roblox or the live Lua callbacks.
-
-## Overview
-
-UNKNOWN scans the current server's field eggs, reports sightings to the shared
-Finder host, and renders a live list of the best eggs reported across servers —
-with one-click join and an automatic "join the best server" mode.
-
-The Finder only boots **after the key-validation endpoint returns `valid=true`**
-and revalidates the key every 60 seconds while running.
+- **Smart Auto Join Engine** — Always prioritizes and teleports to the **highest-rate egg** available across all servers that meets your `MIN AUTO JOIN VALUE`.
+- **Instant Snipe (Zero Lag)** — Removed all artificial delays, blocking network claims, and HTTP timeouts before teleporting. Teleport executes directly and immediately for maximum speed.
+- **Standby Egg Sniper** — If no current egg meets your threshold, Smart Join stays armed and scans the feed continuously every 1 second; the moment an egg meeting your value is detected, it snipes it instantly.
+- **Automatic Multi-Server Fallback** — If candidate #1 fails (server full, egg taken, or Roblox redirect), Smart Join immediately switches to candidate #2, then #3, and so on, keeping strictly to eggs `>= MIN AUTO JOIN VALUE`.
+- **Anti-Random-Server Protection** — If Roblox redirects you to a random server because the target was full, Smart Join detects that you arrived in the wrong server and immediately hops to the next eligible server without getting stuck.
+- **Persistent State Across Server Hops** — `SMART JOIN: ON/OFF` state now persists across teleports and executor restarts.
 
 ## What's new in UI21 — Sleek Compact Animated Redesign
 
@@ -67,22 +60,10 @@ and revalidates the key every 60 seconds while running.
 | 1 | Bootstrap | Auto-execute queue, silent retry per server hop |
 | 2 | Finder core | Services, GUI factory, parsing/formatting helpers |
 | 3 | Glass Premium UI | Theme, header, settings overlay, animations |
-| 4 | Network | Config loader, broadcast, feed pagination, auto-join |
-| 5 | Card renderer | Egg cards, rarity/mutation glyphs, join flow |
+| 4 | Network | Config loader, broadcast, feed pagination, smart auto-join sniper |
+| 5 | Card renderer | Egg cards, rarity/mutation glyphs, instant join flow |
 | 6 | Scan loop | Field-egg reader feeding UI + broadcaster |
 | 7 | Key gate | Glass key window, validation + periodic recheck |
-
-## Local state files
-
-Written to the executor workspace when available:
-
-| File | Purpose |
-|------|---------|
-| `tenshi_beta_ui.json` | UI settings (scope, thresholds, auto-execute, size) |
-| `tenshi_public_sighting_lifecycle_v1.json` | Sighting lifecycle / tombstones |
-| `tenshi_beta_top5_cycle_v2.json` | Retained top-5 cards across refreshes |
-| `tenshi_public_gui_size_v2.json` | Saved GUI scale |
-| `unknown_saved_access_key.txt` | Last accepted key (revalidated online) |
 
 ## Controls
 
@@ -90,6 +71,6 @@ Written to the executor workspace when available:
 - **ALL SERVERS / MY SERVER** — feed scope tabs.
 - **REFRESH** — manual feed refresh with the reset countdown.
 - **VALUE OF SERVERS / MIN AUTO JOIN VALUE** — `1B`–`50B` thresholds.
-- **AUTO JOIN** — teleports to the best eligible reported server automatically.
+- **SMART JOIN** — zero-latency sniper that teleports to the highest eligible egg and falls back automatically if full.
 - **AUTO STEAL** — carries + plants the tracked egg without any input.
 - **SETTINGS** — auto-execute / auto-steal toggles and Discord link.

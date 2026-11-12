@@ -463,6 +463,29 @@ local function createFinder(D)
     -- Auto Steal defaults ON. It only acts on eggs the join flow tracked, plus
     -- the best local egg while Auto Join is armed - never on random field eggs.
     local autoStealEnabled=type(settings.autoSteal)~='boolean' or settings.autoSteal
+    local autoJoinSettingKey='UNKNOWNAutoJoinEnabledV1'
+    local autoJoinEnabled=false
+    pcall(function()
+        local saved=Teleports:GetTeleportSetting(autoJoinSettingKey)
+        if type(saved)=='boolean' then autoJoinEnabled=saved end
+    end)
+    if not autoJoinEnabled and type(settings.autoJoin)=='boolean' then
+        autoJoinEnabled=settings.autoJoin
+    end
+    local failedJobIds={}
+    local function isJobFailed(jobId)
+        local expiry=failedJobIds[jobId]
+        if expiry and os.clock()<expiry then return true end
+        if expiry then failedJobIds[jobId]=nil end
+        return false
+    end
+    pcall(function()
+        local lastTarget=Teleports:GetTeleportSetting('UNKNOWNLastTargetJobId')
+        if type(lastTarget)=='string' and lastTarget~='' and lastTarget~=game.JobId then
+            failedJobIds[lastTarget]=os.clock()+240
+            warn('[MARVIN Smart Join] Redirected by Roblox away from '..lastTarget..' (server was likely full)')
+        end
+    end)
     local autoJoinMinValue=1e9
     local autoJoinMinValueSettingKey='UNKNOWNAutoJoinMinValueV1'
     -- TeleportSetting is the freshest value across a server hop; local JSON may be stale.
@@ -563,7 +586,7 @@ local function createFinder(D)
         if type(writefile)~='function' then return end
         pcall(function()
             local function coords(p) return {p.X.Scale,p.X.Offset,p.Y.Scale,p.Y.Offset} end
-            writefile(settingsPath,Http:JSONEncode({myServer=othersOnly,minRank=minRank,rarityMenu='mythic-up-v1',serversMinValue=serversMinValue,autoJoinMinValue=autoJoinMinValue,autoExecute=autoExecuteEnabled,autoSteal=autoStealEnabled,sizeFactor=sizeFactor,sizePercent=sizePercent,panel=coords(panel.Position),icon=coords(open.Position)}))
+            writefile(settingsPath,Http:JSONEncode({myServer=othersOnly,minRank=minRank,rarityMenu='mythic-up-v1',serversMinValue=serversMinValue,autoJoinMinValue=autoJoinMinValue,autoJoin=autoJoinEnabled,autoExecute=autoExecuteEnabled,autoSteal=autoStealEnabled,sizeFactor=sizeFactor,sizePercent=sizePercent,panel=coords(panel.Position),icon=coords(open.Position)}))
         end)
     end
     local settingsButton=D.make('TextButton',{Name='SettingsButton',Text='SETTINGS',Position=UDim2.new(0,8,0,7),Size=UDim2.fromOffset(80,30),BackgroundColor3=Color3.fromRGB(42,44,52),BackgroundTransparency=0,TextColor3=Color3.fromRGB(255,255,255),TextSize=12,Font=Enum.Font.GothamBold,BorderSizePixel=0,ZIndex=20},panel)
@@ -1286,33 +1309,36 @@ local function createFinder(D)
             minValueInput.Text=minValueInput.Text:match("^%s*(.-)%s*$")
             saveSettings()
             autoJoinCandidates={};autoJoinCandidateIndex=1;autoJoinRetryRequested=false
-            queryStatus='Auto Join minimum set to '..minValueInput.Text
+            feedAt=0
+            queryStatus='Smart Join minimum set to '..minValueInput.Text
         else
             minValueInput.Text=string.format('%.0fB',autoJoinMinValue/1e9)
             queryStatus='Enter a value from 1B to 50B (example: 1.5B)'
         end
     end)
-    -- Beast Auto Join: selects the highest-income valid egg from the shared Finder feed.
-    local autoJoinEnabled=false
+    -- Smart Auto Join: targets top eggs with zero-delay sniping and multi-server fallback.
     local autoJoinBusy=false
     local autoJoinCandidates={}
     local autoJoinCandidateIndex=1
     local autoJoinRetryRequested=false
-    local autoJoinButton=D.make('TextButton',{Name='AutoJoin',Text='AUTO JOIN: OFF',Position=UDim2.new(0,10,1,-52),Size=UDim2.new(1,-20,0,40),BackgroundColor3=Color3.fromRGB(200,45,45),TextColor3=Color3.new(1,1,1),TextSize=13,Font=Enum.Font.GothamBold},panel)
+    local autoJoinButton=D.make('TextButton',{Name='AutoJoin',Text='SMART JOIN: OFF',Position=UDim2.new(0,10,1,-52),Size=UDim2.new(1,-20,0,40),BackgroundColor3=Color3.fromRGB(200,45,45),TextColor3=Color3.new(1,1,1),TextSize=13,Font=Enum.Font.GothamBold},panel)
     D.make('UICorner',{CornerRadius=UDim.new(0,6)},autoJoinButton)
     autoJoinButton.TextScaled=true;autoJoinButton.TextWrapped=false
     D.make('UITextSizeConstraint',{MinTextSize=1,MaxTextSize=14},autoJoinButton)
     local function paintAutoJoin()
-        autoJoinButton.Text=autoJoinEnabled and 'AUTO JOIN: ON' or 'AUTO JOIN: OFF'
-        autoJoinButton.BackgroundColor3=autoJoinEnabled and Color3.fromRGB(30,155,85) or Color3.fromRGB(200,45,45)
+        autoJoinButton.Text=autoJoinEnabled and 'SMART JOIN: ON' or 'SMART JOIN: OFF'
+        autoJoinButton.BackgroundColor3=autoJoinEnabled and Color3.fromRGB(30,165,85) or Color3.fromRGB(200,45,45)
     end
+    paintAutoJoin()
     autoJoinButton.Activated:Connect(function()
         if not active then return end
         autoJoinEnabled=not autoJoinEnabled
         autoJoinCandidates={};autoJoinCandidateIndex=1;autoJoinRetryRequested=false
+        pcall(function() Teleports:SetTeleportSetting(autoJoinSettingKey,autoJoinEnabled) end)
+        saveSettings()
         if autoJoinEnabled then feedAt=-math.huge end
         paintAutoJoin()
-        queryStatus=autoJoinEnabled and 'Auto Join enabled: checking all available pages' or 'Auto Join disabled'
+        queryStatus=autoJoinEnabled and ('Smart Join ON: searching for egg >= '..string.format('%.1fB',autoJoinMinValue/1e9)..'/s') or 'Smart Join OFF'
     end)
     local publicBroadcastConfig=nil
     local featureConfig=nil
@@ -1517,26 +1543,44 @@ local function createFinder(D)
         end
         return best
     end
-    -- Auto Join compares the best eligible local egg against every public server.
-    -- It stays local on ties and only teleports when a strictly better remote egg exists.
-    -- Reservation failures and asynchronous teleport failures advance to the next candidate.
+    --========================================================================--
+    --  SMART AUTO JOIN (Zero-Latency Sniper & Multi-Server Fallback Pipeline)
+    --  1. Targets the HIGHEST-rate egg across all reported servers (Smart Join).
+    --  2. If none currently exists, enters standby sniper mode, listening for top eggs.
+    --  3. Instant Snipe: Direct teleport call with zero artificial delay or blocking claims.
+    --  4. Instant Fallback: If a target server is full, unavailable, or redirected,
+    --     it immediately switches to the next best server that still meets autoJoinMinValue!
+    --========================================================================--
     task.spawn(function()
         while active do
             if autoJoinEnabled and not autoJoinBusy and not joining then
                 autoJoinBusy=true
                 local ok,err=pcall(function()
                     if not config then
-                        queryStatus='Auto Join: waiting for Finder connection'
+                        queryStatus='Smart Join: connecting to Finder network...'
                         return
                     end
-                    if #autoJoinCandidates==0 then
-                        if os.clock()-feedAt>6 then
+
+                    -- Check local server first: if the best egg >= autoJoinMinValue is already here, we stay!
+                    local localBest=localBestAutoJoinRate()
+                    if localBest>=autoJoinMinValue then
+                        queryStatus='Smart Join: top egg ('..D.money(localBest)..'/s) is already in this server!'
+                        autoJoinCandidates={}
+                        autoJoinCandidateIndex=1
+                        return
+                    end
+
+                    -- Fast feed refresh when candidates are empty or retry requested
+                    if #autoJoinCandidates==0 or autoJoinRetryRequested then
+                        autoJoinRetryRequested=false
+                        if os.clock()-feedAt>=1.0 then
                             local refreshed,message=refresh(true)
-                            if not refreshed then
-                                queryStatus='Auto Join: '..tostring(message or 'feed refresh failed')
+                            if not refreshed and #feed==0 then
+                                queryStatus='Smart Join: waiting for egg feed ('..tostring(message or 'refreshing')..')'
                                 return
                             end
                         end
+
                         local now=(os.clock()+clockOffset)*1000
                         local candidates={}
                         for _,entry in ipairs(feed) do
@@ -1544,96 +1588,129 @@ local function createFinder(D)
                             local job=type(entry.jobId)=='string' and entry.jobId or ''
                             local place=tonumber(entry.placeId)
                             local expiry=tonumber(entry.expiresAt)
-                            local validEntry=job~='' and job~=game.JobId and place and place>0
-                                and expiry and expiry>now and rate and rate>0
-                                and entry.uid~=nil and entry.full~=true and entry.unavailable~=true
+                            local validEntry=job~='' and job~=game.JobId and not isJobFailed(job)
+                                and place and place>0
+                                and expiry and expiry>now
+                                and rate and rate>=autoJoinMinValue
+                                and entry.uid~=nil
+                                and entry.full~=true and entry.unavailable~=true
                                 and entry.takenConfirmed~=true
-                                and rate>=autoJoinMinValue
                                 and D.publicEntryAllowed(entry,now)
-                            if validEntry then candidates[#candidates+1]=entry end
+
+                            if validEntry then
+                                candidates[#candidates+1]=entry
+                            end
                         end
+
+                        -- Sort candidates by rate DESCENDING (Highest egg first = Smart Join)
                         table.sort(candidates,function(a,b)
-                            local ar,br=tonumber(a.rate) or 0,tonumber(b.rate) or 0
+                            local ar=tonumber(a.rate) or 0
+                            local br=tonumber(b.rate) or 0
                             if ar~=br then return ar>br end
                             return tostring(a.jobId)<tostring(b.jobId)
                         end)
-                        local localBest=localBestAutoJoinRate()
-                        local remoteBest=#candidates>0 and (tonumber(candidates[1].rate) or 0) or 0
-                        if localBest>0 and localBest>=remoteBest then
-                            autoJoinCandidates={};autoJoinCandidateIndex=1;autoJoinRetryRequested=false
-                            queryStatus='Auto Join: best eligible egg is already in this server'
-                            return
-                        end
-                        for i=1,#candidates do autoJoinCandidates[i]=candidates[i] end
+
+                        autoJoinCandidates=candidates
                         autoJoinCandidateIndex=1
-                        autoJoinRetryRequested=false
                     end
-                    if autoJoinCandidateIndex>#autoJoinCandidates then
-                        queryStatus='Auto Join: all available candidates failed'
-                        autoJoinCandidates={};autoJoinCandidateIndex=1;autoJoinRetryRequested=false
-                        feedAt=0
+
+                    -- If no remote candidates meet autoJoinMinValue, we wait in standby/sniper mode
+                    if #autoJoinCandidates==0 or autoJoinCandidateIndex>#autoJoinCandidates then
+                        autoJoinCandidates={}
+                        autoJoinCandidateIndex=1
+                        queryStatus='Smart Join: listening for top egg >= '..string.format('%.1fB',autoJoinMinValue/1e9)..'/s...'
                         return
                     end
+
                     local target=autoJoinCandidates[autoJoinCandidateIndex]
-                    local localBest=localBestAutoJoinRate()
-                    if localBest>0 and localBest>=(tonumber(target and target.rate) or 0) then
-                        autoJoinCandidates={};autoJoinCandidateIndex=1;autoJoinRetryRequested=false
-                        queryStatus='Auto Join: best eligible egg is already in this server'
+                    if not target then
+                        autoJoinCandidateIndex+=1
                         return
                     end
+
+                    local targetRate=tonumber(target.rate) or 0
+                    if targetRate<autoJoinMinValue then
+                        -- Below user threshold; skip
+                        autoJoinCandidateIndex+=1
+                        return
+                    end
+
                     local now=(os.clock()+clockOffset)*1000
-                    if not target or tonumber(target.expiresAt or 0)<=now then
+                    if tonumber(target.expiresAt or 0)<=now then
+                        -- Expired, advance to next candidate
                         autoJoinCandidateIndex+=1
                         autoJoinRetryRequested=true
-                        queryStatus='Auto Join: report expired; trying next server'
                         return
                     end
-                    queryStatus='Auto Join: trying #'..tostring(autoJoinCandidateIndex)..' '..tostring(target.name)..' ('..tostring(target.rate)..'/s)'
-                    local claim,claimError=network(config.endpoint..'/v1/join','POST',
-                        Http:JSONEncode({placeId=target.placeId,jobId=target.jobId,uid=target.uid,reporterId=reporterId,userId=D.player.UserId}),
-                        headers())
-                    if not claim or claim.allowed~=true then
-                        if claim and (claim.unavailable or claim.full or claim.taken) then
-                            target.full=true;target.unavailable=claim.unavailable==true
-                        end
-                        autoJoinCandidateIndex+=1
-                        autoJoinRetryRequested=true
-                        feedAt=0
-                        queryStatus='Auto Join: server #'..tostring(autoJoinCandidateIndex-1)..' unavailable; trying next'
-                        return
-                    end
-                    local joinExpiry=math.min(tonumber(target.expiresAt) or math.huge,tonumber(claim.expiresAt) or math.huge)
-                    if now>=joinExpiry then
-                        autoJoinCandidateIndex+=1;autoJoinRetryRequested=true;feedAt=0
-                        queryStatus='Auto Join: report expired; trying next server'
-                        return
-                    end
+
+                    -- Target selected! Proceed with zero-latency Instant Snipe
+                    queryStatus='Smart Join: SNIPING #'..tostring(autoJoinCandidateIndex)..' '..tostring(target.name)..' ('..D.money(targetRate)..'/s)...'
+
+                    -- Non-blocking background claim: notify the backend without delaying our teleport
+                    task.spawn(function()
+                        pcall(function()
+                            if config and config.endpoint then
+                                requestFn({
+                                    Url=config.endpoint..'/v1/join',
+                                    Method='POST',
+                                    Headers=headers(),
+                                    Body=Http:JSONEncode({
+                                        placeId=target.placeId,
+                                        jobId=target.jobId,
+                                        uid=target.uid,
+                                        reporterId=reporterId,
+                                        userId=D.player.UserId
+                                    }),
+                                    Timeout=3
+                                })
+                            end
+                        end)
+                    end)
+
                     joining=true
-                    queryStatus='Auto Join: joining server #'..tostring(autoJoinCandidateIndex)
+                    pcall(function() Teleports:SetTeleportSetting('UNKNOWNLastTargetJobId',target.jobId) end)
+                    pcall(function() Teleports:SetTeleportSetting(autoJoinSettingKey,true) end)
+                    pcall(function() Teleports:SetTeleportSetting(autoJoinMinValueSettingKey,autoJoinMinValue) end)
+
                     queueAutoExecute()
                     D.saveGuiBeforeTeleport()
                     D.stopFarm()
                     rememberJoinedEgg(target)
+
                     local teleported,teleportError=pcall(function()
                         Teleports:TeleportToPlaceInstance(target.placeId,target.jobId,D.player)
                     end)
+
                     if not teleported then
                         joining=false
-                        autoJoinCandidateIndex+=1;autoJoinRetryRequested=true
-                        queryStatus='Auto Join: teleport failed; trying next server'
-                        warn('Tenshi Beast Auto Join teleport:',teleportError)
+                        failedJobIds[target.jobId]=os.clock()+180
+                        target.unavailable=true
+                        autoJoinCandidateIndex+=1
+                        autoJoinRetryRequested=true
+                        queryStatus='Smart Join: server #'..tostring(autoJoinCandidateIndex-1)..' failed, trying next candidate...'
+                        warn('[MARVIN Smart Join] Teleport failed:',teleportError)
+                    else
+                        -- Teleport issued to Roblox!
+                        task.delay(10,function()
+                            if joining and active then
+                                joining=false
+                                failedJobIds[target.jobId]=os.clock()+180
+                                autoJoinCandidateIndex+=1
+                                autoJoinRetryRequested=true
+                                queryStatus='Smart Join: teleport timed out, switching to next server...'
+                            end
+                        end)
                     end
                 end)
+
                 if not ok then
                     joining=false
-                    autoJoinCandidateIndex+=1
                     autoJoinRetryRequested=true
-                    queryStatus='Auto Join error: '..tostring(err)
-                    warn('Tenshi Beast Auto Join:',err)
+                    warn('[MARVIN Smart Join Error]:',err)
                 end
                 autoJoinBusy=false
             end
-            task.wait(0.25)
+            task.wait(0.12)
         end
     end)
 
@@ -2637,38 +2714,33 @@ local function createFinder(D)
                 if (os.clock()+clockOffset)*1000>=entry.expiresAt then
                     joining=false;joiningKey=nil;feedAt=-math.huge;render();return
                 end
-                if not config then joining=false;joiningKey=nil;queryStatus='Finder not connected';return end
-                local claim,claimError=network(config.endpoint..'/v1/join','POST',Http:JSONEncode({placeId=entry.placeId,jobId=entry.jobId,uid=entry.uid,reporterId=reporterId,userId=D.player.UserId}),headers())
-                if claim and claim.allowed~=true and (claim.unavailable or claim.full) then
-                    joining=false;joiningKey=nil;entry.full=true;entry.unavailable=claim.unavailable==true;entry.takenConfirmed=claim.takenConfirmed==true;lastRender=nil
-                    queryStatus='Egg no longer available';render();return
-                end
-                if not claim or claim.allowed~=true then
-                    joining=false;joiningKey=nil;feedAt=-math.huge
-                    if claim and not claim.retryable then
-                        for _,item in ipairs(feed) do if item.jobId==entry.jobId then item.full=true end end
-                        render()
-                    end
-                    queryStatus=claim and (claim.error or 'Server reserved; choose another') or ('Join reservation failed: '..tostring(claimError))
-                    return
-                end
-                -- Best-effort background report; never block a successful JOIN on reporting.
+                -- Non-blocking background claim: zero waiting!
                 task.spawn(function()
-                    local shared,shareError=report()
-                    if not shared then warn('Pre-teleport report: '..tostring(shareError)) end
+                    pcall(function()
+                        if config and config.endpoint then
+                            requestFn({
+                                Url=config.endpoint..'/v1/join',
+                                Method='POST',
+                                Headers=headers(),
+                                Body=Http:JSONEncode({placeId=entry.placeId,jobId=entry.jobId,uid=entry.uid,reporterId=reporterId,userId=D.player.UserId}),
+                                Timeout=3
+                            })
+                        end
+                    end)
                 end)
-                local joinExpiry=math.min(entry.expiresAt,tonumber(claim.expiresAt) or entry.expiresAt)
-                if (os.clock()+clockOffset)*1000>=joinExpiry then
-                    joining=false;joiningKey=nil;feedAt=-math.huge;entry.expiresAt=joinExpiry;render()
-                    queryStatus='Reset reached; refreshing';return
-                end
+
+                pcall(function() Teleports:SetTeleportSetting('UNKNOWNLastTargetJobId',entry.jobId) end)
                 queueAutoExecute()
                 D.saveGuiBeforeTeleport()
                 D.stopFarm()
                 rememberJoinedEgg(entry)
                 local ok,err=pcall(function() Teleports:TeleportToPlaceInstance(entry.placeId,entry.jobId,D.player) end)
-                if not ok then queryStatus='Join failed: '..tostring(err); joining=false;joiningKey=nil end
-                task.delay(12,function() joining=false;joiningKey=nil end)
+                if not ok then
+                    queryStatus='Join failed: '..tostring(err)
+                    joining=false;joiningKey=nil
+                    failedJobIds[entry.jobId]=os.clock()+180
+                end
+                task.delay(10,function() joining=false;joiningKey=nil end)
             end)
             end
             card.entry=entry
@@ -2858,10 +2930,16 @@ local function createFinder(D)
     local failed=Teleports.TeleportInitFailed:Connect(function(who,_,message)
         if who==D.player then
             joining=false;queryStatus='Join failed: '..tostring(message)
-            if autoJoinEnabled and autoJoinCandidateIndex<=#autoJoinCandidates then
+            pcall(function()
+                local lastTarget=Teleports:GetTeleportSetting('UNKNOWNLastTargetJobId')
+                if type(lastTarget)=='string' and lastTarget~='' then
+                    failedJobIds[lastTarget]=os.clock()+180
+                end
+            end)
+            if autoJoinEnabled then
                 autoJoinCandidateIndex+=1
                 autoJoinRetryRequested=true
-                queryStatus='Auto Join: teleport failed; trying the next candidate'
+                queryStatus='Smart Join: server was full ('..tostring(message)..'), hopping to next server...'
             end
         end
     end)
