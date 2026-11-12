@@ -534,8 +534,10 @@ local function createFinder(D)
         local view=D.gui.AbsoluteSize
         if view.X<=0 or view.Y<=0 then return end
         local baseWidth,baseHeight=1500,850
-        local scale=math.min(1.08*sizeFactor,view.X*0.90/baseWidth,view.Y*0.88/baseHeight)
-        scale=math.max(0.42,scale)
+        -- Fit the complete dashboard inside short/narrow phone viewports.
+        -- The previous 0.42 floor could force the 1500x850 panel off-screen.
+        local scale=math.min(1.08*sizeFactor,view.X*0.94/baseWidth,view.Y*0.92/baseHeight)
+        scale=math.max(0.24,scale)
         responsiveScale.Scale=scale
         panel.AnchorPoint=Vector2.new(0.5,0.5)
         panel.Position=UDim2.fromScale(0.5,0.5)
