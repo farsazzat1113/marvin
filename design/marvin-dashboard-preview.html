@@ -23,6 +23,27 @@ body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.45;ba
 .toast{position:fixed;bottom:22px;left:50%;transform:translate(-50%,20px);opacity:0;background:#211331;border:1px solid #c18aff66;color:#fff;padding:11px 16px;border-radius:99px;font-size:12px;transition:.25s;pointer-events:none;z-index:5}.toast.show{opacity:1;transform:translate(-50%,0)}
 @media(max-width:760px){.wrap{width:calc(100% - 20px);margin:15px auto 30px}.hero{grid-template-columns:1fr}.hero-main{padding:12px 3px 0}.hero-art{min-height:175px}.content{grid-template-columns:1fr}.stats{gap:8px}.stat{padding:12px}.stat strong{font-size:16px}.topright .live{display:none}.foot{font-size:8px}.dashboard{padding:14px}}
 @media(max-width:390px){.stats{grid-template-columns:1fr}.stat{display:flex;justify-content:space-between;align-items:center}.stat strong{margin:0}.brand strong{font-size:13px}}
+
+/* Premium motion pass */
+:root{--glow:rgba(185,103,255,.18)}
+.dashboard{isolation:isolate}
+.dashboard:before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;opacity:.24;background:linear-gradient(90deg,transparent 49.8%,#c78aff12 50%,transparent 50.2%),linear-gradient(transparent 49.8%,#c78aff10 50%,transparent 50.2%);background-size:46px 46px;mask-image:linear-gradient(to bottom,black,transparent 75%)}
+.hero-art:before{content:"";position:absolute;inset:-45%;background:conic-gradient(from 0deg,transparent,#bd68ff20,transparent,#ff67d020,transparent);animation:spin 22s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.hero-art:after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 35%,#fff1 48%,transparent 60%);transform:translateX(-110%);animation:artSweep 7s ease-in-out infinite}
+@keyframes artSweep{55%,100%{transform:translateX(110%)}}
+.core{position:relative;z-index:1}.orbit{z-index:1}
+.stat,.card{transition:transform .25s,border-color .25s,box-shadow .25s}
+.stat:hover,.card:hover{border-color:#c78aff55;box-shadow:0 12px 35px #0004,0 0 24px #a855f718}
+.feedrow{position:relative;overflow:hidden}
+.feedrow:after{content:"";position:absolute;inset:0;transform:translateX(-110%);background:linear-gradient(100deg,transparent,#fff1,transparent);transition:transform .7s}
+.feedrow:hover:after{transform:translateX(110%)}
+.chip:focus-visible,.btn:focus-visible,.iconbtn:focus-visible,.switch:focus-visible{outline:2px solid #d69cff;outline-offset:3px}
+.switch{border:0}
+.live i{animation:livePulse 1.8s ease-in-out infinite}
+@keyframes livePulse{50%{box-shadow:0 0 0 5px #61efb922,0 0 16px #61efb9}}
+.foot span:last-child{color:#a98bbd}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}}
 </style>
 </head>
 <body>
@@ -30,10 +51,10 @@ body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.45;ba
 <main class="wrap">
 <header class="top"><div class="brand"><div class="mark">M</div><div><strong>MARVIN</strong><small>EGG FINDER · CONCEPT UI</small></div></div><div class="topright"><span class="live"><i></i>PREVIEW MODE</span><button class="iconbtn" id="settingsTop" aria-label="Settings">⚙</button></div></header>
 <section class="shell"><div class="dashboard">
-<section class="hero"><div class="hero-main"><div class="eyebrow">✦ Next-generation interface</div><h1><span class="gradient-text">MARVIN</span><br>CONTROL</h1><p>A premium space-inspired dashboard concept. Built as a separate visual layer so the existing game logic and controls can be connected later without redesigning the experience.</p><div class="actions"><button class="btn primary" data-toast="Preview action only — game logic is not connected.">▶ &nbsp; LAUNCH PREVIEW</button><button class="btn secondary" data-toast="Settings preview opened.">⚙ &nbsp; SETTINGS</button><button class="btn secondary" data-toast="More actions are placeholders in this concept.">••• &nbsp; MORE</button></div></div>
+<section class="hero"><div class="hero-main"><div class="eyebrow">✦ Next-generation interface</div><h1><span class="gradient-text">MARVIN</span><br>CONTROL</h1><p>A premium space-inspired dashboard concept. Built as a separate visual layer so the existing game logic and controls can be connected later without redesigning the experience.</p><div class="actions"><button class="btn primary" id="launchDemo">▶ &nbsp; RUN VISUAL DEMO</button><button class="btn secondary" data-toast="Settings preview opened.">⚙ &nbsp; SETTINGS</button><button class="btn secondary" data-toast="More actions are placeholders in this concept.">••• &nbsp; MORE</button></div></div>
 <div class="hero-art"><div class="orbit"></div><div class="orbit orb2"></div><div class="core">✦</div><div class="art-label">MARVIN / NEBULA CORE</div></div></section>
 <section class="stats"><div class="stat"><span>Connection</span><strong>Preview <em>●</em></strong></div><div class="stat"><span>Live feed</span><strong>Not connected</strong></div><div class="stat"><span>Interface</span><strong>Interactive</strong></div></section>
-<section class="content"><div class="card"><h2>✧ &nbsp; EGG DISCOVERY FEED</h2><div class="sub">Visual sample rows · waiting for live game data</div><div class="toolbar"><button class="chip active">ALL SERVERS</button><button class="chip">MY SERVER</button><button class="chip">RARITY</button><button class="chip">↻ REFRESH</button></div><div class="feed"><div class="feedrow"><div class="egg">🥚</div><div class="rowtext"><b>Discovery feed placeholder</b><small>Real egg name and value will appear here</small></div><span class="tag">WAITING</span></div><div class="feedrow"><div class="egg">✧</div><div class="rowtext"><b>Live item card</b><small>Connected to original data source later</small></div><span class="tag">PREVIEW</span></div><div class="feedrow"><div class="egg">◈</div><div class="rowtext"><b>Server result card</b><small>Original Join callback remains untouched</small></div><span class="tag">PREVIEW</span></div></div></div>
+<section class="content"><div class="card"><h2>✧ &nbsp; EGG DISCOVERY FEED</h2><div class="sub">Animated sample feed · simulated data only, not connected to Roblox</div><div class="toolbar"><button class="chip active">ALL SERVERS</button><button class="chip">MY SERVER</button><button class="chip">RARITY</button><button class="chip">↻ REFRESH</button></div><div class="feed"><div class="feedrow"><div class="egg">🥚</div><div class="rowtext"><b>Discovery feed placeholder</b><small>Real egg name and value will appear here</small></div><span class="tag">WAITING</span></div><div class="feedrow"><div class="egg">✧</div><div class="rowtext"><b>Live item card</b><small>Connected to original data source later</small></div><span class="tag">PREVIEW</span></div><div class="feedrow"><div class="egg">◈</div><div class="rowtext"><b>Server result card</b><small>Original Join callback remains untouched</small></div><span class="tag">PREVIEW</span></div></div></div>
 <aside class="card"><h2>✧ &nbsp; QUICK CONTROLS</h2><div class="sub">Interaction samples — not connected to gameplay</div><div class="settings"><div class="setting"><div><b>Auto Execute</b><small>Original toggle hookup pending</small></div><div class="switch on" role="switch" aria-checked="true" tabindex="0"></div></div><div class="setting"><div><b>Auto Steal</b><small>Original toggle hookup pending</small></div><div class="switch" role="switch" aria-checked="false" tabindex="0"></div></div><div class="setting"><div><b>Compact Layout</b><small>Preview display preference</small></div><div class="switch" role="switch" aria-checked="false" tabindex="0"></div></div><button class="btn secondary wide" data-toast="Discord action is not connected in the design preview.">JOIN COMMUNITY ↗</button></div></aside></section>
 <footer class="foot"><span>MARVIN · PREMIUM VISUAL SYSTEM</span><span>DESIGN PREVIEW — NOT A LIVE ROBLOX UI</span></footer>
 </div></section>
@@ -44,6 +65,27 @@ function notify(message){toast.textContent=message;toast.classList.add('show');c
 document.querySelectorAll('[data-toast]').forEach(button=>button.addEventListener('click',()=>notify(button.dataset.toast)));
 document.querySelectorAll('.chip').forEach(chip=>chip.addEventListener('click',()=>{chip.parentElement.querySelectorAll('.chip').forEach(item=>item.classList.remove('active'));chip.classList.add('active');notify('Visual filter preview — no game query is running.');}));
 document.querySelectorAll('.switch').forEach(toggle=>{const flip=()=>{toggle.classList.toggle('on');toggle.setAttribute('aria-checked',toggle.classList.contains('on')?'true':'false');notify('Preview toggle only — original setting is unchanged.');};toggle.addEventListener('click',flip);toggle.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();flip();}});});
+
 document.getElementById('settingsTop').addEventListener('click',()=>notify('Settings preview — original controls are not connected.'));
+document.getElementById('launchDemo').addEventListener('click',()=>{
+ const feed=document.querySelector('.feed');
+ const samples=[
+  ['🐅','Tiger Egg · Demo Sample','Illustrative item · value not connected','DEMO'],
+  ['🐉','Dragon Egg · Demo Sample','Illustrative item · value not connected','DEMO'],
+  ['🦍','Gorilla Egg · Demo Sample','Illustrative item · value not connected','DEMO']
+ ];
+ feed.innerHTML='';
+ samples.forEach((row,i)=>{
+  const el=document.createElement('div');el.className='feedrow';el.style.animation='enter .45s ease both';el.style.animationDelay=(i*.12)+'s';
+  const egg=document.createElement('div');egg.className='egg';egg.textContent=row[0];
+  const txt=document.createElement('div');txt.className='rowtext';
+  const b=document.createElement('b');b.textContent=row[1];
+  const sm=document.createElement('small');sm.textContent=row[2];txt.append(b,sm);
+  const tag=document.createElement('span');tag.className='tag';tag.textContent=row[3];
+  el.append(egg,txt,tag);feed.append(el);
+ });
+ notify('Visual demo running — sample cards only, no game data.');
+});
+
 </script>
 </body></html>
