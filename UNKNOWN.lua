@@ -765,22 +765,22 @@ local function createFinder(D)
     local list=D.make('ScrollingFrame',{Position=UDim2.fromOffset(14,92),Size=UDim2.new(1,-16,1,-278),BackgroundTransparency=1,BorderSizePixel=0,AutomaticCanvasSize=Enum.AutomaticSize.None,CanvasSize=UDim2.new(),ScrollBarThickness=6,ScrollBarImageColor3=Color3.fromRGB(150,132,190),ScrollBarImageTransparency=0.1},panel)
     
     --========================================================================--
-    --  [3] MARVIN DESKTOP THEME 2.0 (visual-only)
+    --  [3] MARVIN PREMIUM PURPLE THEME 3.0 (visual-only)
     --  Wide midnight dashboard, animated energy sweep, moving nebulae and
     --  restrained neon accents. No gameplay callbacks or data flow are changed.
     --========================================================================--
     local Theme = {
-        bg        = Color3.fromRGB(5, 10, 22),
-        bgDeep    = Color3.fromRGB(4, 8, 18),
-        glass     = Color3.fromRGB(13, 24, 42),
-        glassHigh = Color3.fromRGB(20, 38, 61),
-        accent    = Color3.fromRGB(53, 216, 255),
-        accentHot = Color3.fromRGB(159, 93, 255),
-        cyan      = Color3.fromRGB(92, 231, 255),
+        bg        = Color3.fromRGB(9, 5, 20),
+        bgDeep    = Color3.fromRGB(5, 3, 14),
+        glass     = Color3.fromRGB(24, 13, 43),
+        glassHigh = Color3.fromRGB(39, 22, 65),
+        accent    = Color3.fromRGB(171, 79, 255),
+        accentHot = Color3.fromRGB(255, 61, 184),
+        cyan      = Color3.fromRGB(106, 211, 255),
         text      = Color3.fromRGB(239, 247, 255),
         muted     = Color3.fromRGB(143, 166, 195),
         green     = Color3.fromRGB(65, 238, 167),
-        tabActive = Color3.fromRGB(24, 93, 131),
+        tabActive = Color3.fromRGB(91, 37, 145),
     }
     D.theme = Theme
     local starTweens = {}
@@ -795,9 +795,9 @@ local function createFinder(D)
     local panelGradient = D.make('UIGradient', {
         Rotation = 24,
         Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, Color3.fromRGB(5, 11, 25)),
-            ColorSequenceKeypoint.new(0.48, Color3.fromRGB(11, 18, 39)),
-            ColorSequenceKeypoint.new(1, Color3.fromRGB(17, 10, 36)),
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(10, 5, 24)),
+            ColorSequenceKeypoint.new(0.48, Color3.fromRGB(23, 10, 43)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(43, 8, 39)),
         }),
     }, panel)
     local panelMotion = TweenService:Create(panelGradient,
@@ -847,9 +847,9 @@ local function createFinder(D)
         D.make('UIGradient', {
             Rotation = 0,
             Color = ColorSequence.new({
-                ColorSequenceKeypoint.new(0, Color3.fromRGB(6, 17, 34)),
-                ColorSequenceKeypoint.new(0.55, Color3.fromRGB(17, 22, 49)),
-                ColorSequenceKeypoint.new(1, Color3.fromRGB(28, 13, 48)),
+                ColorSequenceKeypoint.new(0, Color3.fromRGB(13, 6, 29)),
+                ColorSequenceKeypoint.new(0.55, Color3.fromRGB(35, 12, 57)),
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(57, 10, 47)),
             }),
         }, bar)
     end
@@ -1052,7 +1052,7 @@ local function createFinder(D)
             end
             corner.CornerRadius = UDim.new(0, 10)
             if obj == refreshButton then
-                obj.BackgroundColor3 = Color3.fromRGB(33, 114, 160)
+                obj.BackgroundColor3 = Color3.fromRGB(112, 48, 174)
                 stroke.Color = Theme.cyan
                 stroke.Transparency = 0.08
                 stroke.Thickness = 1.6
