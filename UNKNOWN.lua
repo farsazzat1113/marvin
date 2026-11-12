@@ -1437,6 +1437,16 @@ local function createFinder(D)
     --  PlantEgg requires a valid local CFrame on the plot's PetArea; a fixed
     --  CFrame.new(0,0,0) can point outside a usable placement cell.
     --========================================================================--
+    -- Game-specific Auto Steal rules. Universe ID 10563114921 is the
+    -- current Steal An Egg experience; FFA=false means target only confirmed
+    -- local field-slot eggs, never carried/dropped/remote feed records.
+    local AUTO_STEAL_GAME_RULES = {
+        [10563114921] = {
+            FFA = false,
+        },
+    }
+    local autoStealGameRules = AUTO_STEAL_GAME_RULES[game.GameId]
+
     local stealEggState,stealIdentity,stealPlot,stealPlacedEggRenderer
     pcall(function() stealEggState=module('Client.EggState') end)
     pcall(function() stealIdentity=module('Shared.Util.AreaEggSlotIdentity') end)
@@ -1735,6 +1745,10 @@ local function createFinder(D)
                     return
                 end
                 if not autoStealEnabled then return end
+                if not autoStealGameRules then
+                    queryStatus='Auto Steal: unsupported Universe ID '..tostring(game.GameId)
+                    return
+                end
                 if not stealEggState then
                     queryStatus='Auto Steal: EggState module unavailable'
                     return
@@ -1759,7 +1773,12 @@ local function createFinder(D)
 
                 local function isAvailableFieldEgg(entry)
                     if type(entry)~='table' or entry.uid==nil then return false end
-                    if entry.state==nil then return true end
+
+                    -- FFA=false is deliberately strict: without a confirmed
+                    -- Slot state, do not treat an unknown/carrying egg as stealable.
+                    if autoStealGameRules.FFA==false and entry.state==nil then return false end
+
+                    if entry.state==nil then return autoStealGameRules.FFA==true end
                     if stealAreaStates and stealAreaStates.Slot~=nil then
                         return entry.state==stealAreaStates.Slot
                     end
