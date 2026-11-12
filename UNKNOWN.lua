@@ -2431,7 +2431,7 @@ local function createFinder(D)
     end
     local function fitFinanceText(card)
         local rowWidth=panel.Size.X.Offset-28
-        local width=rowWidth-184
+        local width=rowWidth-220
         local service=game:GetService('TextService')
         local weightSize=type(card.entry.weight)=='number' and 16 or 19
         local weightAvailable=width*0.46-10
@@ -2464,10 +2464,10 @@ local function createFinder(D)
                 rankWidthCache[rankText]=width
             end
             card.rankLabel.Text=rankText;card.rankLabel.Size=UDim2.fromOffset(width,28)
-            card.nameLabel.Position=UDim2.fromOffset(86+width,3);card.nameLabel.Size=UDim2.new(1,-94-width,0,26)
+            card.nameLabel.Position=UDim2.fromOffset(110+width,3);card.nameLabel.Size=UDim2.new(1,-118-width,0,26)
         end
         if card.nameLabel.Text~=tostring(entry.name) then card.nameLabel.Text=tostring(entry.name) end
-        card.nameLabel.Size=UDim2.new(1,-94-card.rankLabel.Size.X.Offset,0,26)
+        card.nameLabel.Size=UDim2.new(1,-118-card.rankLabel.Size.X.Offset,0,26)
         if card.icon.Image~=(entry.icon or '') then card.icon.Image=entry.icon or '' end
         if not card.financeReady or card.rate~=entry.rate or card.missingRate~=entry.missingRate then
             card.incomeLabel.Text=entry.missingRate and 'Income unavailable' or D.money(entry.rate)
@@ -2786,26 +2786,26 @@ local function createFinder(D)
                 rankWidth=math.ceil(textService:GetTextSize(rankText,20,Enum.Font.FredokaOne,Vector2.new(1000,28)).X)+4
                 rankWidthCache[rankText]=rankWidth
             end
-            local rankLabel=D.label(row,rankText,UDim2.fromOffset(86,3),UDim2.fromOffset(rankWidth,26),Color3.fromRGB(220,224,235),20)
+            local rankLabel=D.label(row,rankText,UDim2.fromOffset(110,3),UDim2.fromOffset(rankWidth,26),Color3.fromRGB(220,224,235),20)
             rankLabel.Font=Enum.Font.FredokaOne
             D.make('UIStroke',{Color=Color3.new(0,0,0),Thickness=1.5},rankLabel)
             card.rankLabel=rankLabel
             rankLabel.TextTruncate=Enum.TextTruncate.None
-            local nameLabel=D.label(row,tostring(entry.name),UDim2.fromOffset(86+rankWidth,3),UDim2.new(1,-94-rankWidth,0,26),nameColor,21)
+            local nameLabel=D.label(row,tostring(entry.name),UDim2.fromOffset(110+rankWidth,3),UDim2.new(1,-118-rankWidth,0,26),nameColor,21)
             card.nameLabel=nameLabel
             nameLabel.Font=Enum.Font.GothamBlack
             D.make('UIStroke',{Color=Color3.new(0,0,0),Thickness=1.1},nameLabel)
             nameLabel.TextStrokeColor3=Color3.new(0,0,0);nameLabel.TextStrokeTransparency=1
             rankLabel.TextStrokeColor3=Color3.new(0,0,0);rankLabel.TextStrokeTransparency=1
             pcall(function() card.icon.ResampleMode=Enum.ResamplerMode.Default end)
-            local rarityCell=D.make('Frame',{Name='RarityCell',Position=UDim2.new(0,2,1,rarityKey=='secret' and -26 or -22),Size=UDim2.fromOffset(82,22),BackgroundTransparency=1,ClipsDescendants=true},row)
+            local rarityCell=D.make('Frame',{Name='RarityCell',Position=UDim2.fromOffset(110,57),Size=UDim2.fromOffset(160,20),BackgroundTransparency=1,ClipsDescendants=true},row)
             local rarityText=tostring(entry.rarity)
             local rarityTextSize=raritySizeCache[rarityText]
             if not rarityTextSize then
                 rarityTextSize=20
                 while rarityTextSize>1 do
                     local bounds=textService:GetTextSize(rarityText,rarityTextSize,Enum.Font.GothamBlack,Vector2.new(1000,1000))
-                    if bounds.X<=76 and bounds.Y<=20 then break end
+                    if bounds.X<=148 and bounds.Y<=18 then break end
                     rarityTextSize-=1
                 end
                 raritySizeCache[rarityText]=rarityTextSize
@@ -2819,7 +2819,7 @@ local function createFinder(D)
             rarityLabel.TextScaled=false
             rarityLabel.TextWrapped=false
             styleRarityLabel(nameLabel,rarityKey)
-            local finance=D.make('Frame',{Name='IncomeAndWeight',Position=UDim2.fromOffset(86,31),Size=UDim2.new(1,-184,0,22),BackgroundTransparency=1},row)
+            local finance=D.make('Frame',{Name='IncomeAndWeight',Position=UDim2.fromOffset(110,31),Size=UDim2.new(1,-220,0,22),BackgroundTransparency=1},row)
             local incomeCell=D.make('Frame',{Name='IncomeCell',Position=UDim2.new(),Size=UDim2.new(0.54,-4,1,0),BackgroundTransparency=1,ClipsDescendants=false},finance)
             local incomeLabel=D.label(incomeCell,entry.missingRate and 'Income unavailable' or D.money(entry.rate),UDim2.fromOffset(3,2),UDim2.new(1,-6,1,-4),Color3.fromRGB(135,240,140),20)
             card.incomeLabel=incomeLabel
@@ -2852,10 +2852,10 @@ local function createFinder(D)
             end
 
             local names=mutationNames(entry)
-            local available=math.max(100,panel.Size.X.Offset-130)
+            local available=math.max(100,panel.Size.X.Offset-230)
             local widths,total={},0
             for i,name in ipairs(names) do widths[i]=mutationWidth(name,textService,available);total+=widths[i]+5 end
-            local strip=D.make('Frame',{Name='MutationStrip',Position=UDim2.new(0,86,1,-29),Size=UDim2.new(1,-94,0,28),BackgroundTransparency=1,ClipsDescendants=true},row)
+            local strip=D.make('Frame',{Name='MutationStrip',Position=UDim2.new(0,110,1,-29),Size=UDim2.new(1,-218,0,28),BackgroundTransparency=1,ClipsDescendants=true},row)
             local words=D.make('Frame',{Name='MutationWords',Position=UDim2.fromOffset(4,0),Size=UDim2.fromOffset(math.max(1,total),28),BackgroundTransparency=1},strip)
             D.make('UIScale',{Scale=math.min(1,available/math.max(1,total))},words)
             local x=0
