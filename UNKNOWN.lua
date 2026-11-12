@@ -1592,29 +1592,40 @@ local function createFinder(D)
     end
 
     local function carryHome(uid)
-        if not (stealEggState and stealPlot and type(stealEggState.PlantEgg)=='function') then
-            return false,'plot or egg placement module unavailable'
+        if not (stealEggState and stealPlot
+            and type(stealEggState.PlantEgg)=='function'
+            and type(stealEggState.WearEggTool)=='function') then
+            return false,'egg equip or placement API unavailable'
         end
 
         local plotOk,plot=pcall(stealPlot.ResolvePlot)
         if not plotOk or not plot then return false,'your plot could not be resolved' end
+
         local petArea=plot.PetArea
         local centerPoint=plot.CenterPoint
+        local update=plot.ToUpdate
+        if update and type(update.FindFirstChild)=='function' then
+            petArea=petArea or update:FindFirstChild('PetArea')
+        end
         if not (petArea and petArea:IsA('BasePart') and centerPoint and centerPoint:IsA('BasePart')) then
-            local update=plot.ToUpdate
-            if update and update.FindFirstChild then
-                petArea=petArea or update:FindFirstChild('PetArea')
-            end
-            if not (petArea and petArea:IsA('BasePart') and centerPoint and centerPoint:IsA('BasePart')) then
-                return false,'your plot PetArea or CenterPoint is unavailable'
-            end
+            return false,'your plot PetArea or CenterPoint is unavailable'
         end
 
-        -- The server claims a carried egg only after the character enters its
-        -- own PetArea. Merely calling PlantEgg from CenterPoint skips this step.
-        local claimPoint=petArea.Position+Vector3.new(0,4,0)
-        local reached,moveReason=walkToPoint(claimPoint,math.max(5,math.min(petArea.Size.X,petArea.Size.Z)*0.12),120)
-        if not reached then return false,'could not enter your PetArea: '..tostring(moveReason) end
+        -- The game's own farm returns to RespawnPointCFrame (or CenterPoint)
+        -- to trigger the carry deposit. Walking to the PetArea's geometric
+        -- center is not equivalent to reaching the game's home/standby point.
+        local homePosition
+        if typeof(plot.RespawnPointCFrame)=='CFrame' then
+            homePosition=plot.RespawnPointCFrame.Position
+        elseif centerPoint:IsA('BasePart') then
+            homePosition=centerPoint.Position
+        end
+        if typeof(homePosition)~='Vector3' then
+            return false,'plot home/standby position is unavailable'
+        end
+
+        local reached,moveReason=walkToPoint(homePosition,6,120)
+        if not reached then return false,'could not reach your plot home: '..tostring(moveReason) end
 
         local function carryWasCleared()
             if type(stealEggState.ReadCarryState)=='function' then
@@ -1627,7 +1638,8 @@ local function createFinder(D)
                 local stateOk,snapshot=pcall(stealEggState.ReadFieldEggs)
                 if stateOk and type(snapshot)=='table' and type(snapshot.Records)=='table' then
                     for key,record in pairs(snapshot.Records) do
-                        if tostring(record.Uid or key)==uid and stealAreaStates and record.State==stealAreaStates.Slot then
+                        if tostring(record.Uid or key)==uid
+                            and stealAreaStates and record.State==stealAreaStates.Slot then
                             return true
                         end
                     end
@@ -1636,13 +1648,40 @@ local function createFinder(D)
             return false
         end
 
-        local claimDeadline=os.clock()+12
+        local claimDeadline=os.clock()+15
         local claimed=false
         repeat
             if carryWasCleared() then claimed=true;break end
             task.wait(0.25)
         until not alive or os.clock()>=claimDeadline
-        if not claimed then return false,'PetArea did not confirm the egg claim' end
+        if not claimed then return false,'home reached, but the server has not confirmed deposit' end
+
+        local function isEquipped()
+            local character=D.player.Character
+            if not character then return false end
+            for _,child in ipairs(character:GetChildren()) do
+                if child:IsA('Tool') and child:GetAttribute('ItemType')=='AssetEgg'
+                    and tostring(child:GetAttribute('UID') or '')==uid then
+                    return true
+                end
+            end
+            return false
+        end
+
+        local equipped=false
+        local equipReason='egg tool was not equipped'
+        for attempt=1,8 do
+            if isEquipped() then equipped=true;break end
+            local equipOk,equipResult=pcall(stealEggState.WearEggTool,uid)
+            if not equipOk then
+                equipReason=tostring(equipResult)
+            elseif equipResult~=true then
+                equipReason='game did not equip the carried egg'
+            end
+            task.wait(0.3)
+            if isEquipped() then equipped=true;break end
+        end
+        if not equipped then return false,'egg deposited but equip failed: '..equipReason end
 
         local placement=nextStealPlacementCFrame(plot)
         if not placement then return false,'no free placement spot found on your plot' end
@@ -1650,6 +1689,10 @@ local function createFinder(D)
         local callOk,placed,placeReason=pcall(stealEggState.PlantEgg,uid,placement)
         if not callOk then return false,tostring(placed) end
         if placed~=true then return false,tostring(placeReason or 'game did not confirm egg placement') end
+
+        if type(stealEggState.DoffEggTool)=='function' then
+            pcall(stealEggState.DoffEggTool,nil)
+        end
         return true
     end
 
