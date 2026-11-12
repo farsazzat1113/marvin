@@ -76,10 +76,23 @@ queueAutoExecute()
 -- Records are never filtered by distance or by model availability.
 local Players = game:GetService('Players')
 local RS = game:GetService('ReplicatedStorage')
+
+-- Teleport queues and executors can run before the client finishes joining.
+-- Wait for the local player instead of silently terminating the script.
+if not game:IsLoaded() then
+    game.Loaded:Wait()
+end
+
 local player = Players.LocalPlayer
-assert(player, 'Join the game first')
-local parent = player:WaitForChild('PlayerGui', 15)
-assert(parent, 'PlayerGui unavailable')
+local playerDeadline = os.clock() + 60
+while not player and os.clock() < playerDeadline do
+    task.wait(0.1)
+    player = Players.LocalPlayer
+end
+assert(player, 'LocalPlayer did not become available within 60 seconds')
+
+local parent = player:WaitForChild('PlayerGui', 60)
+assert(parent, 'PlayerGui unavailable after waiting 60 seconds')
 local old = parent:FindFirstChild('MARVIN') or parent:FindFirstChild('TENSHI_'..'FINDER_BETA')
 if old then old:Destroy() end
 local gui = Instance.new('ScreenGui')
@@ -3267,11 +3280,12 @@ gui.DisplayOrder = 1100
 
 local parent
 pcall(function()
-    parent = gethui()
+    if type(gethui) == "function" then parent = gethui() end
 end)
 if not parent then
-    parent = player:WaitForChild("PlayerGui")
+    parent = player:WaitForChild("PlayerGui", 60)
 end
+assert(parent, "Key UI could not find a GUI parent")
 gui.Parent = parent
 
 local frame = Instance.new("Frame")
