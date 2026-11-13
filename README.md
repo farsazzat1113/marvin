@@ -1,51 +1,49 @@
 # UNKNOWN
 
-**Shared Egg Finder + Cloudflare Key Gate** — a single-file Roblox UI script with a
-premium glass interface, live shared feed, and auto-join.
+**Shared Egg Finder + 24-Hour Linkvertise Key System** — a single-file Roblox UI script with a
+compact animated glassmorphism interface, rotating royal crown, live shared feed, smart sniper auto-join, and Linkvertise ad monetization.
 
-![Build](https://img.shields.io/badge/build-Public%20v0.4.3%20%2F%20UI20-935CFF)
-![Theme](https://img.shields.io/badge/theme-Glass%20Premium-38CDFF)
+![Build](https://img.shields.io/badge/build-Public%20v0.5.0%20%2F%20UI26-935CFF)
+![Theme](https://img.shields.io/badge/theme-Glass%20Premium%20Royal%20Crown-FFD700)
+![Key Gate](https://img.shields.io/badge/key%20gate-Linkvertise%2024H%20Monetized-FF8C00)
+![Engine](https://img.shields.io/badge/engine-Smart%20Join%20Sniper-34EB96)
 ![File](https://img.shields.io/badge/format-single--file%20Lua-success)
 
-## Live design preview
+## Executor Loadstrings
 
-[Open the animated MARVIN dashboard preview](https://html-preview.github.io/?url=https%3A%2F%2Fgithub.com%2Ffarsazzat1113%2Fmarvin%2Fblob%2Fmarvin-premium-purple-ui-2026-11-12%2Fdesign%2Fmarvin-dashboard-preview.html)
+To run MARVIN directly in your executor:
 
-This is a separate HTML/CSS/JavaScript visual prototype. Its starfield, nebula lighting,
-gradient title, orbital core, hover states, and preview-only controls animate in a browser.
-It is not connected to Roblox or the live Lua callbacks.
+### 🚀 1️⃣ Obfuscated Build (Protected & Recommended)
+```lua
+loadstring(game:HttpGet("https://raw.githubusercontent.com/farsazzat1113/marvin/arena/7303e424-marvin/UNKNOWN.obfuscated.lua"))()
+```
+
+### 💻 2️⃣ Clean Source Build
+```lua
+loadstring(game:HttpGet("https://raw.githubusercontent.com/farsazzat1113/marvin/arena/7303e424-marvin/UNKNOWN.lua"))()
+```
+
+---
+
+## What's new in UI26 — Linkvertise 24-Hour Ad-Key System
+
+- **💵 Linkvertise Ad Monetization** — Connected directly to your Linkvertise campaign (`https://direct-link.net/3852708/7hzx0OtX0UJe`).
+- **⏱️ 24-Hour Daily Key Access** — Keys remain valid for 24 full hours (`86400s`) upon verification, automatically saved to `marvin_key_auth.json`. Returning players jump straight into MARVIN without re-entering keys or seeing ads repeatedly.
+- **👑 Royal Key Window** — Centered dark glassmorphic card with a 360° continuously spinning royal crown.
+- **🔗 1-Click "GET KEY (ADS)" Button** — Automatically copies your Linkvertise link to the user's clipboard and instructs them to open their browser.
+- **☁️ Dynamic Keys via `keys.json`** — Change or add valid keys on GitHub anytime without re-obfuscating or modifying script files.
+- **🚫 Auto Steal Removed** — Completely eliminated to prevent any movement interference.
+- **🎯 Active PlaceId Matching** — Smart Join strictly validates that target servers match your current `game.PlaceId`.
+- **⚡ Smart Auto Join Engine** — Always prioritizes and teleports to the highest-rate egg across all active servers.
+- **🔄 Multi-Server Fallback** — Instantly hops to the next best eligible server if the target is full.
+
+---
 
 ## Overview
 
 UNKNOWN scans the current server's field eggs, reports sightings to the shared
 Finder host, and renders a live list of the best eggs reported across servers —
-with one-click join and an automatic "join the best server" mode.
-
-The Finder only boots **after the key-validation endpoint returns `valid=true`**
-and revalidates the key every 60 seconds while running.
-
-## What's new in UI20 — Auto Steal
-
-- **AUTO STEAL** — hands-free carry + plant for the egg a join tracked:
-  the character is parked next to the egg, the game's own carry remote is
-  invoked, then the egg is taken home and planted on your plot.
-- While **Auto Join** is armed, the best local egg over your minimum gets
-  picked up automatically too - no buttons pressed.
-- New persisted settings toggle: **SETTINGS → AUTO STEAL: ON/OFF** (default ON).
-
-## What's new in UI19 — "Glass Premium"
-
-- **Glass Premium theme** — translucent deep-space panel, purple→cyan gradient
-  borders, soft outer glow, fading header hairline.
-- **Animated starfield v2** — fine twinkling stars plus three slow-breathing
-  nebula glows, always behind the real content (managed Z-order).
-- **Glass cards** — deep indigo egg cards with soft gradients and purple
-  hairline borders; consistent 8 px rounding everywhere.
-- **Panel pop** — the window opens with a short Back-eased scale animation.
-- **Key gate redesign** — centered glass card, accent underline, focus-lit input
-  border, gradient verify button with hover/press feedback, entrance animation.
-- **Encoding cleanup** — fixed mojibake strings (`â¦` → `…`, `Ã—` → `×`, `—`).
-- **Organized source** — numbered section banners ([1]–[7]) and a header map.
+with one-click join and an automatic "smart join sniper" mode.
 
 ## Source map
 
@@ -53,30 +51,18 @@ and revalidates the key every 60 seconds while running.
 |---|---------|----------------|
 | 1 | Bootstrap | Auto-execute queue, silent retry per server hop |
 | 2 | Finder core | Services, GUI factory, parsing/formatting helpers |
-| 3 | Glass Premium UI | Theme, header, settings overlay, animations |
-| 4 | Network | Config loader, broadcast, feed pagination, auto-join |
-| 5 | Card renderer | Egg cards, rarity/mutation glyphs, join flow |
+| 3 | Glass Premium UI | Theme, rotating crown, header, settings overlay, animations |
+| 4 | Network | Config loader, broadcast, feed pagination, smart auto-join sniper |
+| 5 | Card renderer | Egg cards, rarity/mutation glyphs, instant join flow |
 | 6 | Scan loop | Field-egg reader feeding UI + broadcaster |
-| 7 | Key gate | Glass key window, validation + periodic recheck |
-
-## Local state files
-
-Written to the executor workspace when available:
-
-| File | Purpose |
-|------|---------|
-| `tenshi_beta_ui.json` | UI settings (scope, thresholds, auto-execute, size) |
-| `tenshi_public_sighting_lifecycle_v1.json` | Sighting lifecycle / tombstones |
-| `tenshi_beta_top5_cycle_v2.json` | Retained top-5 cards across refreshes |
-| `tenshi_public_gui_size_v2.json` | Saved GUI scale |
-| `unknown_saved_access_key.txt` | Last accepted key (revalidated online) |
+| 7 | Key gate | Linkvertise 24h glass key window with rotating royal crown |
 
 ## Controls
 
 - **Launcher icon** / **F key** — toggle the panel (draggable via its header).
+- **GET KEY (ADS)** — copies the Linkvertise link to clipboard.
 - **ALL SERVERS / MY SERVER** — feed scope tabs.
 - **REFRESH** — manual feed refresh with the reset countdown.
 - **VALUE OF SERVERS / MIN AUTO JOIN VALUE** — `1B`–`50B` thresholds.
-- **AUTO JOIN** — teleports to the best eligible reported server automatically.
-- **AUTO STEAL** — carries + plants the tracked egg without any input.
-- **SETTINGS** — auto-execute / auto-steal toggles and Discord link.
+- **SMART JOIN** — zero-latency sniper that teleports to the highest eligible egg and falls back automatically if full.
+- **SETTINGS** — auto-execute toggles and Discord link.
