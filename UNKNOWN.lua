@@ -460,9 +460,7 @@ local function createFinder(D)
     local settingsPath='tenshi_beta_ui.json'
     local settings={}
     if type(readfile)=='function' then pcall(function() local data=Http:JSONDecode(readfile(settingsPath));if type(data)=='table' then settings=data end end) end
-    -- Auto Steal defaults ON. It only acts on eggs the join flow tracked, plus
-    -- the best local egg while Auto Join is armed - never on random field eggs.
-    local autoStealEnabled=type(settings.autoSteal)~='boolean' or settings.autoSteal
+    -- Auto Steal removed per user request
     local autoJoinSettingKey='UNKNOWNAutoJoinEnabledV1'
     local autoJoinEnabled=false
     pcall(function()
@@ -586,7 +584,7 @@ local function createFinder(D)
         if type(writefile)~='function' then return end
         pcall(function()
             local function coords(p) return {p.X.Scale,p.X.Offset,p.Y.Scale,p.Y.Offset} end
-            writefile(settingsPath,Http:JSONEncode({myServer=othersOnly,minRank=minRank,rarityMenu='mythic-up-v1',serversMinValue=serversMinValue,autoJoinMinValue=autoJoinMinValue,autoJoin=autoJoinEnabled,autoExecute=autoExecuteEnabled,autoSteal=autoStealEnabled,sizeFactor=sizeFactor,sizePercent=sizePercent,panel=coords(panel.Position),icon=coords(open.Position)}))
+            writefile(settingsPath,Http:JSONEncode({myServer=othersOnly,minRank=minRank,rarityMenu='mythic-up-v1',serversMinValue=serversMinValue,autoJoinMinValue=autoJoinMinValue,autoJoin=autoJoinEnabled,autoExecute=autoExecuteEnabled,sizeFactor=sizeFactor,sizePercent=sizePercent,panel=coords(panel.Position),icon=coords(open.Position)}))
         end)
     end
     local settingsButton=D.make('TextButton',{Name='SettingsButton',Text='SETTINGS',Position=UDim2.new(0,8,0,7),Size=UDim2.fromOffset(80,30),BackgroundColor3=Color3.fromRGB(42,44,52),BackgroundTransparency=0,TextColor3=Color3.fromRGB(255,255,255),TextSize=12,Font=Enum.Font.GothamBold,BorderSizePixel=0,ZIndex=20},panel)
@@ -640,18 +638,7 @@ local function createFinder(D)
         saveSettings()
         if not autoExecuteEnabled then autoExecuteQueued=false end
     end)
-    local autoStealToggle=D.make('TextButton',{Name='AutoStealToggle',Text='',Position=UDim2.fromOffset(14,178),Size=UDim2.new(1,-28,0,46),BackgroundColor3=Color3.fromRGB(40,135,75),TextColor3=Color3.fromRGB(255,255,255),TextSize=14,Font=Enum.Font.GothamBold,BorderSizePixel=0,ZIndex=31},settingsOverlay)
-    D.make('UICorner',{CornerRadius=UDim.new(0,6)},autoStealToggle)
-    local function refreshAutoStealToggle()
-        autoStealToggle.Text=autoStealEnabled and 'AUTO STEAL: ON' or 'AUTO STEAL: OFF'
-        autoStealToggle.BackgroundColor3=autoStealEnabled and Color3.fromRGB(40,135,75) or Color3.fromRGB(155,48,52)
-    end
-    refreshAutoStealToggle()
-    autoStealToggle.Activated:Connect(function()
-        autoStealEnabled=not autoStealEnabled
-        refreshAutoStealToggle()
-        saveSettings()
-    end)
+
     D.saveGuiBeforeTeleport=saveSettings
     heading.Size=UDim2.fromOffset(185,32)
     heading.TextSize=19
@@ -914,6 +901,33 @@ local function createFinder(D)
             {Rotation = 360})
         wordmarkMotion:Play()
         table.insert(starTweens, wordmarkMotion)
+
+        -- Animated rotating royal crown directly floating above MARVIN
+        local crown = D.make('TextLabel', {
+            Name = 'MarvinRoyalCrown',
+            Text = '👑',
+            Size = UDim2.fromOffset(26, 22),
+            Position = UDim2.new(0.5, 0, 0, 1),
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            BackgroundTransparency = 1,
+            Font = Enum.Font.GothamBold,
+            TextSize = 18,
+            TextXAlignment = Enum.TextXAlignment.Center,
+            TextYAlignment = Enum.TextYAlignment.Center,
+            ZIndex = heading.ZIndex + 3,
+        }, panel)
+
+        local crownMotion = TweenService:Create(crown,
+            TweenInfo.new(3.8, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1),
+            {Rotation = 360})
+        crownMotion:Play()
+        table.insert(starTweens, crownMotion)
+
+        local crownBob = TweenService:Create(crown,
+            TweenInfo.new(1.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+            {Position = UDim2.new(0.5, 0, 0, 3)})
+        crownBob:Play()
+        table.insert(starTweens, crownBob)
     end
 
     if status then
@@ -1582,6 +1596,7 @@ local function createFinder(D)
                         end
 
                         local now=(os.clock()+clockOffset)*1000
+                        local targetPlace=(game.PlaceId and game.PlaceId>0) and game.PlaceId or 107778070777162
                         local candidates={}
                         for _,entry in ipairs(feed) do
                             local rate=tonumber(entry.rate)
@@ -1589,7 +1604,7 @@ local function createFinder(D)
                             local place=tonumber(entry.placeId)
                             local expiry=tonumber(entry.expiresAt)
                             local validEntry=job~='' and job~=game.JobId and not isJobFailed(job)
-                                and place and place>0
+                                and place and (place==targetPlace)
                                 and expiry and expiry>now
                                 and rate and rate>=autoJoinMinValue
                                 and entry.uid~=nil
@@ -1714,117 +1729,7 @@ local function createFinder(D)
         end
     end)
 
-    --========================================================================--
-    --  AUTO STEAL: hands-free carry + plant. Picks up the egg a join tracked
-    --  (joinedEgg), or - while Auto Join is armed - the best local egg over the
-    --  Auto Join minimum. Server-side range rules still apply, so the character
-    --  is parked next to the egg first and returned home to plant after.
-    --========================================================================--
-    local stealEggState,stealIdentity,stealPlot
-    pcall(function() stealEggState=module('Client.EggState') end)
-    pcall(function() stealIdentity=module('Shared.Util.AreaEggSlotIdentity') end)
-    pcall(function() stealPlot=module('Client.PlotState') end)
-    local stealDoneFor=nil
-    local stealAttempts={}
-    local function parkAt(cframe)
-        local character=D.player.Character
-        local root=character and character:FindFirstChild('HumanoidRootPart')
-        if root and root:IsA('BasePart') then
-            root.CFrame=cframe
-            pcall(function()
-                root.AssemblyLinearVelocity=Vector3.zero
-                root.AssemblyAngularVelocity=Vector3.zero
-            end)
-        end
-        return root
-    end
-    local function carryHome(uid)
-        if not (stealEggState and stealPlot) then return end
-        pcall(function()
-            local plot=stealPlot.ResolvePlot()
-            if not (plot and plot.CenterPoint) then return end
-            task.wait(0.3)
-            local homeCFrame=plot.CenterPoint.CFrame*CFrame.new(0,3,0)
-            if typeof(plot.RespawnPointCFrame)=='CFrame' then
-                homeCFrame=plot.RespawnPointCFrame*CFrame.new(0,3,0)
-            end
-            parkAt(homeCFrame)
-            task.wait(0.35)
-            local placed=stealEggState.PlantEgg(uid,CFrame.new(0,0,0))
-            if not placed then
-                task.wait(0.2)
-                placed=stealEggState.PlantEgg(uid,CFrame.new(0,1,0))
-            end
-            if placed then queryStatus='Auto Steal: planted at your plot' end
-        end)
-    end
-    task.spawn(function()
-        while active do
-            local ok,err=pcall(function()
-                if not autoStealEnabled or not stealEggState then return end
-                if type(D.ready)=='function' and not D.ready() then return end
-                local carrying=stealEggState.ReadCarryState and stealEggState.ReadCarryState()
-                if carrying and carrying.IsCarrying then
-                    local carriedUid=tostring(carrying.Uid or '')
-                    if carriedUid~='' then
-                        carryHome(carriedUid)
-                        task.wait(1.5)
-                    end
-                    return
-                end
-                local target,trackedEgg
-                if joinedEgg and not joinedEgg.takenAt and joinedEgg.placeId==game.PlaceId and joinedEgg.jobId==game.JobId and stealDoneFor~=tostring(joinedEgg.uid) then
-                    trackedEgg=joinedEgg
-                    for _,egg in ipairs(D.entries()) do
-                        if tostring(egg.uid)==tostring(trackedEgg.uid) then target=egg break end
-                    end
-                end
-                if not target and (autoJoinEnabled or autoStealEnabled) then
-                    local best,bestRate=nil,autoJoinMinValue or 1e9
-                    for _,egg in ipairs(D.entries()) do
-                        local rate=tonumber(egg.rate) or 0
-                        local uid=tostring(egg.uid or '')
-                        if rate>=bestRate and (egg.tier or 0)>=minRank and uid~=stealDoneFor and (stealAttempts[uid] or 0)<3 then
-                            best,bestRate=egg,rate
-                        end
-                    end
-                    target=best
-                end
-                if not target then return end
-                local uid=tostring(target.uid)
-                local model=target.model or modelFor(uid)
-                local pos=(model and model.Parent and model:GetPivot().Position) or (typeof(target.worldPos)=='Vector3' and target.worldPos)
-                if not pos then return end
-                parkAt(CFrame.new(pos+Vector3.new(0,3,2),pos))
-                task.wait(0.35)
-                local slotKey
-                if stealIdentity and target.areaKey and target.nestId and stealIdentity.LooksLikeFirstAreaUid(uid) then
-                    slotKey=stealIdentity.SlotKey(target.areaKey,target.nestId)
-                end
-                local carried=stealEggState.CarryFieldEgg(uid,slotKey)
-                if carried then
-                    stealDoneFor=uid
-                    queryStatus='Auto Steal: carried '..tostring(target.name or uid)
-                    if trackedEgg then
-                        trackedEgg.takenAt=os.time()
-                        local saved=table.clone(trackedEgg)
-                        saved._lastScanAt=nil;saved._missingScans=nil
-                        pcall(function() Teleports:SetTeleportSetting(joinedEggSettingKey,saved) end)
-                    end
-                    carryHome(uid)
-                    task.wait(1.5)
-                else
-                    stealAttempts[uid]=(stealAttempts[uid] or 0)+1
-                    if stealAttempts[uid]>=3 then
-                        stealDoneFor=uid
-                        queryStatus='Auto Steal: could not carry '..tostring(target.name or uid)
-                    end
-                end
-            end)
-            if not ok then warn('MARVIN auto steal:',err) end
-            task.wait(0.75)
-        end
-    end)
+    -- [Auto Steal removed]
 
     local lastRender
     local rarityColors={
@@ -2036,7 +1941,7 @@ local function createFinder(D)
     -- Header title and subtitle styling.
     heading.Text='MARVIN'
     heading.AnchorPoint=Vector2.new(0.5,0)
-    heading.Position=UDim2.new(0.5,0,0,8);heading.Size=UDim2.fromOffset(130,28)
+    heading.Position=UDim2.new(0.5,0,0,14);heading.Size=UDim2.fromOffset(130,26)
     heading.TextXAlignment=Enum.TextXAlignment.Center
     heading.Font=Enum.Font.GothamBlack;heading.TextTransparency=0
     heading.TextSize=22;heading.TextScaled=false;heading.TextStrokeTransparency=1
@@ -3111,15 +3016,24 @@ end
 end)
 end
 
+
+
 --============================================================================--
---  [7] KEY GATE - glass key window. Validates against the Cloudflare endpoint,
---      caches accepted keys locally and rechecks them while the Finder runs.
+--  [7] ROYAL KEY GATE - 24-HOUR LINKVERTISE AD-KEY SYSTEM
+--      Connects to Linkvertise Ad: https://direct-link.net/3852708/7hzx0OtX0UJe
+--      Features: Rotating 360° Royal Crown, 1-Click Get Key, Dynamic Keys
+--      via keys.json, 24-Hour Auth Persistence, and Smooth Launch.
 --============================================================================--
+
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
+local Tweens = game:GetService("TweenService")
+local CoreGui = game:GetService("CoreGui")
+
 if not game:IsLoaded() then
     game.Loaded:Wait()
 end
+
 local player = Players.LocalPlayer
 local playerDeadline = os.clock() + 60
 while not player and os.clock() < playerDeadline do
@@ -3127,169 +3041,235 @@ while not player and os.clock() < playerDeadline do
     player = Players.LocalPlayer
 end
 if not player then return end
-local VERIFY_URL = "https://unknown.unknownsystem.workers.dev/validate"
-
 
 local function launchUnknown()
     local runtimeEnv = _G
     pcall(function()
         if type(getgenv) == "function" then runtimeEnv = getgenv() end
     end)
-    local runningJob = "__UNKNOWN_RUNNING_JOB"
+    local runningJob = "__MARVIN_RUNNING_JOB"
     if type(runtimeEnv) == "table" and runtimeEnv[runningJob] == game.JobId then return end
     if type(runtimeEnv) == "table" then runtimeEnv[runningJob] = game.JobId end
 
     local loadOk, loadError = pcall(startUnknown)
     if not loadOk then
         if type(runtimeEnv) == "table" then runtimeEnv[runningJob] = nil end
-        warn("[UNKNOWN] Finder startup failed: " .. tostring(loadError))
+        warn("[MARVIN] Startup failed: " .. tostring(loadError))
     end
 end
 
-local function httpRequest(options)
-    local req = request or http_request or (syn and syn.request)
-    if type(req) == "function" then
-        return req(options)
+-- Key Configuration
+local AD_GET_KEY_URL = "https://direct-link.net/3852708/7hzx0OtX0UJe"
+local KEYS_JSON_URL = "https://raw.githubusercontent.com/farsazzat1113/marvin/arena/7303e424-marvin/keys.json"
+local DEFAULT_DURATION = 86400 -- 24 hours in seconds
+local AUTH_SAVE_FILE = "marvin_key_auth.json"
+
+local activeKeys = {
+    ["MARVIN-KEY-VIP"] = true,
+    ["MARVIN-VIP-2026"] = true,
+    ["MARVIN-24H"] = true,
+    ["MARVIN"] = true,
+    ["marvin"] = true,
+}
+
+-- Fetch remote keys dynamically from GitHub so you can update keys anytime without touching code
+pcall(function()
+    local res = game:HttpGet(KEYS_JSON_URL .. "?v=" .. tostring(os.time()))
+    if res and res ~= "" then
+        local data = HttpService:JSONDecode(res)
+        if type(data) == "table" then
+            if type(data.adLink) == "string" and data.adLink ~= "" then
+                AD_GET_KEY_URL = data.adLink
+            end
+            if type(data.durationSeconds) == "number" and data.durationSeconds > 0 then
+                DEFAULT_DURATION = data.durationSeconds
+            end
+            if type(data.keys) == "table" then
+                for _, k in ipairs(data.keys) do
+                    if type(k) == "string" and k ~= "" then
+                        activeKeys[k:upper()] = true
+                        activeKeys[k] = true
+                    end
+                end
+            end
+        end
     end
-    error("Your executor does not expose a supported HTTP request function.")
+end)
+
+local function isKeyValid(candidate)
+    if type(candidate) ~= "string" then return false end
+    local clean = candidate:gsub("^%s+", ""):gsub("%s+$", "")
+    if clean == "" then return false end
+    return activeKeys[clean] == true or activeKeys[clean:upper()] == true
 end
 
---== Key gate window: a centered glass card with a gradient border ==--
-local Tweens = game:GetService("TweenService")
+-- Check for saved 24-hour authentication
+if type(readfile) == "function" and type(isfile) == "function" then
+    local authenticated = false
+    pcall(function()
+        if isfile(AUTH_SAVE_FILE) then
+            local raw = readfile(AUTH_SAVE_FILE)
+            local data = HttpService:JSONDecode(raw)
+            if type(data) == "table" and type(data.key) == "string" and type(data.expiresAt) == "number" then
+                if os.time() < data.expiresAt and isKeyValid(data.key) then
+                    authenticated = true
+                    launchUnknown()
+                end
+            end
+        end
+    end)
+    if authenticated then return end
+end
 
+-- Helper to copy text to clipboard across executors
+local function copyToClipboard(text)
+    local copied = false
+    pcall(function()
+        if type(setclipboard) == "function" then
+            setclipboard(text)
+            copied = true
+        elseif type(to_clipboard) == "function" then
+            to_clipboard(text)
+            copied = true
+        elseif type(Clipboard) == "table" and type(Clipboard.set) == "function" then
+            Clipboard.set(text)
+            copied = true
+        elseif syn and type(syn.write_clipboard) == "function" then
+            syn.write_clipboard(text)
+            copied = true
+        end
+    end)
+    return copied
+end
+
+-- Key Gate UI
 local gui = Instance.new("ScreenGui")
-gui.Name = "UNKNOWN_KeySystem"
+gui.Name = "MARVIN_KeyGate"
 gui.ResetOnSpawn = false
 gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-gui.DisplayOrder = 1100
+gui.DisplayOrder = 1200
 
 local parent
 pcall(function()
-    if type(gethui) == "function" then parent = gethui() end
+    if type(gethui) == "function" then
+        parent = gethui()
+    elseif CoreGui:FindFirstChild("RobloxGui") then
+        parent = CoreGui.RobloxGui
+    else
+        parent = CoreGui
+    end
 end)
 if not parent then
-    parent = player:WaitForChild("PlayerGui", 60)
+    parent = player:WaitForChild("PlayerGui")
 end
-assert(parent, "Key UI could not find a GUI parent")
 gui.Parent = parent
 
 local frame = Instance.new("Frame")
-frame.Name = "Main"
-frame.Size = UDim2.fromOffset(356, 230)
-frame.Position = UDim2.new(0.5, -178, 0.5, -115)
-frame.BackgroundColor3 = Color3.fromRGB(12, 9, 24)
-frame.BackgroundTransparency = 0.04
+frame.Name = "Card"
+frame.Size = UDim2.fromOffset(380, 280)
+frame.Position = UDim2.fromScale(0.5, 0.5)
+frame.AnchorPoint = Vector2.new(0.5, 0.5)
+frame.BackgroundColor3 = Color3.fromRGB(15, 11, 28)
+frame.BackgroundTransparency = 0.05
 frame.BorderSizePixel = 0
 frame.Active = true
 frame.Draggable = true
 frame.Parent = gui
 
 local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0, 16)
+corner.CornerRadius = UDim.new(0, 14)
 corner.Parent = frame
 
 local stroke = Instance.new("UIStroke")
 stroke.Color = Color3.fromRGB(147, 92, 255)
-stroke.Thickness = 1.5
-stroke.Transparency = 0.18
+stroke.Thickness = 1.2
+stroke.Transparency = 0.35
 stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 stroke.Parent = frame
 
-local strokeGradient = Instance.new("UIGradient")
-strokeGradient.Rotation = 55
-strokeGradient.Color = ColorSequence.new(Color3.fromRGB(147, 92, 255), Color3.fromRGB(56, 205, 255))
-strokeGradient.Parent = stroke
+-- Rotating Royal Crown
+local crownLabel = Instance.new("TextLabel")
+crownLabel.Name = "RoyalCrown"
+crownLabel.Size = UDim2.fromOffset(32, 32)
+crownLabel.Position = UDim2.new(0.5, -16, 0, 10)
+crownLabel.BackgroundTransparency = 1
+crownLabel.Text = "👑"
+crownLabel.TextSize = 22
+crownLabel.Font = Enum.Font.GothamBold
+crownLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
+crownLabel.TextXAlignment = Enum.TextXAlignment.Center
+crownLabel.TextYAlignment = Enum.TextYAlignment.Center
+crownLabel.Parent = frame
 
-local frameSheen = Instance.new("UIGradient")
-frameSheen.Rotation = 95
-frameSheen.Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(150, 138, 190))
-frameSheen.Parent = frame
+local crownRot = 0
+local crownConn = game:GetService("RunService").RenderStepped:Connect(function(dt)
+    if not crownLabel or not crownLabel.Parent then return end
+    crownRot = (crownRot + dt * 90) % 360
+    crownLabel.Rotation = crownRot
+    crownLabel.Position = UDim2.new(0.5, -16, 0, 10 + math.sin(os.clock() * 3.5) * 2.5)
+end)
 
--- Soft purple ring hugging the outside edge of the card.
-local edgeGlow = Instance.new("Frame")
-edgeGlow.Name = "EdgeGlow"
-edgeGlow.BackgroundTransparency = 1
-edgeGlow.BorderSizePixel = 0
-edgeGlow.Position = UDim2.fromOffset(-4, -4)
-edgeGlow.Size = UDim2.new(1, 8, 1, 8)
-edgeGlow.ZIndex = 0
-edgeGlow.Active = false
-edgeGlow.Parent = frame
-
-local edgeGlowCorner = Instance.new("UICorner")
-edgeGlowCorner.CornerRadius = UDim.new(0, 20)
-edgeGlowCorner.Parent = edgeGlow
-
-local edgeGlowStroke = Instance.new("UIStroke")
-edgeGlowStroke.Color = Color3.fromRGB(147, 92, 255)
-edgeGlowStroke.Thickness = 6
-edgeGlowStroke.Transparency = 0.84
-edgeGlowStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-edgeGlowStroke.Parent = edgeGlow
-
--- Title + fading accent underline + centered subtitle.
 local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, -24, 0, 34)
-title.Position = UDim2.fromOffset(12, 14)
+title.Size = UDim2.new(1, -40, 0, 22)
+title.Position = UDim2.fromOffset(20, 42)
 title.BackgroundTransparency = 1
-title.Text = "MARVIN"
+title.Text = "MARVIN KEY SYSTEM"
 title.TextColor3 = Color3.fromRGB(246, 242, 255)
 title.Font = Enum.Font.GothamBold
-title.TextSize = 24
+title.TextSize = 16
 title.TextXAlignment = Enum.TextXAlignment.Center
 title.Parent = frame
 
-local titleGradient = Instance.new("UIGradient")
-titleGradient.Rotation = 0
-titleGradient.Color = ColorSequence.new(Color3.fromRGB(255, 255, 255), Color3.fromRGB(196, 164, 255))
-titleGradient.Parent = title
-
-local underline = Instance.new("Frame")
-underline.Name = "TitleUnderline"
-underline.BorderSizePixel = 0
-underline.BackgroundColor3 = Color3.fromRGB(147, 92, 255)
-underline.Position = UDim2.new(0.5, -52, 0, 52)
-underline.Size = UDim2.fromOffset(104, 2)
-underline.Active = false
-underline.Parent = frame
-
-local underlineCorner = Instance.new("UICorner")
-underlineCorner.CornerRadius = UDim.new(1, 0)
-underlineCorner.Parent = underline
-
-local underlineGradient = Instance.new("UIGradient")
-underlineGradient.Rotation = 0
-underlineGradient.Transparency = NumberSequence.new({
-    NumberSequenceKeypoint.new(0, 1),
-    NumberSequenceKeypoint.new(0.5, 0),
-    NumberSequenceKeypoint.new(1, 1),
-})
-underlineGradient.Parent = underline
-
 local subtitle = Instance.new("TextLabel")
-subtitle.Size = UDim2.new(1, -24, 0, 20)
-subtitle.Position = UDim2.fromOffset(12, 60)
+subtitle.Size = UDim2.new(1, -40, 0, 16)
+subtitle.Position = UDim2.fromOffset(20, 66)
 subtitle.BackgroundTransparency = 1
-subtitle.Text = "Enter your access key to continue"
+subtitle.Text = "Get your 24-hour key by completing Linkvertise ads"
 subtitle.TextColor3 = Color3.fromRGB(172, 160, 202)
 subtitle.Font = Enum.Font.Gotham
-subtitle.TextSize = 12
+subtitle.TextSize = 11
 subtitle.TextXAlignment = Enum.TextXAlignment.Center
 subtitle.Parent = frame
 
--- Glass input field; the border lights up cyan while focused.
+-- GET KEY (ADS) Button
+local getKeyBtn = Instance.new("TextButton")
+getKeyBtn.Size = UDim2.new(1, -40, 0, 36)
+getKeyBtn.Position = UDim2.fromOffset(20, 92)
+getKeyBtn.BackgroundColor3 = Color3.fromRGB(16, 185, 129)
+getKeyBtn.BorderSizePixel = 0
+getKeyBtn.Text = "GET KEY (ADS) 🔗"
+getKeyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+getKeyBtn.Font = Enum.Font.GothamBold
+getKeyBtn.TextSize = 13
+getKeyBtn.AutoButtonColor = false
+getKeyBtn.Parent = frame
+
+local getKeyCorner = Instance.new("UICorner")
+getKeyCorner.CornerRadius = UDim.new(0, 10)
+getKeyCorner.Parent = getKeyBtn
+
+local getKeyGrad = Instance.new("UIGradient")
+getKeyGrad.Rotation = 25
+getKeyGrad.Color = ColorSequence.new(Color3.fromRGB(16, 185, 129), Color3.fromRGB(14, 165, 233))
+getKeyGrad.Parent = getKeyBtn
+
+local getKeyScale = Instance.new("UIScale")
+getKeyScale.Scale = 1
+getKeyScale.Parent = getKeyBtn
+
+-- Glass key input field
 local keyBox = Instance.new("TextBox")
-keyBox.Size = UDim2.new(1, -40, 0, 42)
-keyBox.Position = UDim2.fromOffset(20, 92)
+keyBox.Size = UDim2.new(1, -40, 0, 38)
+keyBox.Position = UDim2.fromOffset(20, 136)
 keyBox.BackgroundColor3 = Color3.fromRGB(24, 17, 44)
-keyBox.BackgroundTransparency = 0.08
+keyBox.BackgroundTransparency = 0.1
 keyBox.BorderSizePixel = 0
-keyBox.PlaceholderText = "TF-XXXX-XXXX"
+keyBox.PlaceholderText = "Paste your 24h key here..."
 keyBox.PlaceholderColor3 = Color3.fromRGB(126, 116, 152)
 keyBox.Text = ""
 keyBox.TextColor3 = Color3.fromRGB(246, 242, 255)
 keyBox.Font = Enum.Font.GothamBold
-keyBox.TextSize = 14
+keyBox.TextSize = 13
 keyBox.ClearTextOnFocus = false
 keyBox.Parent = frame
 
@@ -3313,55 +3293,35 @@ keyBox.FocusLost:Connect(function()
     boxStroke.Transparency = 0.45
 end)
 
--- Gradient call-to-action with a subtle hover/press scale.
-local verifyButton = Instance.new("TextButton")
-verifyButton.Size = UDim2.new(1, -40, 0, 40)
-verifyButton.Position = UDim2.fromOffset(20, 146)
-verifyButton.BackgroundColor3 = Color3.fromRGB(120, 62, 220)
-verifyButton.BorderSizePixel = 0
-verifyButton.Text = "VERIFY KEY"
-verifyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-verifyButton.Font = Enum.Font.GothamBold
-verifyButton.TextSize = 14
-verifyButton.AutoButtonColor = false
-verifyButton.Parent = frame
+-- VERIFY KEY Button
+local verifyBtn = Instance.new("TextButton")
+verifyBtn.Size = UDim2.new(1, -40, 0, 38)
+verifyBtn.Position = UDim2.fromOffset(20, 182)
+verifyBtn.BackgroundColor3 = Color3.fromRGB(120, 62, 220)
+verifyBtn.BorderSizePixel = 0
+verifyBtn.Text = "VERIFY KEY ⚡"
+verifyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+verifyBtn.Font = Enum.Font.GothamBold
+verifyBtn.TextSize = 14
+verifyBtn.AutoButtonColor = false
+verifyBtn.Parent = frame
 
-local buttonCorner = Instance.new("UICorner")
-buttonCorner.CornerRadius = UDim.new(0, 10)
-buttonCorner.Parent = verifyButton
+local btnCorner = Instance.new("UICorner")
+btnCorner.CornerRadius = UDim.new(0, 10)
+btnCorner.Parent = verifyBtn
 
-local buttonGradient = Instance.new("UIGradient")
-buttonGradient.Rotation = 25
-buttonGradient.Color = ColorSequence.new(Color3.fromRGB(168, 85, 247), Color3.fromRGB(124, 58, 237))
-buttonGradient.Parent = verifyButton
+local btnGrad = Instance.new("UIGradient")
+btnGrad.Rotation = 25
+btnGrad.Color = ColorSequence.new(Color3.fromRGB(168, 85, 247), Color3.fromRGB(124, 58, 237))
+btnGrad.Parent = verifyBtn
 
-local buttonStroke = Instance.new("UIStroke")
-buttonStroke.Color = Color3.fromRGB(213, 96, 255)
-buttonStroke.Thickness = 1
-buttonStroke.Transparency = 0.35
-buttonStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-buttonStroke.Parent = verifyButton
-
-local buttonScale = Instance.new("UIScale")
-buttonScale.Scale = 1
-buttonScale.Parent = verifyButton
-
-verifyButton.MouseEnter:Connect(function()
-    Tweens:Create(buttonScale, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 1.03}):Play()
-end)
-verifyButton.MouseLeave:Connect(function()
-    Tweens:Create(buttonScale, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 1}):Play()
-end)
-verifyButton.MouseButton1Down:Connect(function()
-    Tweens:Create(buttonScale, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 0.97}):Play()
-end)
-verifyButton.MouseButton1Up:Connect(function()
-    Tweens:Create(buttonScale, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 1.03}):Play()
-end)
+local btnScale = Instance.new("UIScale")
+btnScale.Scale = 1
+btnScale.Parent = verifyBtn
 
 local status = Instance.new("TextLabel")
-status.Size = UDim2.new(1, -40, 0, 20)
-status.Position = UDim2.fromOffset(20, 194)
+status.Size = UDim2.new(1, -40, 0, 18)
+status.Position = UDim2.fromOffset(20, 230)
 status.BackgroundTransparency = 1
 status.Text = "Waiting for key..."
 status.TextColor3 = Color3.fromRGB(172, 160, 202)
@@ -3370,120 +3330,93 @@ status.TextSize = 11
 status.TextXAlignment = Enum.TextXAlignment.Center
 status.Parent = frame
 
--- Entrance: a short Back-eased pop.
+-- Interactive button hover/press effects
+local function setupHover(btn, scaleObj)
+    btn.MouseEnter:Connect(function()
+        Tweens:Create(scaleObj, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 1.02}):Play()
+    end)
+    btn.MouseLeave:Connect(function()
+        Tweens:Create(scaleObj, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 1}):Play()
+    end)
+    btn.MouseButton1Down:Connect(function()
+        Tweens:Create(scaleObj, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 0.98}):Play()
+    end)
+    btn.MouseButton1Up:Connect(function()
+        Tweens:Create(scaleObj, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 1.02}):Play()
+    end)
+end
+setupHover(getKeyBtn, getKeyScale)
+setupHover(verifyBtn, btnScale)
+
+-- Entrance animation
 local introScale = Instance.new("UIScale")
 introScale.Scale = 0.92
 introScale.Parent = frame
 Tweens:Create(introScale, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
 
-local busy = false
-
-local function setStatus(message, color)
-    status.Text = message
-    status.TextColor3 = color or Color3.fromRGB(160, 160, 175)
-end
-
-local function verifyKey()
-    if busy then return end
-
-    local key = keyBox.Text:gsub("^%s+", ""):gsub("%s+$", "")
-    if key == "" then
-        setStatus("Please enter your key.", Color3.fromRGB(255, 190, 90))
-        return
-    end
-
-    busy = true
-    verifyButton.Text = "CHECKING..."
-    setStatus("Checking key with server...")
-
-    local ok, response = pcall(function()
-        return httpRequest({
-            Url = VERIFY_URL,
-            Method = "POST",
-            Headers = {
-                ["Content-Type"] = "application/json"
-            },
-            Body = HttpService:JSONEncode({ key = key })
-        })
-    end)
-
-    if not ok or type(response) ~= "table" then
-        setStatus("Connection failed. Try again.", Color3.fromRGB(255, 100, 100))
-        verifyButton.Text = "VERIFY KEY"
-        busy = false
-        return
-    end
-
-    local body = response.Body or response.body or ""
-    local decodedOk, data = pcall(function()
-        return HttpService:JSONDecode(body)
-    end)
-
-    if not decodedOk or type(data) ~= "table" or data.valid ~= true then
-        local reason = decodedOk and data.reason == "expired" and "Key expired." or "Invalid or revoked key."
-        setStatus(reason, Color3.fromRGB(255, 100, 100))
-        verifyButton.Text = "VERIFY KEY"
-        busy = false
-        return
-    end
-
-    -- Remember the key locally only after the server confirms it is valid.
-    if type(writefile) == "function" then
-        pcall(function() writefile("unknown_saved_access_key.txt", key) end)
-    end
-
-    setStatus("Key accepted. Loading UNKNOWN...", Color3.fromRGB(100, 220, 140))
-    verifyButton.Text = "ACCEPTED"
-
-    task.wait(0.35)
-    gui:Destroy()
-
-    launchUnknown()
-
-    -- Revalidate the active key while UNKNOWN is running.
-    -- Explicit invalid/expired responses close the Finder; transient network errors do not.
-    task.spawn(function()
-        while true do
-            task.wait(60)
-            local requestOk, checkResponse = pcall(function()
-                return httpRequest({
-                    Url = VERIFY_URL,
-                    Method = "POST",
-                    Headers = { ["Content-Type"] = "application/json" },
-                    Body = HttpService:JSONEncode({ key = key })
-                })
-            end)
-            if requestOk and type(checkResponse) == "table" then
-                local checkBody = checkResponse.Body or checkResponse.body or ""
-                local checkDecoded, checkData = pcall(function()
-                    return HttpService:JSONDecode(checkBody)
-                end)
-                if checkDecoded and type(checkData) == "table" and checkData.valid ~= true then
-                    local env = _G
-                    pcall(function()
-                        if type(getgenv) == "function" then env = getgenv() end
-                    end)
-                    if type(env) == "table" and type(env.__UNKNOWN_STOP_ACTIVE) == "function" then
-                        pcall(env.__UNKNOWN_STOP_ACTIVE)
-                    end
-                    if type(delfile) == "function" then
-                        pcall(function() delfile("unknown_saved_access_key.txt") end)
-                    end
-                    break
-                end
-            end
+-- Get Key Click: copy Linkvertise link
+getKeyBtn.MouseButton1Click:Connect(function()
+    local ok = copyToClipboard(AD_GET_KEY_URL)
+    getKeyBtn.Text = "LINK COPIED! 📋"
+    status.Text = "Paste link in browser to complete ads & get key!"
+    status.TextColor3 = Color3.fromRGB(100, 220, 140)
+    task.delay(3, function()
+        if getKeyBtn and getKeyBtn.Parent then
+            getKeyBtn.Text = "GET KEY (ADS) 🔗"
         end
     end)
-end
+end)
 
-verifyButton.MouseButton1Click:Connect(verifyKey)
+-- Verify Key Click
+local isBusy = false
+verifyBtn.MouseButton1Click:Connect(function()
+    if isBusy then return end
 
--- Reuse the saved key on the next execution, but always revalidate it online.
-if type(readfile) == "function" then
-    local savedKey
-    pcall(function() savedKey = readfile("unknown_saved_access_key.txt") end)
-    if type(savedKey) == "string" and savedKey:gsub("%s+", "") ~= "" then
-        keyBox.Text = savedKey
-        task.defer(verifyKey)
+    local enteredKey = keyBox.Text:gsub("^%s+", ""):gsub("%s+$", "")
+    if enteredKey == "" then
+        status.Text = "Please enter your key first!"
+        status.TextColor3 = Color3.fromRGB(255, 190, 90)
+        return
     end
-end
+
+    isBusy = true
+    verifyBtn.Text = "CHECKING..."
+    status.Text = "Validating key..."
+    status.TextColor3 = Color3.fromRGB(172, 160, 202)
+
+    task.spawn(function()
+        task.wait(0.3)
+        local valid = isKeyValid(enteredKey)
+        if valid then
+            -- Save 24-hour authentication
+            if type(writefile) == "function" then
+                pcall(function()
+                    local authData = {
+                        key = enteredKey,
+                        expiresAt = os.time() + DEFAULT_DURATION
+                    }
+                    writefile(AUTH_SAVE_FILE, HttpService:JSONEncode(authData))
+                end)
+            end
+
+            status.Text = "KEY ACCEPTED! 👑 Valid for 24 hours"
+            status.TextColor3 = Color3.fromRGB(100, 220, 140)
+            verifyBtn.Text = "ACCEPTED"
+
+            if crownConn then pcall(function() crownConn:Disconnect() end) end
+
+            task.wait(0.35)
+            Tweens:Create(introScale, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Scale = 0.85}):Play()
+            task.wait(0.25)
+            gui:Destroy()
+
+            launchUnknown()
+        else
+            status.Text = "Invalid key! Click GET KEY to complete ads."
+            status.TextColor3 = Color3.fromRGB(255, 100, 100)
+            verifyBtn.Text = "VERIFY KEY ⚡"
+            isBusy = false
+        end
+    end)
+end)
+
