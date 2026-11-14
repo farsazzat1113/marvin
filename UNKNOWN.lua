@@ -2494,6 +2494,18 @@ local function createFinder(D)
             end
             D.gui:SetAttribute('MarvinTop4Count',#top4)
         end)
+        -- Performance monitor: expose real scan/render health without touching
+        -- existing controls, filters, networking, or join behavior.
+        local scanMs=metadata and tonumber(metadata.scanDurationMs)
+        local scanCount=metadata and tonumber(metadata.fieldCount)
+        top4Title.Text=string.format('✦ LIVE TOP 4  •  REFRESH 1s  •  SCAN %s  •  ITEMS %s',
+            scanMs and (tostring(math.floor(scanMs+0.5))..'ms') or 'N/A',
+            scanCount and tostring(scanCount) or tostring(#entries))
+        pcall(function()
+            D.gui:SetAttribute('MarvinPerfScanMs',scanMs)
+            D.gui:SetAttribute('MarvinPerfFieldCount',scanCount or #entries)
+            D.gui:SetAttribute('MarvinPerfRenderAt',os.time())
+        end)
         -- Refresh the visible Top 4 tiles from the exact same ranked entries.
         for i=1,4 do
             local tile=top4Cards[i]
@@ -3045,7 +3057,9 @@ local function run()
                 entry.mutationText=tostring(entry.area or ''):match('Mut:%s*(.*)') or ''
             end
             latestEntries=eggs
-            latestMetadata={states=fieldStates,resetAt=resetAt,scanAt=scanAt,scanClock=scanStartedClock}
+            local scanDurationMs=(os.clock()-scanStartedClock)*1000
+            latestMetadata={states=fieldStates,resetAt=resetAt,scanAt=scanAt,scanClock=scanStartedClock,
+                scanDurationMs=scanDurationMs,fieldCount=fieldCount,missingIncome=missingIncome}
             lastScan=os.clock()
         end)
         if not ok then warn('NYX Finder scan:',err) end
