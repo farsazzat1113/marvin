@@ -333,6 +333,258 @@ local function readTraitNames(record)
     return names,known
 end
 --============================================================================--
+--============================================================================--
+--  [GROUP 1] MARVIN INTELLIGENCE & ANALYSIS ENGINE (Features 1 - 10)
+--============================================================================--
+local MARVIN_Group1_Intelligence = {}
+MARVIN_Group1_Intelligence.__index = MARVIN_Group1_Intelligence
+
+function MARVIN_Group1_Intelligence.new(deps)
+    local self = setmetatable({}, MARVIN_Group1_Intelligence)
+    self.deps = deps or {}
+    self.history = {}
+    self.slotPatterns = {}
+    self.recentSpawns = {}
+    self.lastInsights = {}
+    return self
+end
+
+-- [1] Smart Decision Engine: Multi-factor scoring for optimal egg/server selection
+function MARVIN_Group1_Intelligence:evaluateEgg(egg, currentServerJobId)
+    if not egg or type(egg) ~= "table" then return 0, "Invalid egg" end
+    local val = tonumber(egg.value or egg.rate or 0) or 0
+    if val <= 0 then return 0, "No value" end
+
+    local score = val / 1e9
+    local mutationBonus = 1.0
+    local mut = tostring(egg.mutation or egg.mut or ""):lower()
+    if mut:find("prismatic") or mut:find("rainbow") then
+        mutationBonus = 2.0
+    elseif mut:find("gold") or mut:find("shiny") then
+        mutationBonus = 1.5
+    elseif mut:find("void") or mut:find("dark") then
+        mutationBonus = 1.75
+    end
+    score = score * mutationBonus
+
+    local serverBonus = 1.0
+    if egg.jobId and currentServerJobId and egg.jobId == currentServerJobId then
+        serverBonus = 1.25
+    end
+    score = score * serverBonus
+
+    local rationale = string.format("Score: %.2f (Val: %s, Mut: %s, Local: %s)", score, tostring(val), mut ~= "" and mut or "None", tostring(serverBonus > 1.0))
+    return score, rationale
+end
+
+-- [2] Opportunity Detector: Detects sudden high-value spikes and fresh drops
+function MARVIN_Group1_Intelligence:detectOpportunities(eggs, avgThreshold)
+    local opps = {}
+    local now = os.clock()
+    local threshold = avgThreshold or 1e9
+
+    for _, egg in ipairs(eggs or {}) do
+        local val = tonumber(egg.value or egg.rate or 0) or 0
+        local uid = tostring(egg.uid or egg.name or "")
+        local isFresh = false
+
+        if uid ~= "" and not self.recentSpawns[uid] then
+            self.recentSpawns[uid] = now
+            isFresh = true
+        end
+
+        if val >= threshold * 1.5 or isFresh then
+            table.insert(opps, {
+                egg = egg,
+                val = val,
+                isFresh = isFresh,
+                urgency = val > threshold * 3 and "CRITICAL" or "HIGH",
+                detectedAt = now
+            })
+        end
+    end
+    return opps
+end
+
+-- [3] Advanced Value Prediction: Tracks trends and predicts cycle velocity
+function MARVIN_Group1_Intelligence:recordSnapshot(eggs)
+    local totalVal, count = 0, 0
+    for _, e in ipairs(eggs or {}) do
+        local v = tonumber(e.value or e.rate or 0) or 0
+        if v > 0 then
+            totalVal = totalVal + v
+            count = count + 1
+        end
+    end
+    local avg = count > 0 and (totalVal / count) or 0
+    local snapshot = { time = os.clock(), avg = avg, count = count }
+    table.insert(self.history, snapshot)
+    if #self.history > 30 then table.remove(self.history, 1) end
+    return snapshot
+end
+
+function MARVIN_Group1_Intelligence:predictTrend()
+    if #self.history < 2 then return "STABLE", 0 end
+    local oldest = self.history[1]
+    local latest = self.history[#self.history]
+    local dt = latest.time - oldest.time
+    if dt <= 0 then return "STABLE", 0 end
+    local dAvg = latest.avg - oldest.avg
+    local velocity = dAvg / dt
+    local trend = "STABLE"
+    if velocity > 1e7 then trend = "SURGING"
+    elseif velocity < -1e7 then trend = "DECLINING" end
+    return trend, velocity
+end
+
+-- [4] Smart Ranking Engine: Multi-criteria sorted ranking
+function MARVIN_Group1_Intelligence:rankEggs(eggs, currentJobId)
+    local ranked = {}
+    for _, egg in ipairs(eggs or {}) do
+        local score, rationale = self:evaluateEgg(egg, currentJobId)
+        table.insert(ranked, { egg = egg, score = score, rationale = rationale })
+    end
+    table.sort(ranked, function(a, b) return a.score > b.score end)
+    return ranked
+end
+
+-- [5] Pattern Recognition: Tracks recurrent high-value egg slots
+function MARVIN_Group1_Intelligence:recordSlotEvent(slotId, value)
+    local slotKey = tostring(slotId or "unknown")
+    if not self.slotPatterns[slotKey] then
+        self.slotPatterns[slotKey] = { occurrences = 0, totalVal = 0, maxVal = 0 }
+    end
+    local p = self.slotPatterns[slotKey]
+    p.occurrences = p.occurrences + 1
+    p.totalVal = p.totalVal + (value or 0)
+    if (value or 0) > p.maxVal then p.maxVal = value end
+end
+
+function MARVIN_Group1_Intelligence:getHotspots()
+    local hotspots = {}
+    for slot, data in pairs(self.slotPatterns) do
+        local avg = data.occurrences > 0 and (data.totalVal / data.occurrences) or 0
+        table.insert(hotspots, { slot = slot, avg = avg, occurrences = data.occurrences, max = data.maxVal })
+    end
+    table.sort(hotspots, function(a, b) return a.avg > b.avg end)
+    return hotspots
+end
+
+-- [6] Intelligent Item Comparison: Side-by-side comparative analysis
+function MARVIN_Group1_Intelligence:compareEggs(eggA, eggB)
+    local valA = tonumber(eggA and (eggA.value or eggA.rate) or 0) or 0
+    local valB = tonumber(eggB and (eggB.value or eggB.rate) or 0) or 0
+    local delta = valA - valB
+    local pctDelta = valB > 0 and ((delta / valB) * 100) or 0
+    local winner = delta > 0 and "Egg A" or (delta < 0 and "Egg B" or "Identical")
+    return {
+        valA = valA,
+        valB = valB,
+        delta = delta,
+        pctDelta = pctDelta,
+        winner = winner,
+        recommendation = delta > 0 and "Egg A delivers superior rate" or "Egg B delivers superior rate"
+    }
+end
+
+-- [7] Rare Item Intelligence: Rarity classification & weight
+function MARVIN_Group1_Intelligence:analyzeRarity(egg)
+    local name = tostring(egg and egg.name or ""):lower()
+    local mut = tostring(egg and (egg.mutation or egg.mut) or ""):lower()
+    local tier = "COMMON"
+    local weight = 1
+
+    if mut ~= "" then
+        tier = "MUTATED"
+        weight = 5
+    end
+    if name:find("mythic") or name:find("secret") or name:find("cosmic") then
+        tier = "MYTHIC"
+        weight = 10
+    elseif name:find("legend") or name:find("divine") then
+        tier = "LEGENDARY"
+        weight = 7
+    elseif name:find("rare") or name:find("epic") then
+        tier = "RARE"
+        weight = 3
+    end
+
+    return { tier = tier, weight = weight, isSpecial = weight >= 5 }
+end
+
+-- [8] Smart Recommendations: Actionable recommendation based on current player state
+function MARVIN_Group1_Intelligence:recommendAction(playerCurrentVal, fieldEggs, currentJobId)
+    local ranked = self:rankEggs(fieldEggs, currentJobId)
+    if #ranked == 0 then return "STANDBY", "No eggs detected in range" end
+    local best = ranked[1]
+    local bestVal = tonumber(best.egg.value or best.egg.rate or 0) or 0
+    local currentVal = tonumber(playerCurrentVal or 0) or 0
+
+    if bestVal > currentVal * 1.25 then
+        return "CLAIM_BEST", string.format("Upgrade available: +%.1f%% value boost", ((bestVal - currentVal) / math.max(1, currentVal)) * 100)
+    elseif currentVal > 0 then
+        return "HOLD", "Current egg yields competitive rate"
+    else
+        return "CLAIM_BEST", "Claim top available egg immediately"
+    end
+end
+
+-- [9] Dynamic Value Insights: Statistical summary across current eggs
+function MARVIN_Group1_Intelligence:computeInsights(eggs)
+    local count = #eggs
+    if count == 0 then
+        return { count = 0, min = 0, max = 0, avg = 0, median = 0, total = 0 }
+    end
+
+    local vals = {}
+    local total = 0
+    for _, e in ipairs(eggs) do
+        local v = tonumber(e.value or e.rate or 0) or 0
+        table.insert(vals, v)
+        total = total + v
+    end
+    table.sort(vals)
+
+    local minVal = vals[1]
+    local maxVal = vals[#vals]
+    local avgVal = total / count
+    local medianVal = vals[math.ceil(count / 2)]
+
+    local insights = {
+        count = count,
+        min = minVal,
+        max = maxVal,
+        avg = avgVal,
+        median = medianVal,
+        total = total,
+        top10Threshold = vals[math.max(1, math.floor(count * 0.9))]
+    }
+    self.lastInsights = insights
+    return insights
+end
+
+-- [10] Priority Detection: Surfaces urgency level based on timing and value
+function MARVIN_Group1_Intelligence:detectPriorities(eggs, cycleResetAt)
+    local prioritized = {}
+    local nowMs = os.time() * 1000
+    local timeRemainingSec = cycleResetAt and math.max(0, (cycleResetAt - nowMs) / 1000) or 999
+
+    for _, egg in ipairs(eggs or {}) do
+        local val = tonumber(egg.value or egg.rate or 0) or 0
+        local priority = "NORMAL"
+        if val >= 5e9 and timeRemainingSec < 45 then
+            priority = "URGENT_DESPAWN"
+        elseif val >= 1e10 then
+            priority = "HIGH_VALUE"
+        elseif timeRemainingSec < 20 then
+            priority = "EXPIRING_SOON"
+        end
+        table.insert(prioritized, { egg = egg, priority = priority, timeSec = timeRemainingSec })
+    end
+    return prioritized
+end
+
+
 --  [3-5] FINDER UI + NETWORK + RENDERER - createFinder(D) wires the glass
 --        panel, the broadcast/feed networking and the egg-card list together.
 --============================================================================--
