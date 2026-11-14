@@ -783,6 +783,166 @@ function MARVIN_Group2_Scanner:generateAccuracyReport(totalRaw, totalValid, anom
 end
 
 
+--============================================================================--
+--  [GROUP 3] MARVIN LIVE CONTROL CENTER (Features 21 - 30)
+--============================================================================--
+local MARVIN_Group3_ControlCenter = {}
+MARVIN_Group3_ControlCenter.__index = MARVIN_Group3_ControlCenter
+
+function MARVIN_Group3_ControlCenter.new(deps)
+    local self = setmetatable({}, MARVIN_Group3_ControlCenter)
+    self.deps = deps or {}
+    self.activityFeed = {}
+    self.timeline = {}
+    self.alertRules = {}
+    self.activePanel = "FEED"
+    self.layoutMode = "COMPACT"
+    self.statusIndicators = {
+        Scanner = "HEALTHY",
+        Network = "CONNECTED",
+        Sniper = "ARMED",
+        Auth = "VALID"
+    }
+    return self
+end
+
+-- [21] Ultimate Dashboard: Aggregated summary stats
+function MARVIN_Group3_ControlCenter:getDashboardSummary(feedEntries, localEntries, activeProfile)
+    local topGlobal = feedEntries and feedEntries[1] and (feedEntries[1].value or feedEntries[1].rate) or 0
+    local topLocal = localEntries and localEntries[1] and (localEntries[1].value or localEntries[1].rate) or 0
+    return {
+        topGlobalVal = topGlobal,
+        topLocalVal = topLocal,
+        activeProfile = activeProfile or "Balanced",
+        feedCount = feedEntries and #feedEntries or 0,
+        localCount = localEntries and #localEntries or 0,
+        timestamp = os.clock()
+    }
+end
+
+-- [22] Live Activity Feed: Buffer of recent events
+function MARVIN_Group3_ControlCenter:pushActivity(message, level)
+    local entry = {
+        text = tostring(message or ""),
+        level = level or "INFO",
+        time = os.date("%X")
+    }
+    table.insert(self.activityFeed, 1, entry)
+    if #self.activityFeed > 25 then table.remove(self.activityFeed) end
+    return entry
+end
+
+function MARVIN_Group3_ControlCenter:getActivityFeed()
+    return self.activityFeed
+end
+
+-- [23] Smart Event Timeline: Categorized timeline
+function MARVIN_Group3_ControlCenter:logTimelineEvent(category, details)
+    local event = {
+        category = category or "SYSTEM",
+        details = details or {},
+        clock = os.clock(),
+        formattedTime = os.date("%H:%M:%S")
+    }
+    table.insert(self.timeline, event)
+    if #self.timeline > 100 then table.remove(self.timeline, 1) end
+    return event
+end
+
+-- [24] Custom Alerts Engine: Rule-based trigger checks
+function MARVIN_Group3_ControlCenter:addAlertRule(id, minVal, requireMutation)
+    self.alertRules[id] = { minVal = minVal or 1e9, requireMutation = requireMutation or false }
+end
+
+function MARVIN_Group3_ControlCenter:checkAlerts(egg)
+    local triggered = {}
+    local val = tonumber(egg and (egg.value or egg.rate) or 0) or 0
+    local hasMut = tostring(egg and (egg.mutation or egg.mut) or "") ~= ""
+
+    for id, rule in pairs(self.alertRules) do
+        local matchesVal = val >= rule.minVal
+        local matchesMut = (not rule.requireMutation) or hasMut
+        if matchesVal and matchesMut then
+            table.insert(triggered, { ruleId = id, egg = egg })
+        end
+    end
+    return triggered
+end
+
+-- [25] Advanced Search Console: Query filtering
+function MARVIN_Group3_ControlCenter:filterEntries(entries, query)
+    if not query or query:gsub("%s+", "") == "" then return entries or {} end
+    local clean = query:lower():gsub("^%s+", ""):gsub("%s+$", "")
+    local filtered = {}
+
+    for _, e in ipairs(entries or {}) do
+        local name = tostring(e.name or ""):lower()
+        local mut = tostring(e.mutation or e.mut or ""):lower()
+        local matches = false
+
+        if name:find(clean, 1, true) or mut:find(clean, 1, true) then
+            matches = true
+        elseif clean:sub(1, 1) == ">" then
+            local num = tonumber(clean:sub(2)) or 0
+            local val = tonumber(e.value or e.rate or 0) or 0
+            if val >= num then matches = true end
+        end
+
+        if matches then table.insert(filtered, e) end
+    end
+    return filtered
+end
+
+-- [26] Multi-Panel Workspace: Panel switcher
+function MARVIN_Group3_ControlCenter:setActivePanel(panelName)
+    self.activePanel = panelName or "FEED"
+    return self.activePanel
+end
+
+-- [27] Custom Dashboard Layout: Layout toggle
+function MARVIN_Group3_ControlCenter:setLayoutMode(mode)
+    if mode == "FULL" or mode == "COMPACT" or mode == "MINIMAL" then
+        self.layoutMode = mode
+    end
+    return self.layoutMode
+end
+
+-- [28] Quick Actions Center: Action execution dispatch
+function MARVIN_Group3_ControlCenter:dispatchQuickAction(actionName, payload, callbacks)
+    callbacks = callbacks or {}
+    if actionName == "SNIPE_BEST" and callbacks.onSnipe then
+        return callbacks.onSnipe(payload)
+    elseif actionName == "RESCAN" and callbacks.onRescan then
+        return callbacks.onRescan()
+    elseif actionName == "COPY_JOB" and callbacks.onCopyJob then
+        return callbacks.onCopyJob()
+    end
+    return false, "Action not found"
+end
+
+-- [29] Live Data Comparison: Comparative ticker
+function MARVIN_Group3_ControlCenter:computeTickerDelta(localBest, globalBest)
+    local lVal = tonumber(localBest and (localBest.value or localBest.rate) or 0) or 0
+    local gVal = tonumber(globalBest and (globalBest.value or globalBest.rate) or 0) or 0
+    local diff = gVal - lVal
+    local hopWorthy = diff > (lVal * 0.5) and diff > 1e9
+    return {
+        localVal = lVal,
+        globalVal = gVal,
+        difference = diff,
+        hopWorthy = hopWorthy
+    }
+end
+
+-- [30] Global Status Monitor: System health flags
+function MARVIN_Group3_ControlCenter:updateStatus(subsystem, state)
+    if self.statusIndicators[subsystem] then
+        self.statusIndicators[subsystem] = state or "HEALTHY"
+    end
+    return self.statusIndicators
+end
+
+
 --  [3-5] FINDER UI + NETWORK + RENDERER - createFinder(D) wires the glass
 --        panel, the broadcast/feed networking and the egg-card list together.
 --============================================================================--
