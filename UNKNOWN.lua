@@ -2788,6 +2788,24 @@ local function createFinder(D)
         list.CanvasPosition=savedScroll
         list.Visible=true
     end
+    -- Error Detector: record render failures without swallowing or changing the original error flow.
+    local renderErrorCount=0
+    local lastRenderErrorAt=0
+    local lastRenderErrorMessage=''
+    local function recordRenderError(err)
+        renderErrorCount+=1
+        lastRenderErrorAt=os.time()
+        lastRenderErrorMessage=tostring(err):sub(1,180)
+        pcall(function()
+            D.gui:SetAttribute('MarvinErrorCount',renderErrorCount)
+            D.gui:SetAttribute('MarvinLastErrorAt',lastRenderErrorAt)
+            D.gui:SetAttribute('MarvinLastError',lastRenderErrorMessage)
+        end)
+        if renderErrorCount==1 or renderErrorCount%5==0 then
+            pushNotice('ERROR DETECTOR','Render error #'..renderErrorCount..': '..lastRenderErrorMessage)
+        end
+        warn('[MARVIN Error Detector] '..lastRenderErrorMessage)
+    end
     render=function()
         if not active then return end
         if rendering then renderPending=true;return end
@@ -2795,7 +2813,11 @@ local function createFinder(D)
         local ok,err=pcall(renderOnce)
         rendering=false
         if renderPending then renderPending=false;queueRender() end
-        if not ok then list.Visible=true;error(err) end
+        if not ok then
+            list.Visible=true
+            recordRenderError(err)
+            error(err)
+        end
     end
     requestScopeRender=function()
         -- Hide old-tab rows immediately; never expose remote JOINs as MY SERVER.
