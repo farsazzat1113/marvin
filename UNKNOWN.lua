@@ -597,6 +597,25 @@ local function createFinder(D)
     D.make('UICorner',{CornerRadius=UDim.new(0,5)},settingsClose)
     local autoExecuteToggle=D.make('TextButton',{Name='AutoExecuteToggle',Text='',Position=UDim2.fromOffset(14,62),Size=UDim2.new(1,-28,0,46),BackgroundColor3=Color3.fromRGB(67,70,80),TextColor3=Color3.fromRGB(255,255,255),TextSize=14,Font=Enum.Font.GothamBold,BorderSizePixel=0,ZIndex=31},settingsOverlay)
     D.make('UICorner',{CornerRadius=UDim.new(0,6)},autoExecuteToggle)
+    -- Settings Manager: explicit save action and a read-only summary of active preferences.
+    local settingsSummary=D.label(settingsOverlay,'PREFERENCES  •  AUTO JOIN '..(autoJoinEnabled and 'ON' or 'OFF')..'  •  AUTO EXECUTE '..(autoExecuteEnabled and 'ON' or 'OFF'),UDim2.fromOffset(14,178),UDim2.new(1,-28,0,38),Color3.fromRGB(215,205,235),11)
+    settingsSummary.Name='SettingsSummary'
+    settingsSummary.ZIndex=31
+    settingsSummary.TextWrapped=true
+    settingsSummary.TextXAlignment=Enum.TextXAlignment.Left
+    local saveSettingsButton=D.make('TextButton',{Name='SaveSettingsNow',Text='SAVE SETTINGS NOW',Position=UDim2.fromOffset(14,224),Size=UDim2.new(1,-28,0,42),BackgroundColor3=Color3.fromRGB(94,72,165),TextColor3=Color3.fromRGB(255,255,255),TextSize=13,Font=Enum.Font.GothamBold,BorderSizePixel=0,ZIndex=31},settingsOverlay)
+    D.make('UICorner',{CornerRadius=UDim.new(0,6)},saveSettingsButton)
+    local settingsSaveStatus=D.label(settingsOverlay,'Changes are saved automatically when supported.',UDim2.fromOffset(14,272),UDim2.new(1,-28,0,34),Color3.fromRGB(170,220,190),10)
+    settingsSaveStatus.Name='SettingsSaveStatus'
+    settingsSaveStatus.ZIndex=31
+    settingsSaveStatus.TextWrapped=true
+    settingsSaveStatus.TextXAlignment=Enum.TextXAlignment.Left
+    saveSettingsButton.Activated:Connect(function()
+        saveSettings()
+        settingsSummary.Text='PREFERENCES  •  AUTO JOIN '..(autoJoinEnabled and 'ON' or 'OFF')..'  •  AUTO EXECUTE '..(autoExecuteEnabled and 'ON' or 'OFF')
+        settingsSaveStatus.Text=type(writefile)=='function' and 'Settings save requested.' or 'Local file saving is unavailable in this executor.'
+        settingsSaveStatus.TextColor3=type(writefile)=='function' and Color3.fromRGB(130,245,175) or Color3.fromRGB(255,205,120)
+    end)
     local discordAccountButton=D.make('TextButton',{Name='DiscordAccountButton',Text='DISCORD ACCOUNT',Position=UDim2.fromOffset(14,120),Size=UDim2.new(1,-28,0,46),BackgroundColor3=Color3.fromRGB(88,70,150),TextColor3=Color3.fromRGB(255,255,255),TextSize=14,Font=Enum.Font.GothamBold,BorderSizePixel=0,ZIndex=31},settingsOverlay)
     D.make('UICorner',{CornerRadius=UDim.new(0,6)},discordAccountButton)
     discordAccountButton.Activated:Connect(function()
