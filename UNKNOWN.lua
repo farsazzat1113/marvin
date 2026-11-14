@@ -773,6 +773,48 @@ local function createFinder(D)
     resetTimer.TextTruncate=Enum.TextTruncate.AtEnd
     resetTimer.Active=false
     local refreshing=false
+    -- Lightweight MARVIN notification center: one non-blocking toast at a time.
+    -- It observes existing status values only; it does not change join/network logic.
+    local noticeGui=D.make('Frame',{
+        Name='MarvinNotification',AnchorPoint=Vector2.new(0.5,1),
+        Position=UDim2.new(0.5,0,1,80),Size=UDim2.fromOffset(320,58),
+        BackgroundColor3=Color3.fromRGB(18,13,36),BackgroundTransparency=0.06,
+        BorderSizePixel=0,Visible=false,ZIndex=200
+    },D.gui)
+    D.make('UICorner',{CornerRadius=UDim.new(0,10)},noticeGui)
+    D.make('UIStroke',{Color=Color3.fromRGB(147,92,255),Thickness=1.3,Transparency=0.18},noticeGui)
+    local noticeTitle=D.make('TextLabel',{
+        Name='Title',Position=UDim2.fromOffset(12,6),Size=UDim2.new(1,-24,0,18),
+        BackgroundTransparency=1,Text='MARVIN',TextColor3=Color3.fromRGB(211,185,255),
+        Font=Enum.Font.GothamBold,TextSize=11,TextXAlignment=Enum.TextXAlignment.Left,
+        ZIndex=201
+    },noticeGui)
+    local noticeBody=D.make('TextLabel',{
+        Name='Message',Position=UDim2.fromOffset(12,25),Size=UDim2.new(1,-24,0,25),
+        BackgroundTransparency=1,Text='',TextColor3=Color3.fromRGB(245,240,255),
+        Font=Enum.Font.Gotham,TextSize=11,TextWrapped=true,
+        TextXAlignment=Enum.TextXAlignment.Left,ZIndex=201
+    },noticeGui)
+    local noticeTicket=0
+    local function pushNotice(title,message)
+        noticeTicket+=1
+        local ticket=noticeTicket
+        noticeTitle.Text=tostring(title or 'MARVIN')
+        noticeBody.Text=tostring(message or ''):sub(1,150)
+        noticeGui.Visible=true
+        noticeGui.Position=UDim2.new(0.5,0,1,80)
+        TweenService:Create(noticeGui,TweenInfo.new(0.22,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),
+            {Position=UDim2.new(0.5,0,1,-18)}):Play()
+        task.delay(3.5,function()
+            if ticket~=noticeTicket or not noticeGui.Parent then return end
+            local hide=TweenService:Create(noticeGui,TweenInfo.new(0.2,Enum.EasingStyle.Quad,Enum.EasingDirection.In),
+                {Position=UDim2.new(0.5,0,1,80)})
+            hide:Play()
+            hide.Completed:Wait()
+            if ticket==noticeTicket and noticeGui.Parent then noticeGui.Visible=false end
+        end)
+    end
+
     -- Live Top 4 strip: compact read-only summary above the existing result list.
     local top4Panel=D.make('Frame',{Name='MarvinLiveTop4',Position=UDim2.fromOffset(10,102),Size=UDim2.new(1,-20,0,76),BackgroundColor3=Color3.fromRGB(17,12,34),BackgroundTransparency=0.08,BorderSizePixel=0},panel)
     D.make('UICorner',{CornerRadius=UDim.new(0,11)},top4Panel)
@@ -2958,8 +3000,20 @@ local function createFinder(D)
         end
     end)
     task.spawn(function()
+        local lastNoticeState=''
         while active do
             status.Text=joining and 'Joining server…' or (tostring(reportStatus)..'\n'..tostring(queryStatus))
+            local noticeState=joining and 'JOINING' or (tostring(queryStatus)..'|'..tostring(reportStatus))
+            if noticeState~=lastNoticeState then
+                lastNoticeState=noticeState
+                local lower=noticeState:lower()
+                if joining then
+                    pushNotice('SMART JOIN','Connecting to the selected server…')
+                elseif lower:find('error',1,true) or lower:find('failed',1,true)
+                    or lower:find('full',1,true) or lower:find('connected',1,true) then
+                    pushNotice('FINDER UPDATE',noticeState)
+                end
+            end
             local cycle=cycleInfo()
             if cycle then
                 local seconds=math.max(0,math.ceil(cycle.remaining))
