@@ -1264,6 +1264,447 @@ function MARVIN_Ultimate.new(deps)
 end
 
 
+--============================================================================--
+--  [MARVIN VISUAL DESIGN ENGINE - INDEPENDENT VISUAL SYSTEM]
+--  Architecture:
+--    1. CSS/TypeScript-Inspired Design Tokens (Themes, Radii, Strokes, Typography)
+--    2. Safe Roblox Translation Layer (Parser, Snapshot, Restore)
+--    3. Visual Adapter (Non-invasive mapper for Panel, Controls, Cards, Launcher)
+--    4. Safe Mode Adaptation & Reduced Motion Support
+--============================================================================--
+local MARVIN_VisualDesignEngine = {}
+MARVIN_VisualDesignEngine.__index = MARVIN_VisualDesignEngine
+
+MARVIN_VisualDesignEngine.Tokens = {
+    Themes = {
+        RoyalAmethyst = {
+            name = "Royal Amethyst",
+            background = Color3.fromRGB(15, 11, 28),
+            backgroundTrans = 0.05,
+            surface = Color3.fromRGB(24, 17, 44),
+            surfaceTrans = 0.12,
+            headerBar = Color3.fromRGB(18, 12, 34),
+            cardBg = Color3.fromRGB(20, 16, 38),
+            cardTrans = 0.08,
+            border = Color3.fromRGB(147, 92, 255),
+            borderTrans = 0.35,
+            borderHighlight = Color3.fromRGB(56, 205, 255),
+            glow = Color3.fromRGB(168, 85, 247),
+            textPrimary = Color3.fromRGB(246, 242, 255),
+            textMuted = Color3.fromRGB(172, 160, 202),
+            accentCyan = Color3.fromRGB(56, 205, 255),
+            accentGold = Color3.fromRGB(255, 215, 0),
+            accentGreen = Color3.fromRGB(16, 185, 129),
+            accentDanger = Color3.fromRGB(239, 68, 68),
+            activeTab = Color3.fromRGB(120, 62, 220),
+            inactiveTab = Color3.fromRGB(30, 22, 52),
+            gradientMain = {
+                Rotation = 35,
+                Colors = {
+                    { 0.0, Color3.fromRGB(168, 85, 247) },
+                    { 1.0, Color3.fromRGB(124, 58, 237) }
+                }
+            },
+            gradientCard = {
+                Rotation = 20,
+                Colors = {
+                    { 0.0, Color3.fromRGB(25, 18, 48) },
+                    { 0.5, Color3.fromRGB(18, 14, 36) },
+                    { 1.0, Color3.fromRGB(28, 20, 56) }
+                }
+            }
+        },
+        CyberpunkCyan = {
+            name = "Cyberpunk Cyan",
+            background = Color3.fromRGB(8, 18, 28),
+            backgroundTrans = 0.05,
+            surface = Color3.fromRGB(12, 28, 42),
+            surfaceTrans = 0.12,
+            headerBar = Color3.fromRGB(10, 22, 36),
+            cardBg = Color3.fromRGB(14, 30, 46),
+            cardTrans = 0.08,
+            border = Color3.fromRGB(0, 229, 255),
+            borderTrans = 0.35,
+            borderHighlight = Color3.fromRGB(16, 185, 129),
+            glow = Color3.fromRGB(0, 229, 255),
+            textPrimary = Color3.fromRGB(230, 250, 255),
+            textMuted = Color3.fromRGB(140, 180, 200),
+            accentCyan = Color3.fromRGB(0, 229, 255),
+            accentGold = Color3.fromRGB(255, 200, 0),
+            accentGreen = Color3.fromRGB(16, 185, 129),
+            accentDanger = Color3.fromRGB(255, 75, 75),
+            activeTab = Color3.fromRGB(0, 160, 220),
+            inactiveTab = Color3.fromRGB(15, 35, 52),
+            gradientMain = {
+                Rotation = 30,
+                Colors = {
+                    { 0.0, Color3.fromRGB(0, 229, 255) },
+                    { 1.0, Color3.fromRGB(14, 116, 144) }
+                }
+            },
+            gradientCard = {
+                Rotation = 15,
+                Colors = {
+                    { 0.0, Color3.fromRGB(12, 32, 48) },
+                    { 0.5, Color3.fromRGB(10, 24, 38) },
+                    { 1.0, Color3.fromRGB(16, 38, 58) }
+                }
+            }
+        },
+        EmeraldMatrix = {
+            name = "Emerald Matrix",
+            background = Color3.fromRGB(10, 24, 18),
+            backgroundTrans = 0.05,
+            surface = Color3.fromRGB(16, 36, 28),
+            surfaceTrans = 0.12,
+            headerBar = Color3.fromRGB(12, 28, 22),
+            cardBg = Color3.fromRGB(18, 40, 32),
+            cardTrans = 0.08,
+            border = Color3.fromRGB(16, 185, 129),
+            borderTrans = 0.35,
+            borderHighlight = Color3.fromRGB(52, 211, 153),
+            glow = Color3.fromRGB(16, 185, 129),
+            textPrimary = Color3.fromRGB(235, 255, 245),
+            textMuted = Color3.fromRGB(150, 195, 175),
+            accentCyan = Color3.fromRGB(52, 211, 153),
+            accentGold = Color3.fromRGB(245, 158, 11),
+            accentGreen = Color3.fromRGB(16, 185, 129),
+            accentDanger = Color3.fromRGB(239, 68, 68),
+            activeTab = Color3.fromRGB(5, 150, 105),
+            inactiveTab = Color3.fromRGB(20, 48, 38),
+            gradientMain = {
+                Rotation = 25,
+                Colors = {
+                    { 0.0, Color3.fromRGB(16, 185, 129) },
+                    { 1.0, Color3.fromRGB(4, 120, 87) }
+                }
+            },
+            gradientCard = {
+                Rotation = 20,
+                Colors = {
+                    { 0.0, Color3.fromRGB(16, 42, 34) },
+                    { 0.5, Color3.fromRGB(12, 32, 26) },
+                    { 1.0, Color3.fromRGB(22, 52, 42) }
+                }
+            }
+        },
+        ObsidianGold = {
+            name = "Obsidian Gold",
+            background = Color3.fromRGB(18, 16, 12),
+            backgroundTrans = 0.05,
+            surface = Color3.fromRGB(28, 24, 18),
+            surfaceTrans = 0.12,
+            headerBar = Color3.fromRGB(22, 19, 14),
+            cardBg = Color3.fromRGB(30, 26, 20),
+            cardTrans = 0.08,
+            border = Color3.fromRGB(245, 158, 11),
+            borderTrans = 0.35,
+            borderHighlight = Color3.fromRGB(255, 215, 0),
+            glow = Color3.fromRGB(245, 158, 11),
+            textPrimary = Color3.fromRGB(255, 250, 235),
+            textMuted = Color3.fromRGB(200, 185, 160),
+            accentCyan = Color3.fromRGB(255, 215, 0),
+            accentGold = Color3.fromRGB(255, 215, 0),
+            accentGreen = Color3.fromRGB(16, 185, 129),
+            accentDanger = Color3.fromRGB(239, 68, 68),
+            activeTab = Color3.fromRGB(180, 110, 10),
+            inactiveTab = Color3.fromRGB(38, 32, 24),
+            gradientMain = {
+                Rotation = 25,
+                Colors = {
+                    { 0.0, Color3.fromRGB(255, 215, 0) },
+                    { 1.0, Color3.fromRGB(217, 119, 6) }
+                }
+            },
+            gradientCard = {
+                Rotation = 20,
+                Colors = {
+                    { 0.0, Color3.fromRGB(32, 28, 22) },
+                    { 0.5, Color3.fromRGB(24, 20, 16) },
+                    { 1.0, Color3.fromRGB(40, 34, 26) }
+                }
+            }
+        },
+        SafeModeClean = {
+            name = "Safe Mode Clean",
+            background = Color3.fromRGB(20, 20, 24),
+            backgroundTrans = 0,
+            surface = Color3.fromRGB(30, 30, 36),
+            surfaceTrans = 0,
+            headerBar = Color3.fromRGB(25, 25, 30),
+            cardBg = Color3.fromRGB(28, 28, 34),
+            cardTrans = 0,
+            border = Color3.fromRGB(100, 100, 115),
+            borderTrans = 0.2,
+            borderHighlight = Color3.fromRGB(140, 140, 160),
+            glow = Color3.fromRGB(80, 80, 95),
+            textPrimary = Color3.fromRGB(255, 255, 255),
+            textMuted = Color3.fromRGB(180, 180, 190),
+            accentCyan = Color3.fromRGB(80, 180, 230),
+            accentGold = Color3.fromRGB(220, 180, 60),
+            accentGreen = Color3.fromRGB(40, 180, 100),
+            accentDanger = Color3.fromRGB(220, 60, 60),
+            activeTab = Color3.fromRGB(50, 50, 65),
+            inactiveTab = Color3.fromRGB(28, 28, 34),
+            gradientMain = nil,
+            gradientCard = nil
+        }
+    },
+    Radii = {
+        xs = 4,
+        sm = 6,
+        md = 10,
+        lg = 14,
+        pill = 999
+    },
+    Strokes = {
+        thin = 1.0,
+        normal = 1.2,
+        thick = 2.0
+    }
+}
+
+function MARVIN_VisualDesignEngine.new(options)
+    local self = setmetatable({}, MARVIN_VisualDesignEngine)
+    options = options or {}
+    self.activeThemeKey = options.theme or "RoyalAmethyst"
+    self.safeMode = options.safeMode or false
+    self.originalProperties = {}
+    self.adaptedElements = {}
+    self.tweens = {}
+    return self
+end
+
+function MARVIN_VisualDesignEngine:getTheme()
+    if self.safeMode then
+        return self.Tokens.Themes.SafeModeClean
+    end
+    return self.Tokens.Themes[self.activeThemeKey] or self.Tokens.Themes.RoyalAmethyst
+end
+
+function MARVIN_VisualDesignEngine:setTheme(themeKey)
+    if self.Tokens.Themes[themeKey] then
+        self.activeThemeKey = themeKey
+        self:reapplyActiveTheme()
+        return true
+    end
+    return false
+end
+
+function MARVIN_VisualDesignEngine:setSafeMode(enabled)
+    self.safeMode = (enabled == true)
+    self:reapplyActiveTheme()
+end
+
+function MARVIN_VisualDesignEngine:snapshot(instance, properties)
+    if not instance or self.originalProperties[instance] then return end
+    local snap = {}
+    for _, prop in ipairs(properties) do
+        pcall(function()
+            snap[prop] = instance[prop]
+        end)
+    end
+    self.originalProperties[instance] = snap
+end
+
+function MARVIN_VisualDesignEngine:restore(instance)
+    local snap = self.originalProperties[instance]
+    if not snap or not instance then return end
+    for prop, val in pairs(snap) do
+        pcall(function()
+            instance[prop] = val
+        end)
+    end
+end
+
+function MARVIN_VisualDesignEngine:applyCorner(instance, radius)
+    if not instance then return nil end
+    local corner = instance:FindFirstChildOfClass("UICorner")
+    if not corner then
+        corner = Instance.new("UICorner")
+        corner.Name = "MARVIN_Design_Corner"
+        corner.Parent = instance
+    end
+    corner.CornerRadius = UDim.new(0, radius)
+    return corner
+end
+
+function MARVIN_VisualDesignEngine:applyStroke(instance, color, thickness, transparency)
+    if not instance then return nil end
+    local stroke = instance:FindFirstChildOfClass("UIStroke")
+    if not stroke then
+        stroke = Instance.new("UIStroke")
+        stroke.Name = "MARVIN_Design_Stroke"
+        stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+        stroke.Parent = instance
+    end
+    stroke.Color = color or Color3.fromRGB(147, 92, 255)
+    stroke.Thickness = thickness or 1.2
+    stroke.Transparency = transparency or 0.35
+    return stroke
+end
+
+function MARVIN_VisualDesignEngine:applyGradient(instance, gradientDef)
+    if not instance then return nil end
+    local grad = instance:FindFirstChildOfClass("UIGradient")
+    if not gradientDef then
+        if grad and grad.Name == "MARVIN_Design_Gradient" then
+            grad:Destroy()
+        end
+        return nil
+    end
+
+    if not grad then
+        grad = Instance.new("UIGradient")
+        grad.Name = "MARVIN_Design_Gradient"
+        grad.Parent = instance
+    end
+
+    grad.Rotation = gradientDef.Rotation or 25
+    local keypoints = {}
+    for _, pt in ipairs(gradientDef.Colors or {}) do
+        table.insert(keypoints, ColorSequenceKeypoint.new(pt[1], pt[2]))
+    end
+    if #keypoints >= 2 then
+        grad.Color = ColorSequence.new(keypoints)
+    end
+    return grad
+end
+
+function MARVIN_VisualDesignEngine:adaptPanel(panel, bar, heading, crown)
+    local theme = self:getTheme()
+    if panel then
+        self:snapshot(panel, {"BackgroundColor3", "BackgroundTransparency"})
+        panel.BackgroundColor3 = theme.background
+        panel.BackgroundTransparency = theme.backgroundTrans
+        self:applyCorner(panel, self.Tokens.Radii.lg)
+        self:applyStroke(panel, theme.border, self.Tokens.Strokes.normal, theme.borderTrans)
+        self.adaptedElements["panel"] = panel
+    end
+
+    if bar then
+        self:snapshot(bar, {"BackgroundColor3", "BackgroundTransparency"})
+        bar.BackgroundColor3 = theme.headerBar
+        bar.BackgroundTransparency = 0
+        self:applyCorner(bar, self.Tokens.Radii.sm)
+        self.adaptedElements["bar"] = bar
+    end
+
+    if heading then
+        self:snapshot(heading, {"TextColor3", "Font"})
+        heading.TextColor3 = theme.textPrimary
+        heading.Font = Enum.Font.GothamBold
+        self.adaptedElements["heading"] = heading
+    end
+
+    if crown then
+        self:snapshot(crown, {"TextColor3"})
+        crown.TextColor3 = theme.accentGold
+        self.adaptedElements["crown"] = crown
+    end
+end
+
+function MARVIN_VisualDesignEngine:adaptScopeTabs(activeTab, inactiveTab)
+    local theme = self:getTheme()
+    if activeTab then
+        self:snapshot(activeTab, {"BackgroundColor3", "TextColor3"})
+        activeTab.BackgroundColor3 = theme.activeTab
+        activeTab.TextColor3 = theme.textPrimary
+        self:applyCorner(activeTab, self.Tokens.Radii.sm)
+        self:applyStroke(activeTab, theme.borderHighlight, 1, 0.25)
+    end
+    if inactiveTab then
+        self:snapshot(inactiveTab, {"BackgroundColor3", "TextColor3"})
+        inactiveTab.BackgroundColor3 = theme.inactiveTab
+        inactiveTab.TextColor3 = theme.textMuted
+        self:applyCorner(inactiveTab, self.Tokens.Radii.sm)
+        self:applyStroke(inactiveTab, theme.border, 1, 0.6)
+    end
+end
+
+function MARVIN_VisualDesignEngine:adaptControlButton(btn, isPrimary, accentColor)
+    if not btn then return end
+    local theme = self:getTheme()
+    self:snapshot(btn, {"BackgroundColor3", "TextColor3"})
+    local bg = isPrimary and theme.activeTab or theme.surface
+    btn.BackgroundColor3 = bg
+    btn.TextColor3 = theme.textPrimary
+    self:applyCorner(btn, self.Tokens.Radii.sm)
+    self:applyStroke(btn, accentColor or theme.border, 1, theme.borderTrans)
+end
+
+function MARVIN_VisualDesignEngine:adaptEggCard(row, cardGradient, stroke, isTopRank)
+    if not row then return end
+    local theme = self:getTheme()
+    row.BackgroundColor3 = theme.cardBg
+    row.BackgroundTransparency = theme.cardTrans
+    self:applyCorner(row, self.Tokens.Radii.md)
+
+    if stroke then
+        stroke.Color = isTopRank and theme.borderHighlight or theme.border
+        stroke.Transparency = isTopRank and 0.2 or theme.borderTrans
+        stroke.Thickness = isTopRank and 1.5 or 1.1
+    end
+
+    if cardGradient and theme.gradientCard then
+        self:applyGradient(row, theme.gradientCard)
+    end
+end
+
+function MARVIN_VisualDesignEngine:adaptLauncher(openBtn, caption)
+    local theme = self:getTheme()
+    if openBtn then
+        self:snapshot(openBtn, {"BackgroundColor3"})
+        openBtn.BackgroundColor3 = theme.surface
+        self:applyCorner(openBtn, self.Tokens.Radii.pill)
+        self:applyStroke(openBtn, theme.borderHighlight, 1.5, 0.25)
+    end
+    if caption then
+        self:snapshot(caption, {"TextColor3"})
+        caption.TextColor3 = theme.textPrimary
+    end
+end
+
+function MARVIN_VisualDesignEngine:bindHoverMotion(btn, scaleVal)
+    if self.safeMode or not btn then return end
+    pcall(function()
+        local scale = btn:FindFirstChildOfClass("UIScale")
+        if not scale then
+            scale = Instance.new("UIScale")
+            scale.Name = "MARVIN_Design_Scale"
+            scale.Parent = btn
+        end
+        local Tweens = game:GetService("TweenService")
+        btn.MouseEnter:Connect(function()
+            if self.safeMode then return end
+            Tweens:Create(scale, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = scaleVal or 1.03}):Play()
+        end)
+        btn.MouseLeave:Connect(function()
+            Tweens:Create(scale, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 1.0}):Play()
+        end)
+    end)
+end
+
+function MARVIN_VisualDesignEngine:reapplyActiveTheme()
+    local theme = self:getTheme()
+    if self.adaptedElements["panel"] then
+        local p = self.adaptedElements["panel"]
+        p.BackgroundColor3 = theme.background
+        p.BackgroundTransparency = theme.backgroundTrans
+        self:applyStroke(p, theme.border, self.Tokens.Strokes.normal, theme.borderTrans)
+    end
+    if self.adaptedElements["bar"] then
+        self.adaptedElements["bar"].BackgroundColor3 = theme.headerBar
+    end
+    if self.adaptedElements["heading"] then
+        self.adaptedElements["heading"].TextColor3 = theme.textPrimary
+    end
+    if self.adaptedElements["crown"] then
+        self.adaptedElements["crown"].TextColor3 = theme.accentGold
+    end
+end
+
+
 --  [3-5] FINDER UI + NETWORK + RENDERER - createFinder(D) wires the glass
 --        panel, the broadcast/feed networking and the egg-card list together.
 --============================================================================--
@@ -1355,6 +1796,10 @@ local function createFinder(D)
     local ultimateEngine = MARVIN_Ultimate.new({ http = Http, teleports = Teleports, player = D.player })
     D.ultimate = ultimateEngine
     _G.__MARVIN_ULTIMATE = ultimateEngine
+
+    local designEngine = MARVIN_VisualDesignEngine.new({ theme = "RoyalAmethyst", safeMode = (type(settings.safeMode) == "boolean" and settings.safeMode) })
+    D.designEngine = designEngine
+    _G.__MARVIN_DESIGN = designEngine
     local config,configAt=nil,-math.huge
     local feed,feedAt={},0
     local clockOffset=0
@@ -1485,6 +1930,7 @@ local function createFinder(D)
     local sizePercent=D.publicGuiPercent(settings.sizePercent,settings.sizeFactor)
     local sizeFactor=sizePercent/100
     local launcherScale=D.make('UIScale',{Scale=0.8},open)
+    pcall(function() designEngine:adaptLauncher(open, iconCaption) end)
     local function fitFinder()
         local view=D.gui.AbsoluteSize
         if view.X<=0 or view.Y<=0 then return end
@@ -1862,6 +2308,9 @@ local function createFinder(D)
             {Position = UDim2.new(0.5, 0, 0, 3)})
         crownBob:Play()
         table.insert(starTweens, crownBob)
+        pcall(function()
+            designEngine:adaptPanel(panel, bar, heading, crown)
+        end)
     end
 
     if status then
@@ -2083,6 +2532,15 @@ local function createFinder(D)
     local function refreshGlassScope()
         if scope then scope.BackgroundColor3 = othersOnly and Theme.glass or Theme.tabActive end
         if myScope then myScope.BackgroundColor3 = othersOnly and Theme.tabActive or Theme.glass end
+        pcall(function()
+            if designEngine then
+                if othersOnly then
+                    designEngine:adaptScopeTabs(myScope, scope)
+                else
+                    designEngine:adaptScopeTabs(scope, myScope)
+                end
+            end
+        end)
     end
     if scope then scope.Activated:Connect(function() task.defer(refreshGlassScope) end) end
     if myScope then myScope.Activated:Connect(function() task.defer(refreshGlassScope) end) end
@@ -2114,6 +2572,17 @@ local function createFinder(D)
             {Rotation = 360})
         openMotion:Play()
         table.insert(starTweens, openMotion)
+
+        pcall(function()
+            if designEngine then
+                designEngine:bindHoverMotion(scope, 1.02)
+                designEngine:bindHoverMotion(myScope, 1.02)
+                designEngine:bindHoverMotion(rarity, 1.02)
+                designEngine:bindHoverMotion(autoJoinButton, 1.02)
+                designEngine:bindHoverMotion(refreshButton, 1.02)
+                designEngine:bindHoverMotion(settingsButton, 1.05)
+            end
+        end)
 
         local halo = D.make('Frame', {
             Name = 'LauncherHalo',
@@ -3426,7 +3895,12 @@ local function createFinder(D)
                 {Rotation=180})
             cardMotion:Play()
             table.insert(starTweens,cardMotion)
-            D.make('UIStroke',{Color=Theme.accent,Transparency=0.48,Thickness=1.2,ApplyStrokeMode=Enum.ApplyStrokeMode.Border},row)
+            local cardStroke=D.make('UIStroke',{Color=Theme.accent,Transparency=0.48,Thickness=1.2,ApplyStrokeMode=Enum.ApplyStrokeMode.Border},row)
+            pcall(function()
+                if designEngine then
+                    designEngine:adaptEggCard(row, cardGradient, cardStroke, i == 1)
+                end
+            end)
             D.make('Frame',{Name='CardAccentRail',Position=UDim2.fromOffset(0,12),Size=UDim2.fromOffset(3,84),BackgroundColor3=Theme.cyan,BackgroundTransparency=0.08,BorderSizePixel=0,Active=false},row)
             D.make('Frame',{Name='CardBevelTop',Position=UDim2.fromOffset(3,1),Size=UDim2.new(1,-6,0,1),BackgroundColor3=Color3.fromRGB(235,230,255),BackgroundTransparency=0.55,BorderSizePixel=0,Active=false},row)
             D.make('Frame',{Name='CardBevelBottom',Position=UDim2.new(0,3,1,-2),Size=UDim2.new(1,-6,0,1),BackgroundColor3=Color3.fromRGB(10,6,22),BackgroundTransparency=0,BorderSizePixel=0,Active=false},row)
