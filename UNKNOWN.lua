@@ -460,6 +460,8 @@ local function createFinder(D)
     local settingsPath='tenshi_beta_ui.json'
     local settings={}
     if type(readfile)=='function' then pcall(function() local data=Http:JSONDecode(readfile(settingsPath));if type(data)=='table' then settings=data end end) end
+    local accentThemes={Purple=Color3.fromRGB(147,92,255),Blue=Color3.fromRGB(56,160,255),Pink=Color3.fromRGB(255,105,180)}
+    local accentTheme=type(settings.accentTheme)=='string' and accentThemes[settings.accentTheme] and settings.accentTheme or 'Purple'
     -- Auto Steal removed per user request
     local autoJoinSettingKey='UNKNOWNAutoJoinEnabledV1'
     local autoJoinEnabled=false
@@ -584,7 +586,7 @@ local function createFinder(D)
         if type(writefile)~='function' then return end
         pcall(function()
             local function coords(p) return {p.X.Scale,p.X.Offset,p.Y.Scale,p.Y.Offset} end
-            writefile(settingsPath,Http:JSONEncode({myServer=othersOnly,minRank=minRank,rarityMenu='mythic-up-v1',serversMinValue=serversMinValue,autoJoinMinValue=autoJoinMinValue,autoJoin=autoJoinEnabled,autoExecute=autoExecuteEnabled,sizeFactor=sizeFactor,sizePercent=sizePercent,panel=coords(panel.Position),icon=coords(open.Position)}))
+            writefile(settingsPath,Http:JSONEncode({myServer=othersOnly,minRank=minRank,rarityMenu='mythic-up-v1',serversMinValue=serversMinValue,autoJoinMinValue=autoJoinMinValue,autoJoin=autoJoinEnabled,autoExecute=autoExecuteEnabled,sizeFactor=sizeFactor,sizePercent=sizePercent,accentTheme=accentTheme,panel=coords(panel.Position),icon=coords(open.Position)}))
         end)
     end
     local settingsButton=D.make('TextButton',{Name='SettingsButton',Text='SETTINGS',Position=UDim2.new(0,8,0,7),Size=UDim2.fromOffset(80,30),BackgroundColor3=Color3.fromRGB(42,44,52),BackgroundTransparency=0,TextColor3=Color3.fromRGB(255,255,255),TextSize=12,Font=Enum.Font.GothamBold,BorderSizePixel=0,ZIndex=20},panel)
@@ -610,6 +612,30 @@ local function createFinder(D)
     settingsSaveStatus.ZIndex=31
     settingsSaveStatus.TextWrapped=true
     settingsSaveStatus.TextXAlignment=Enum.TextXAlignment.Left
+    -- UI Customization: selectable accent presets, isolated to the settings surface.
+    local themeCaption=D.label(settingsOverlay,'ACCENT COLOR',UDim2.fromOffset(14,322),UDim2.new(1,-28,0,22),Color3.fromRGB(215,205,235),11)
+    themeCaption.ZIndex=31
+    local themeButtons={}
+    local function applyAccentTheme(name,shouldSave)
+        local color=accentThemes[name]
+        if not color then return end
+        accentTheme=name
+        settingsTitle.TextColor3=color
+        saveSettingsButton.BackgroundColor3=color
+        settingsButton.TextColor3=color
+        for themeName,button in pairs(themeButtons) do
+            button.BackgroundColor3=themeName==name and color or Color3.fromRGB(55,57,68)
+        end
+        if shouldSave then saveSettings() end
+    end
+    local themeOrder={'Purple','Blue','Pink'}
+    for index,name in ipairs(themeOrder) do
+        local button=D.make('TextButton',{Name='Accent'..name,Text=name,Position=UDim2.new(0,14+(index-1)*((panel.AbsoluteSize.X-42)/3+7),0,350),Size=UDim2.new(1/3,-15,0,36),BackgroundColor3=Color3.fromRGB(55,57,68),TextColor3=Color3.fromRGB(255,255,255),TextSize=12,Font=Enum.Font.GothamBold,BorderSizePixel=0,ZIndex=31},settingsOverlay)
+        D.make('UICorner',{CornerRadius=UDim.new(0,6)},button)
+        themeButtons[name]=button
+        button.Activated:Connect(function() applyAccentTheme(name,true) end)
+    end
+    applyAccentTheme(accentTheme,false)
     saveSettingsButton.Activated:Connect(function()
         saveSettings()
         settingsSummary.Text='PREFERENCES  •  AUTO JOIN '..(autoJoinEnabled and 'ON' or 'OFF')..'  •  AUTO EXECUTE '..(autoExecuteEnabled and 'ON' or 'OFF')
