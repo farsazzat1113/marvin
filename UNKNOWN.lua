@@ -2454,6 +2454,28 @@ local function createFinder(D)
                 entries[#entries+1]=visible
             end
         end
+        -- Read-only Top 4 value scanner output. The existing ranked cards remain
+        -- untouched; this publishes the same live, filtered results for overlays
+        -- and diagnostics without changing buttons, joins, or server selection.
+        pcall(function()
+            local top4={}
+            for i=1,math.min(4,#entries) do
+                local e=entries[i]
+                top4[i]={
+                    rank=i,uid=tostring(e.uid or ''),name=tostring(e.name or 'Unknown'),
+                    rate=tonumber(e.rate),rarity=tostring(e.rarity or 'Unknown'),
+                    scale=tonumber(e.scale),weight=tonumber(e.weight),
+                    icon=tostring(e.icon or ''),area=tostring(e.area or ''),
+                    estimated=e.estimated==true,source=tostring(e.source or 'unknown')
+                }
+            end
+            local encoded=Http:JSONEncode(top4)
+            if D.gui:GetAttribute('MarvinTop4JSON')~=encoded then
+                D.gui:SetAttribute('MarvinTop4JSON',encoded)
+                D.gui:SetAttribute('MarvinTop4UpdatedAt',os.time())
+            end
+            D.gui:SetAttribute('MarvinTop4Count',#top4)
+        end)
         -- Keep the old canvas extent while rebuilding so Roblox does not clamp
         -- the scroll position to zero when the rows are temporarily removed.
         local savedScroll=list.CanvasPosition
