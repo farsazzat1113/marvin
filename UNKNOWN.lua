@@ -462,6 +462,7 @@ local function createFinder(D)
     if type(readfile)=='function' then pcall(function() local data=Http:JSONDecode(readfile(settingsPath));if type(data)=='table' then settings=data end end) end
     local accentThemes={Purple=Color3.fromRGB(147,92,255),Blue=Color3.fromRGB(56,160,255),Pink=Color3.fromRGB(255,105,180)}
     local accentTheme=type(settings.accentTheme)=='string' and accentThemes[settings.accentTheme] and settings.accentTheme or 'Purple'
+    local safeMode=settings.safeMode==true
     -- Auto Steal removed per user request
     local autoJoinSettingKey='UNKNOWNAutoJoinEnabledV1'
     local autoJoinEnabled=false
@@ -586,7 +587,7 @@ local function createFinder(D)
         if type(writefile)~='function' then return end
         pcall(function()
             local function coords(p) return {p.X.Scale,p.X.Offset,p.Y.Scale,p.Y.Offset} end
-            writefile(settingsPath,Http:JSONEncode({myServer=othersOnly,minRank=minRank,rarityMenu='mythic-up-v1',serversMinValue=serversMinValue,autoJoinMinValue=autoJoinMinValue,autoJoin=autoJoinEnabled,autoExecute=autoExecuteEnabled,sizeFactor=sizeFactor,sizePercent=sizePercent,accentTheme=accentTheme,panel=coords(panel.Position),icon=coords(open.Position)}))
+            writefile(settingsPath,Http:JSONEncode({myServer=othersOnly,minRank=minRank,rarityMenu='mythic-up-v1',serversMinValue=serversMinValue,autoJoinMinValue=autoJoinMinValue,autoJoin=autoJoinEnabled,autoExecute=autoExecuteEnabled,sizeFactor=sizeFactor,sizePercent=sizePercent,accentTheme=accentTheme,safeMode=safeMode,panel=coords(panel.Position),icon=coords(open.Position)}))
         end)
     end
     local settingsButton=D.make('TextButton',{Name='SettingsButton',Text='SETTINGS',Position=UDim2.new(0,8,0,7),Size=UDim2.fromOffset(80,30),BackgroundColor3=Color3.fromRGB(42,44,52),BackgroundTransparency=0,TextColor3=Color3.fromRGB(255,255,255),TextSize=12,Font=Enum.Font.GothamBold,BorderSizePixel=0,ZIndex=20},panel)
@@ -636,6 +637,25 @@ local function createFinder(D)
         button.Activated:Connect(function() applyAccentTheme(name,true) end)
     end
     applyAccentTheme(accentTheme,false)
+    -- Safe Mode disables only MARVIN's optional Top 4 pulse animation.
+    local safeModeButton=D.make('TextButton',{Name='SafeModeToggle',Text='',Position=UDim2.fromOffset(14,398),Size=UDim2.new(1,-28,0,38),BackgroundColor3=Color3.fromRGB(55,57,68),TextColor3=Color3.fromRGB(255,255,255),TextSize=12,Font=Enum.Font.GothamBold,BorderSizePixel=0,ZIndex=31},settingsOverlay)
+    D.make('UICorner',{CornerRadius=UDim.new(0,6)},safeModeButton)
+    local function refreshSafeModeButton()
+        safeModeButton.Text=safeMode and 'SAFE MODE: ON  •  EXTRA ANIMATIONS OFF' or 'SAFE MODE: OFF  •  EXTRA ANIMATIONS ON'
+        safeModeButton.BackgroundColor3=safeMode and Color3.fromRGB(42,125,82) or Color3.fromRGB(55,57,68)
+    end
+    refreshSafeModeButton()
+    safeModeButton.Activated:Connect(function()
+        safeMode=not safeMode
+        refreshSafeModeButton()
+        if safeMode then
+            for _,tile in ipairs(top4Cards) do
+                if tile.motionTween then pcall(function() tile.motionTween:Cancel() end);tile.motionTween=nil end
+                if tile.motion then tile.motion.Scale=1 end
+            end
+        end
+        saveSettings()
+    end)
     saveSettingsButton.Activated:Connect(function()
         saveSettings()
         settingsSummary.Text='PREFERENCES  •  AUTO JOIN '..(autoJoinEnabled and 'ON' or 'OFF')..'  •  AUTO EXECUTE '..(autoExecuteEnabled and 'ON' or 'OFF')
@@ -2603,12 +2623,14 @@ local function createFinder(D)
                 local entryKey=tostring(e.uid or e.key or e.name or i)..'|'..tostring(e.rate or '')..'|'..tostring(e.icon or '')
                 if tile.lastKey~=entryKey then
                     tile.lastKey=entryKey
-                    if tile.motionTween then pcall(function() tile.motionTween:Cancel() end) end
+                    if tile.motionTween then pcall(function() tile.motionTween:Cancel() end);tile.motionTween=nil end
                     tile.motion.Scale=1
-                    tile.motionTween=TweenService:Create(tile.motion,
-                        TweenInfo.new(0.22,Enum.EasingStyle.Sine,Enum.EasingDirection.Out,1,true),
-                        {Scale=1.055})
-                    tile.motionTween:Play()
+                    if not safeMode then
+                        tile.motionTween=TweenService:Create(tile.motion,
+                            TweenInfo.new(0.22,Enum.EasingStyle.Sine,Enum.EasingDirection.Out,1,true),
+                            {Scale=1.055})
+                        tile.motionTween:Play()
+                    end
                 end
                 tile.icon.Image=type(e.icon)=='string' and e.icon or ''
                 tile.name.Text='#'..i..' '..tostring(e.name or 'Unknown')
