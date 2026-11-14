@@ -850,7 +850,8 @@ local function createFinder(D)
         name.Font=Enum.Font.GothamBold;name.TextXAlignment=Enum.TextXAlignment.Left;name.TextTruncate=Enum.TextTruncate.AtEnd
         local value=D.label(tile,'—',UDim2.fromOffset(43,25),UDim2.new(1,-46,0,19),Color3.fromRGB(104,242,166),9)
         value.Font=Enum.Font.GothamBlack;value.TextXAlignment=Enum.TextXAlignment.Left;value.TextTruncate=Enum.TextTruncate.AtEnd
-        top4Cards[i]={icon=icon,name=name,value=value,tile=tile}
+        local tileMotion=D.make('UIScale',{Scale=1},tile)
+        top4Cards[i]={icon=icon,name=name,value=value,tile=tile,motion=tileMotion,lastKey=nil,motionTween=nil}
     end
     local list=D.make('ScrollingFrame',{Position=UDim2.fromOffset(10,186),Size=UDim2.new(1,-20,1,-368),BackgroundTransparency=1,BorderSizePixel=0,AutomaticCanvasSize=Enum.AutomaticSize.None,CanvasSize=UDim2.new(),ScrollBarThickness=6,ScrollBarImageColor3=Color3.fromRGB(56,205,255),ScrollBarImageTransparency=0.1},panel)
     
@@ -2573,6 +2574,16 @@ local function createFinder(D)
             local e=entries[i]
             if e then
                 tile.tile.Visible=true
+                local entryKey=tostring(e.uid or e.key or e.name or i)..'|'..tostring(e.rate or '')..'|'..tostring(e.icon or '')
+                if tile.lastKey~=entryKey then
+                    tile.lastKey=entryKey
+                    if tile.motionTween then pcall(function() tile.motionTween:Cancel() end) end
+                    tile.motion.Scale=1
+                    tile.motionTween=TweenService:Create(tile.motion,
+                        TweenInfo.new(0.22,Enum.EasingStyle.Sine,Enum.EasingDirection.Out,1,true),
+                        {Scale=1.055})
+                    tile.motionTween:Play()
+                end
                 tile.icon.Image=type(e.icon)=='string' and e.icon or ''
                 tile.name.Text='#'..i..' '..tostring(e.name or 'Unknown')
                 tile.value.Text=type(e.rate)=='number' and D.money(e.rate) or 'Value unavailable'
