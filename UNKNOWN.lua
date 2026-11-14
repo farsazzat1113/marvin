@@ -943,6 +943,146 @@ function MARVIN_Group3_ControlCenter:updateStatus(subsystem, state)
 end
 
 
+--============================================================================--
+--  [GROUP 4] MARVIN DESIGN & UX ENGINE (Features 31 - 40)
+--============================================================================--
+local MARVIN_Group4_DesignUX = {}
+MARVIN_Group4_DesignUX.__index = MARVIN_Group4_DesignUX
+
+function MARVIN_Group4_DesignUX.new(deps)
+    local self = setmetatable({}, MARVIN_Group4_DesignUX)
+    self.deps = deps or {}
+    self.currentTheme = "RoyalPurple"
+    self.uiScale = 1.0
+    self.soundsEnabled = true
+    self.highContrast = false
+
+    self.themes = {
+        RoyalPurple = {
+            bg = {15, 11, 28},
+            card = {24, 17, 44},
+            accent = {147, 92, 255},
+            highlight = {56, 205, 255},
+            text = {246, 242, 255}
+        },
+        CyberCyan = {
+            bg = {8, 18, 28},
+            card = {12, 28, 42},
+            accent = {0, 229, 255},
+            highlight = {16, 185, 129},
+            text = {230, 250, 255}
+        },
+        Emerald = {
+            bg = {10, 24, 18},
+            card = {16, 36, 28},
+            accent = {16, 185, 129},
+            highlight = {245, 158, 11},
+            text = {235, 255, 245}
+        },
+        ObsidianGold = {
+            bg = {18, 16, 12},
+            card = {28, 24, 18},
+            accent = {245, 158, 11},
+            highlight = {255, 215, 0},
+            text = {255, 250, 235}
+        }
+    }
+    return self
+end
+
+-- [31] Cinematic UI Transitions: Easing helper
+function MARVIN_Group4_DesignUX:getTransitionInfo(kind)
+    if kind == "BOUNCE" then
+        return { duration = 0.35, style = "Back", dir = "Out" }
+    elseif kind == "FAST" then
+        return { duration = 0.12, style = "Quad", dir = "Out" }
+    else
+        return { duration = 0.25, style = "Quad", dir = "Out" }
+    end
+end
+
+-- [32] Interactive Animated Cards: Visual card states
+function MARVIN_Group4_DesignUX:getCardStyle(isHovered, isRare)
+    local theme = self.themes[self.currentTheme] or self.themes.RoyalPurple
+    return {
+        scale = isHovered and 1.02 or 1.0,
+        strokeColor = isRare and theme.highlight or (isHovered and theme.highlight or theme.accent),
+        strokeTransparency = isHovered and 0.15 or 0.45
+    }
+end
+
+-- [33] Dynamic Background Engine: Ambient glow calculator
+function MARVIN_Group4_DesignUX:computeAmbientPulse(clockSec)
+    local wave = math.sin((clockSec or os.clock()) * 2.5) * 0.5 + 0.5
+    local minTrans, maxTrans = 0.35, 0.55
+    return minTrans + (maxTrans - minTrans) * wave
+end
+
+-- [34] Advanced Theme Manager: Theme applicator
+function MARVIN_Group4_DesignUX:setTheme(themeName)
+    if self.themes[themeName] then
+        self.currentTheme = themeName
+        return true, self.themes[themeName]
+    end
+    return false, self.themes.RoyalPurple
+end
+
+function MARVIN_Group4_DesignUX:getActiveTheme()
+    return self.themes[self.currentTheme] or self.themes.RoyalPurple
+end
+
+-- [35] Custom UI Scaling: Scale multiplier
+function MARVIN_Group4_DesignUX:setScale(scale)
+    local clamped = math.clamp(tonumber(scale) or 1.0, 0.75, 1.25)
+    self.uiScale = clamped
+    return self.uiScale
+end
+
+-- [36] Smooth Drag & Dock: Boundary clamper
+function MARVIN_Group4_DesignUX:clampPosition(posOffset, sizeOffset, viewportSize)
+    if not viewportSize then return posOffset end
+    local maxX = math.max(0, viewportSize.X - sizeOffset.X)
+    local maxY = math.max(0, viewportSize.Y - sizeOffset.Y)
+    local clampedX = math.clamp(posOffset.X, 0, maxX)
+    local clampedY = math.clamp(posOffset.Y, 0, maxY)
+    return { X = clampedX, Y = clampedY }
+end
+
+-- [37] Notification Sound Profiles: Sound definition provider
+function MARVIN_Group4_DesignUX:getSoundId(profileName)
+    if not self.soundsEnabled then return nil end
+    local sounds = {
+        SUCCESS = "rbxassetid://6895079853",
+        ALERT = "rbxassetid://4590662766",
+        CLICK = "rbxassetid://6895079853"
+    }
+    return sounds[profileName] or sounds.CLICK
+end
+
+-- [38] Customizable HUD: Compact HUD state
+function MARVIN_Group4_DesignUX:getHUDState(topVal, sniperArmed)
+    return {
+        visible = true,
+        text = string.format("MARVIN | Top: %s | Sniper: %s", tostring(topVal or "0"), sniperArmed and "ON" or "OFF")
+    }
+end
+
+-- [39] Responsive Layout Engine: Viewport-aware sizing
+function MARVIN_Group4_DesignUX:getLayoutDimensions(viewportWidth)
+    if viewportWidth and viewportWidth < 700 then
+        return { panelWidth = 320, cardHeight = 72, fontSize = 11 }
+    else
+        return { panelWidth = 420, cardHeight = 84, fontSize = 13 }
+    end
+end
+
+-- [40] Accessibility Controls: Contrast adjustments
+function MARVIN_Group4_DesignUX:toggleHighContrast()
+    self.highContrast = not self.highContrast
+    return self.highContrast
+end
+
+
 --  [3-5] FINDER UI + NETWORK + RENDERER - createFinder(D) wires the glass
 --        panel, the broadcast/feed networking and the egg-card list together.
 --============================================================================--
