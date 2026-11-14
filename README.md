@@ -1,82 +1,98 @@
-# UNKNOWN
+# MARVIN Ultimate
 
-**Shared Egg Finder + Cloudflare Key Gate** — a single-file Roblox UI script with a
-premium glass interface, live shared feed, and auto-join.
+**Shared Egg Finder + 24-Hour Linkvertise Key System + MARVIN Ultimate Suite (50 Features)** —
+a single-file Roblox UI script with a compact animated glassmorphism interface, rotating royal crown,
+live shared feed, smart sniper auto-join, Linkvertise ad monetization, and comprehensive analytics, scanning, and diagnostics.
 
-![Build](https://img.shields.io/badge/build-Public%20v0.4.3%20%2F%20UI20-935CFF)
-![Theme](https://img.shields.io/badge/theme-Glass%20Premium-38CDFF)
+![Build](https://img.shields.io/badge/build-Public%20v0.6.0%20%2F%20UI31-935CFF)
+![Theme](https://img.shields.io/badge/theme-Glass%20Premium%20Royal%20Crown-FFD700)
+![Key Gate](https://img.shields.io/badge/key%20gate-Linkvertise%2024H%20Monetized-FF8C00)
+![Suite](https://img.shields.io/badge/suite-MARVIN%20Ultimate%20(50%20Features)-00E5FF)
+![Engine](https://img.shields.io/badge/engine-Smart%20Join%20Sniper-34EB96)
 ![File](https://img.shields.io/badge/format-single--file%20Lua-success)
 
-## Live design preview
+## Executor Loadstrings
 
-[Open the animated MARVIN dashboard preview](https://html-preview.github.io/?url=https%3A%2F%2Fgithub.com%2Ffarsazzat1113%2Fmarvin%2Fblob%2Fmarvin-premium-purple-ui-2026-11-12%2Fdesign%2Fmarvin-dashboard-preview.html)
+To run MARVIN directly in your executor:
 
-This is a separate HTML/CSS/JavaScript visual prototype. Its starfield, nebula lighting,
-gradient title, orbital core, hover states, and preview-only controls animate in a browser.
-It is not connected to Roblox or the live Lua callbacks.
+### 🚀 1️⃣ Obfuscated Build (Protected & Recommended)
+```lua
+loadstring(game:HttpGet("https://raw.githubusercontent.com/farsazzat1113/marvin/arena/25a40565-marvin/UNKNOWN.obfuscated.lua"))()
+```
 
-## Overview
+### 💻 2️⃣ Clean Source Build
+```lua
+loadstring(game:HttpGet("https://raw.githubusercontent.com/farsazzat1113/marvin/arena/25a40565-marvin/UNKNOWN.lua"))()
+```
 
-UNKNOWN scans the current server's field eggs, reports sightings to the shared
-Finder host, and renders a live list of the best eggs reported across servers —
-with one-click join and an automatic "join the best server" mode.
+---
 
-The Finder only boots **after the key-validation endpoint returns `valid=true`**
-and revalidates the key every 60 seconds while running.
+## MARVIN Ultimate — 50 Operational Features Map
 
-## What's new in UI20 — Auto Steal
+### 🧠 المجموعة الأولى: الذكاء والتحليل (Intelligence & Analysis)
+1. **Smart Decision Engine** — Multi-factor composite scoring for optimal egg/server selection.
+2. **Opportunity Detector** — Automatic detection of high-value spikes and fresh drops.
+3. **Advanced Value Prediction** — Trend velocity and value trajectory forecasting.
+4. **Smart Ranking Engine** — Multi-criteria ranking across values, mutations, and latency.
+5. **Pattern Recognition** — Hotspot tracking for recurrent high-value egg spawn slots.
+6. **Intelligent Item Comparison** — Side-by-side comparative analysis of any two egg entries.
+7. **Rare Item Intelligence** — Taxonomy, tier assignment, and rarity scoring.
+8. **Smart Recommendations** — Actionable advice based on player's current rate vs available field eggs.
+9. **Dynamic Value Insights** — Statistical metrics (min, max, average, median, top 10% threshold).
+10. **Priority Detection** — Urgency classification based on despawn/cycle reset deadlines.
 
-- **AUTO STEAL** — hands-free carry + plant for the egg a join tracked:
-  the character is parked next to the egg, the game's own carry remote is
-  invoked, then the egg is taken home and planted on your plot.
-- While **Auto Join** is armed, the best local egg over your minimum gets
-  picked up automatically too - no buttons pressed.
-- New persisted settings toggle: **SETTINGS → AUTO STEAL: ON/OFF** (default ON).
+### 🔍 المجموعة الثانية: الفحص المتقدم (Advanced Scanning)
+11. **Multi-Layer Scanner** — 3-tier pipeline: Memory snapshot, field verification, metadata synchronization.
+12. **Deep Item Inspector** — Comprehensive breakdown of egg states, base rates, and multipliers.
+13. **Live Workspace Scanner** — Safe, bounded scan of visual workspace egg models.
+14. **Attribute Intelligence** — Safe inspection and extraction of Roblox instance attributes.
+15. **Missing Data Detector** — Schema validator that catches and patches missing fields.
+16. **Invalid Data Detector** — Sanitizes NaN, infinite, and malformed numeric values.
+17. **Duplicate Intelligence** — Fast deduplication of identical sightings across rapid scans.
+18. **Scanner Profiles** — Configurable scan modes (Turbo 0.5s, Balanced 1.0s, Eco 2.5s, Stealth 4.0s).
+19. **Incremental Scanning** — Signature-based diffing that updates only when egg states change.
+20. **Scan Accuracy Report** — Coverage percentage, anomaly tracking, and scan latency in ms.
 
-## What's new in UI19 — "Glass Premium"
+### 🎛️ المجموعة الثالثة: مركز التحكم المباشر (Live Control Center)
+21. **Ultimate Dashboard** — Aggregated status overview displaying top global and local egg values.
+22. **Live Activity Feed** — Rolling buffer of recent in-game discoveries and network updates.
+23. **Smart Event Timeline** — Categorized event log tracking spawns, snipes, and syncs.
+24. **Custom Alerts Engine** — Rule-based trigger checks with customizable value thresholds.
+25. **Advanced Search Console** — Multi-mode query filtering by name, mutation, or value.
+26. **Multi-Panel Workspace** — Panel management (Feed, Intelligence, Health, Settings).
+27. **Custom Dashboard Layout** — Layout toggles (Full, Compact, Minimalist HUD).
+28. **Quick Actions Center** — Quick dispatch for Snipe Best, Rescan, and JobId copy.
+29. **Live Data Comparison** — Real-time ticker comparing local server best vs global feed best.
+30. **Global Status Monitor** — Real-time health flags for Scanner, Network, Sniper, and Auth.
 
-- **Glass Premium theme** — translucent deep-space panel, purple→cyan gradient
-  borders, soft outer glow, fading header hairline.
-- **Animated starfield v2** — fine twinkling stars plus three slow-breathing
-  nebula glows, always behind the real content (managed Z-order).
-- **Glass cards** — deep indigo egg cards with soft gradients and purple
-  hairline borders; consistent 8 px rounding everywhere.
-- **Panel pop** — the window opens with a short Back-eased scale animation.
-- **Key gate redesign** — centered glass card, accent underline, focus-lit input
-  border, gradient verify button with hover/press feedback, entrance animation.
-- **Encoding cleanup** — fixed mojibake strings (`â¦` → `…`, `Ã—` → `×`, `—`).
-- **Organized source** — numbered section banners ([1]–[7]) and a header map.
+### 🎨 المجموعة الرابعة: التصميم والتجربة (Design & UX)
+31. **Cinematic UI Transitions** — Smooth TweenService transitions with Back and Quad easings.
+32. **Interactive Animated Cards** — Dynamic card hover effects and stroke illumination.
+33. **Dynamic Background Engine** — Ambient pulsing neon glow with subtle glass reflection.
+34. **Advanced Theme Manager** — 4 distinct themes: Royal Purple, Cyber Cyan, Emerald, Obsidian Gold.
+35. **Custom UI Scaling** — Adjustable interface scale factor (0.75x to 1.25x).
+36. **Smooth Drag & Dock** — Viewport-bounded window dragging to prevent off-screen clipping.
+37. **Notification Sound Profiles** — Audio feedback chimes for successful snipes and alerts.
+38. **Customizable HUD** — Floating on-screen mini-pill showing top rate and sniper status.
+39. **Responsive Layout Engine** — Adapts sizing dynamically for mobile and desktop screens.
+40. **Accessibility Controls** — High-contrast text toggle and enhanced legibility settings.
 
-## Source map
+### ⚙️ المجموعة الخامسة: الأداء والاعتمادية (Performance & Reliability)
+41. **Adaptive Performance Engine** — Automatic throttling when client frame rate drops below 30 FPS.
+42. **Memory Usage Monitor** — Lua heap size monitoring with health status grades.
+43. **Smart Update Scheduler** — Chunked task execution using task.defer to eliminate micro-stutter.
+44. **Background Task Manager** — Central thread and connection tracker with complete cleanup.
+45. **Automatic Error Diagnostics** — Rate-limited error capture with context tagging.
+46. **Safe Recovery Engine** — Self-healing wrappers that prevent fatal loop terminations.
+47. **Configuration Backup System** — Local backup and restore mechanism for settings.
+48. **Compatibility Diagnostics** — Probes executor capabilities and assigns a compatibility grade.
+49. **Feature Dependency Checker** — Verifies required game modules before scan loop initialization.
+50. **System Health Center** — Diagnostic overview aggregating FPS, memory, uptime, and subsystems.
 
-| # | Section | Responsibility |
-|---|---------|----------------|
-| 1 | Bootstrap | Auto-execute queue, silent retry per server hop |
-| 2 | Finder core | Services, GUI factory, parsing/formatting helpers |
-| 3 | Glass Premium UI | Theme, header, settings overlay, animations |
-| 4 | Network | Config loader, broadcast, feed pagination, auto-join |
-| 5 | Card renderer | Egg cards, rarity/mutation glyphs, join flow |
-| 6 | Scan loop | Field-egg reader feeding UI + broadcaster |
-| 7 | Key gate | Glass key window, validation + periodic recheck |
+---
 
-## Local state files
+## Key System & Monetization
 
-Written to the executor workspace when available:
-
-| File | Purpose |
-|------|---------|
-| `tenshi_beta_ui.json` | UI settings (scope, thresholds, auto-execute, size) |
-| `tenshi_public_sighting_lifecycle_v1.json` | Sighting lifecycle / tombstones |
-| `tenshi_beta_top5_cycle_v2.json` | Retained top-5 cards across refreshes |
-| `tenshi_public_gui_size_v2.json` | Saved GUI scale |
-| `unknown_saved_access_key.txt` | Last accepted key (revalidated online) |
-
-## Controls
-
-- **Launcher icon** / **F key** — toggle the panel (draggable via its header).
-- **ALL SERVERS / MY SERVER** — feed scope tabs.
-- **REFRESH** — manual feed refresh with the reset countdown.
-- **VALUE OF SERVERS / MIN AUTO JOIN VALUE** — `1B`–`50B` thresholds.
-- **AUTO JOIN** — teleports to the best eligible reported server automatically.
-- **AUTO STEAL** — carries + plants the tracked egg without any input.
-- **SETTINGS** — auto-execute / auto-steal toggles and Discord link.
+- **Linkvertise 24-Hour Key Gate** — Users complete your Linkvertise campaign (`https://direct-link.net/3852708/7hzx0OtX0UJe`) to obtain a 24-hour access key.
+- **Dynamic Keys (`keys.json`)** — Update or add valid keys on GitHub anytime without editing or re-obfuscating scripts.
+- **1-Click "GET KEY (ADS)"** — Automatically copies the ad link to the user's clipboard.
