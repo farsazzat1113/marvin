@@ -585,6 +585,204 @@ function MARVIN_Group1_Intelligence:detectPriorities(eggs, cycleResetAt)
 end
 
 
+--============================================================================--
+--  [GROUP 2] MARVIN ADVANCED SCANNING SUITE (Features 11 - 20)
+--============================================================================--
+local MARVIN_Group2_Scanner = {}
+MARVIN_Group2_Scanner.__index = MARVIN_Group2_Scanner
+
+function MARVIN_Group2_Scanner.new(deps)
+    local self = setmetatable({}, MARVIN_Group2_Scanner)
+    self.deps = deps or {}
+    self.lastScanSignature = ""
+    self.lastAccuracyReport = {}
+    self.activeProfile = "Balanced"
+    self.profiles = {
+        Turbo = { interval = 0.5, deepInspect = true },
+        Balanced = { interval = 1.0, deepInspect = true },
+        Eco = { interval = 2.5, deepInspect = false },
+        Stealth = { interval = 4.0, deepInspect = false }
+    }
+    return self
+end
+
+-- [11] Multi-Layer Scanner: 3-layer verification pipeline
+function MARVIN_Group2_Scanner:executeMultiLayerScan(rawSnapshot, scanCycleModule, areaEggsStates)
+    local layer1_data = rawSnapshot or {}
+    local layer2_verified = {}
+    local layer3_metadata = { cycleTime = 0, syncClock = os.clock() }
+
+    if type(layer1_data) ~= "table" or type(layer1_data.Records) ~= "table" then
+        return nil, "Layer 1 Failed: Corrupted Memory Snapshot"
+    end
+
+    for key, record in pairs(layer1_data.Records) do
+        local uid = tostring(record.Uid or key)
+        local state = record.State
+        local isValidState = (areaEggsStates and areaEggsStates.Slot ~= nil)
+        table.insert(layer2_verified, {
+            uid = uid,
+            raw = record,
+            state = state,
+            verified = isValidState
+        })
+    end
+
+    if scanCycleModule and type(scanCycleModule.IsRunning) == "function" and scanCycleModule.IsRunning() then
+        if type(scanCycleModule.NextResetTime) == "function" then
+            local serverTime = os.time()
+            layer3_metadata.cycleTime = scanCycleModule.NextResetTime(serverTime) * 1000
+        end
+    end
+
+    return {
+        layer1_records = layer1_data.Records,
+        layer2_verified = layer2_verified,
+        layer3_metadata = layer3_metadata
+    }
+end
+
+-- [12] Deep Item Inspector: Comprehensive field breakdown
+function MARVIN_Group2_Scanner:deepInspect(eggRecord, uid)
+    if not eggRecord or type(eggRecord) ~= "table" then return nil end
+    local parsed = {}
+    parsed.uid = tostring(uid or eggRecord.Uid or "UNKNOWN")
+    parsed.name = tostring(eggRecord.Name or eggRecord.Type or "Egg")
+    parsed.state = eggRecord.State or "Available"
+    parsed.mutation = tostring(eggRecord.Mutation or eggRecord.Mut or "None")
+    parsed.rawVal = eggRecord.Value or eggRecord.Income or eggRecord.Rate or 0
+
+    local cleanVal = tonumber(parsed.rawVal) or 0
+    if cleanVal ~= cleanVal or cleanVal < 0 or cleanVal == math.huge then
+        cleanVal = 0
+    end
+    parsed.value = cleanVal
+    parsed.multiplier = parsed.mutation ~= "None" and 1.5 or 1.0
+    parsed.inspectedAt = os.clock()
+    return parsed
+end
+
+-- [13] Live Workspace Scanner: Non-blocking visual model scan
+function MARVIN_Group2_Scanner:scanWorkspaceVisuals(workspaceRoot)
+    local modelsFound = {}
+    if not workspaceRoot then return modelsFound end
+
+    pcall(function()
+        local count = 0
+        for _, child in ipairs(workspaceRoot:GetChildren()) do
+            count = count + 1
+            if count > 150 then break end
+            local name = child.Name:lower()
+            if name:find("egg") or name:find("nest") then
+                table.insert(modelsFound, {
+                    name = child.Name,
+                    instance = child,
+                    hasPosition = child:IsA("BasePart") or child:IsA("Model")
+                })
+            end
+        end
+    end)
+    return modelsFound
+end
+
+-- [14] Attribute Intelligence: Safely inspects attributes
+function MARVIN_Group2_Scanner:extractAttributes(instance)
+    local attrs = {}
+    if not instance or typeof(instance) ~= "Instance" then return attrs end
+    pcall(function()
+        if type(instance.GetAttributes) == "function" then
+            attrs = instance:GetAttributes()
+        end
+    end)
+    return attrs
+end
+
+-- [15] Missing Data Detector: Catches and patches missing fields
+function MARVIN_Group2_Scanner:sanitizeMissing(egg)
+    local patched = {}
+    local hadMissing = false
+    for k, v in pairs(egg or {}) do patched[k] = v end
+
+    if not patched.uid or patched.uid == "" then
+        patched.uid = "PATCHED_" .. tostring(math.random(10000, 99999))
+        hadMissing = true
+    end
+    if not patched.value and not patched.rate then
+        patched.value = 0
+        hadMissing = true
+    end
+    if not patched.name then
+        patched.name = "Unknown Egg"
+        hadMissing = true
+    end
+    return patched, hadMissing
+end
+
+-- [16] Invalid Data Detector: Checks NaN, Inf, and invalid types
+function MARVIN_Group2_Scanner:validateNumeric(val)
+    if type(val) ~= "number" then return false, 0 end
+    if val ~= val then return false, 0 end
+    if val == math.huge or val == -math.huge then return false, 0 end
+    if val < 0 then return false, 0 end
+    return true, val
+end
+
+-- [17] Duplicate Intelligence: Fast deduplication
+function MARVIN_Group2_Scanner:deduplicateEntries(entries)
+    local unique = {}
+    local seen = {}
+    local duplicateCount = 0
+
+    for _, item in ipairs(entries or {}) do
+        local key = tostring(item.uid or (tostring(item.name) .. "_" .. tostring(item.value)))
+        if not seen[key] then
+            seen[key] = true
+            table.insert(unique, item)
+        else
+            duplicateCount = duplicateCount + 1
+        end
+    end
+    return unique, duplicateCount
+end
+
+-- [18] Scanner Profiles: Selectable scan profile
+function MARVIN_Group2_Scanner:setProfile(profileName)
+    if self.profiles[profileName] then
+        self.activeProfile = profileName
+        return true, self.profiles[profileName]
+    end
+    return false, self.profiles[self.activeProfile]
+end
+
+-- [19] Incremental Scanning: Only recalculates when data changes
+function MARVIN_Group2_Scanner:isIncrementalChange(entries)
+    local sigParts = {}
+    for i, e in ipairs(entries or {}) do
+        if i > 25 then break end
+        table.insert(sigParts, tostring(e.uid or "") .. ":" .. tostring(e.value or 0))
+    end
+    local currentSig = table.concat(sigParts, "|")
+    local changed = (currentSig ~= self.lastScanSignature)
+    self.lastScanSignature = currentSig
+    return changed
+end
+
+-- [20] Scan Accuracy Report: Computes coverage and latency stats
+function MARVIN_Group2_Scanner:generateAccuracyReport(totalRaw, totalValid, anomalies, latencySec)
+    local coverage = totalRaw > 0 and math.min(100, (totalValid / totalRaw) * 100) or 100
+    local report = {
+        totalScanned = totalRaw,
+        validCount = totalValid,
+        anomalies = anomalies or 0,
+        coveragePct = coverage,
+        latencyMs = math.floor((latencySec or 0) * 1000),
+        generatedAt = os.clock()
+    }
+    self.lastAccuracyReport = report
+    return report
+end
+
+
 --  [3-5] FINDER UI + NETWORK + RENDERER - createFinder(D) wires the glass
 --        panel, the broadcast/feed networking and the egg-card list together.
 --============================================================================--
