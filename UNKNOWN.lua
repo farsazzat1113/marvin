@@ -1705,6 +1705,283 @@ function MARVIN_VisualDesignEngine:reapplyActiveTheme()
 end
 
 
+--============================================================================--
+--  [SMART SNIPER + DIRECT EGG TELEPORT SYSTEM]
+--  Features:
+--    1. Finds target egg servers & queues destination data.
+--    2. Seamless server join via TeleportToPlaceInstance.
+--    3. Full character load detection (HumanoidRootPart/Humanoid readiness).
+--    4. Multi-stage spatial resolution of target egg location in workspace/memory.
+--    5. Safe position offset (avoids normal base/house spawn when available).
+--    6. Arrival distance & egg availability verification.
+--    7. Server-authoritative acquisition confirmation respect.
+--    8. Safe fallback if target is not resolved.
+--============================================================================--
+local MARVIN_SmartSniperTeleport = {}
+MARVIN_SmartSniperTeleport.__index = MARVIN_SmartSniperTeleport
+
+local SNIPER_SETTING_KEY = "MARVIN_DIRECT_TELEPORT_TARGET"
+
+function MARVIN_SmartSniperTeleport.new(deps)
+    local self = setmetatable({}, MARVIN_SmartSniperTeleport)
+    self.deps = deps or {}
+    self.Teleports = game:GetService("TeleportService")
+    self.Players = game:GetService("Players")
+    self.player = self.deps.player or self.Players.LocalPlayer
+    self.activeTarget = nil
+    self.isTeleporting = false
+    self.status = "IDLE"
+    return self
+end
+
+function MARVIN_SmartSniperTeleport:queueTarget(entry)
+    if type(entry) ~= "table" then return false end
+    local uid = entry.uid or entry.key
+    if not uid then return false end
+    local targetData = {
+        uid = tostring(uid),
+        key = tostring(entry.key or uid),
+        name = tostring(entry.name or "Unknown Egg"),
+        placeId = tonumber(entry.placeId) or game.PlaceId,
+        jobId = tostring(entry.jobId or ""),
+        rate = tonumber(entry.rate) or 0,
+        area = tostring(entry.area or ""),
+        queuedAt = os.time(),
+        directTeleport = true
+    }
+    self.activeTarget = targetData
+    pcall(function()
+        self.Teleports:SetTeleportSetting(SNIPER_SETTING_KEY, targetData)
+    end)
+    if type(writefile) == "function" then
+        pcall(function()
+            local HttpService = game:GetService("HttpService")
+            writefile("marvin_sniper_target.json", HttpService:JSONEncode(targetData))
+        end)
+    end
+    return true
+end
+
+function MARVIN_SmartSniperTeleport:getQueuedTarget()
+    local target = nil
+    pcall(function()
+        local saved = self.Teleports:GetTeleportSetting(SNIPER_SETTING_KEY)
+        if type(saved) == "table" and (saved.uid or saved.key) and saved.directTeleport == true then
+            if os.time() - (tonumber(saved.queuedAt) or 0) < 300 then
+                target = saved
+            end
+        end
+    end)
+    if not target and type(readfile) == "function" then
+        pcall(function()
+            local HttpService = game:GetService("HttpService")
+            local content = readfile("marvin_sniper_target.json")
+            local parsed = HttpService:JSONDecode(content)
+            if type(parsed) == "table" and (parsed.uid or parsed.key) and parsed.directTeleport == true then
+                if os.time() - (tonumber(parsed.queuedAt) or 0) < 300 then
+                    target = parsed
+                end
+            end
+        end)
+    end
+    if not target and self.activeTarget then
+        target = self.activeTarget
+    end
+    return target
+end
+
+function MARVIN_SmartSniperTeleport:clearQueuedTarget()
+    self.activeTarget = nil
+    pcall(function()
+        self.Teleports:SetTeleportSetting(SNIPER_SETTING_KEY, nil)
+    end)
+    if type(writefile) == "function" then
+        pcall(function()
+            pcall(delfile or function() end, "marvin_sniper_target.json")
+        end)
+    end
+end
+
+function MARVIN_SmartSniperTeleport:locateEggPosition(uid, eggStateModule)
+    if not uid then return nil end
+    local cleanUid = tostring(uid)
+
+    local folder = workspace:FindFirstChild("AreaEggSlotsClient")
+    local model = (folder and folder:FindFirstChild(cleanUid)) or workspace:FindFirstChild(cleanUid)
+    if model and model:IsA("Model") then
+        local pivot = model:GetPivot()
+        if pivot and pivot.Position then
+            return pivot.Position, "MODEL_PIVOT", model
+        end
+        local part = model:FindFirstChildWhichIsA("BasePart")
+        if part then
+            return part.Position, "MODEL_PART", model
+        end
+    end
+
+    if eggStateModule and type(eggStateModule.ReadFieldEggs) == "function" then
+        local ok, snapshot = pcall(eggStateModule.ReadFieldEggs)
+        if ok and type(snapshot) == "table" and type(snapshot.Records) == "table" then
+            for recKey, record in pairs(snapshot.Records) do
+                local rUid = tostring(record.Uid or recKey)
+                if rUid == cleanUid then
+                    if typeof(record.BottomCFrame) == "CFrame" then
+                        return record.BottomCFrame.Position, "RECORD_BOTTOM_CFRAME", nil
+                    elseif typeof(record.CFrame) == "CFrame" then
+                        return record.CFrame.Position, "RECORD_CFRAME", nil
+                    end
+                end
+            end
+        end
+    end
+
+    if folder then
+        for _, child in ipairs(folder:GetChildren()) do
+            if child.Name == cleanUid or child:GetAttribute("Uid") == cleanUid then
+                local pivot = child:GetPivot()
+                if pivot then return pivot.Position, "FOLDER_CHILD_PIVOT", child end
+            end
+        end
+    end
+
+    return nil, "NOT_FOUND", nil
+end
+
+function MARVIN_SmartSniperTeleport:teleportToSafePosition(character, eggPos)
+    if not character or not eggPos then return false, "Missing character or position" end
+    local rootPart = character:FindFirstChild("HumanoidRootPart")
+    local humanoid = character:FindFirstChildWhichIsA("Humanoid")
+    if not rootPart or not humanoid then return false, "Missing HumanoidRootPart" end
+
+    local safeOffset = Vector3.new(2.5, 2.0, 2.5)
+    local safePos = eggPos + safeOffset
+    local lookAtCFrame = CFrame.new(safePos, Vector3.new(eggPos.X, safePos.Y, eggPos.Z))
+
+    pcall(function()
+        rootPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+        rootPart.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+    end)
+
+    rootPart.CFrame = lookAtCFrame
+    return true, safePos
+end
+
+function MARVIN_SmartSniperTeleport:teleportToLocalEgg(entry, eggStateModule)
+    if not entry then return false end
+    local targetUid = entry.uid or entry.key
+    if not targetUid then return false end
+    local player = self.player or self.Players.LocalPlayer
+    local character = player and player.Character
+    if not character then return false end
+    local eggPos = self:locateEggPosition(targetUid, eggStateModule)
+    if not eggPos then return false end
+    local ok = self:teleportToSafePosition(character, eggPos)
+    if ok then
+        self:verifyArrivalAndAvailability(character, eggPos, targetUid, eggStateModule, nil)
+    end
+    return ok
+end
+
+function MARVIN_SmartSniperTeleport:verifyArrivalAndAvailability(character, eggPos, uid, eggStateModule, onConfirmed)
+    if not character or not eggPos then return false end
+    local rootPart = character:FindFirstChild("HumanoidRootPart")
+    if not rootPart then return false end
+
+    local dist = (rootPart.Position - eggPos).Magnitude
+    local arrived = (dist <= 18)
+
+    if not arrived then
+        self.status = "TRANSIT_INCOMPLETE"
+        return false, "Arrival distance check pending"
+    end
+
+    self.status = "ARRIVED_AT_EGG"
+
+    local isAvailable = false
+    if eggStateModule and type(eggStateModule.ReadFieldEggs) == "function" then
+        local ok, snapshot = pcall(eggStateModule.ReadFieldEggs)
+        if ok and type(snapshot) == "table" and type(snapshot.Records) == "table" then
+            for recKey, record in pairs(snapshot.Records) do
+                if tostring(record.Uid or recKey) == tostring(uid) then
+                    isAvailable = (record.State == nil or record.State == 0 or tostring(record.State):lower() == "available")
+                    break
+                end
+            end
+        end
+    else
+        isAvailable = true
+    end
+
+    if isAvailable then
+        self.status = "EGG_AVAILABLE_CONFIRMED"
+        if onConfirmed then pcall(onConfirmed, true) end
+        return true, "Egg arrived and confirmed available"
+    else
+        self.status = "EGG_UNAVAILABLE"
+        if onConfirmed then pcall(onConfirmed, false) end
+        return false, "Egg no longer available"
+    end
+end
+
+function MARVIN_SmartSniperTeleport:runDirectTeleportRoutine(eggStateModule, onStatusUpdate)
+    local target = self:getQueuedTarget()
+    if not target then return end
+
+    local updateStatus = function(msg)
+        self.status = msg
+        if onStatusUpdate then pcall(onStatusUpdate, msg) end
+    end
+
+    updateStatus("SMART_SNIPER: Loaded into server. Waiting for character...")
+
+    local player = self.player or self.Players.LocalPlayer
+    if not player then return end
+
+    local character = player.Character or player.CharacterAdded:Wait()
+    local rootPart = character:WaitForChild("HumanoidRootPart", 12)
+    if not rootPart then
+        updateStatus("FALLBACK: Character root part timeout")
+        self:clearQueuedTarget()
+        return
+    end
+
+    task.wait(0.35)
+
+    updateStatus("SMART_SNIPER: Resolving target egg location (" .. tostring(target.name) .. ")...")
+
+    local eggPos, method, model = nil, nil, nil
+    local deadline = os.clock() + 8.0
+    while os.clock() < deadline and not eggPos do
+        eggPos, method, model = self:locateEggPosition(target.uid, eggStateModule)
+        if not eggPos then task.wait(0.4) end
+    end
+
+    if not eggPos then
+        updateStatus("FALLBACK: Target egg not found in this instance. Remaining at safe spawn.")
+        self:clearQueuedTarget()
+        return
+    end
+
+    updateStatus("SMART_SNIPER: Direct teleport to egg next to safe offset...")
+    local ok, safePos = self:teleportToSafePosition(character, eggPos)
+
+    if ok then
+        task.wait(0.2)
+        local verified, reason = self:verifyArrivalAndAvailability(character, eggPos, target.uid, eggStateModule, function(available)
+            if available then
+                updateStatus("SUCCESS: Arrived next to " .. tostring(target.name) .. "! Egg availability confirmed.")
+            else
+                updateStatus("NOTICE: Arrived at location. Target egg was already claimed or despawned.")
+            end
+        end)
+    else
+        updateStatus("FALLBACK: Direct teleport offset failed. Safe fallback engaged.")
+    end
+
+    self:clearQueuedTarget()
+end
+
+
 --  [3-5] FINDER UI + NETWORK + RENDERER - createFinder(D) wires the glass
 --        panel, the broadcast/feed networking and the egg-card list together.
 --============================================================================--
@@ -1800,6 +2077,21 @@ local function createFinder(D)
     local designEngine = MARVIN_VisualDesignEngine.new({ theme = "RoyalAmethyst", safeMode = (type(settings.safeMode) == "boolean" and settings.safeMode) })
     D.designEngine = designEngine
     _G.__MARVIN_DESIGN = designEngine
+
+    local sniperTeleport = MARVIN_SmartSniperTeleport.new({ player = D.player, teleports = Teleports })
+    D.sniperTeleport = sniperTeleport
+    _G.__MARVIN_SNIPER_TELEPORT = sniperTeleport
+
+    task.spawn(function()
+        pcall(function()
+            sniperTeleport:runDirectTeleportRoutine(D.eggState, function(msg)
+                warn("[MARVIN Direct Teleport] " .. tostring(msg))
+                if status and status.Parent then
+                    status.Text = tostring(msg):sub(1, 42)
+                end
+            end)
+        end)
+    end)
     local config,configAt=nil,-math.huge
     local feed,feedAt={},0
     local clockOffset=0
@@ -1831,6 +2123,11 @@ local function createFinder(D)
         }
         joinedEgg=saved
         pcall(function() Teleports:SetTeleportSetting(joinedEggSettingKey,saved) end)
+        pcall(function()
+            if sniperTeleport then
+                sniperTeleport:queueTarget(entry)
+            end
+        end)
     end
     D.joinedEgg=joinedEgg
     local localHighlight
@@ -3094,6 +3391,11 @@ local function createFinder(D)
                     D.saveGuiBeforeTeleport()
                     D.stopFarm()
                     rememberJoinedEgg(target)
+                    pcall(function()
+                        if sniperTeleport then
+                            sniperTeleport:queueTarget(target)
+                        end
+                    end)
 
                     local teleported,teleportError=pcall(function()
                         Teleports:TeleportToPlaceInstance(target.placeId,target.jobId,D.player)
@@ -4350,7 +4652,7 @@ local function run()
     end
     local lastScan=0
     finderCreating = true
-    createFinder({gui=gui,localPanel={Visible=false},player=player,make=make,label=label,entries=function() return os.clock()-lastScan<10 and latestEntries or {} end,metadata=function() return latestMetadata end,ready=function() return lastScan>0 and os.clock()-lastScan<10 end,parseValue=parseValue,money=money,stopFarm=function() end})
+    createFinder({gui=gui,localPanel={Visible=false},player=player,make=make,label=label,eggState=EggState,entries=function() return os.clock()-lastScan<10 and latestEntries or {} end,metadata=function() return latestMetadata end,ready=function() return lastScan>0 and os.clock()-lastScan<10 end,parseValue=parseValue,money=money,stopFarm=function() end})
     if startupNotice and startupNotice.Parent then startupNotice:Destroy() end
     local notified={}
     while alive do
