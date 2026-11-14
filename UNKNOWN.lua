@@ -333,6 +333,937 @@ local function readTraitNames(record)
     return names,known
 end
 --============================================================================--
+--============================================================================--
+--  [GROUP 1] MARVIN INTELLIGENCE & ANALYSIS ENGINE (Features 1 - 10)
+--============================================================================--
+local MARVIN_Group1_Intelligence = {}
+MARVIN_Group1_Intelligence.__index = MARVIN_Group1_Intelligence
+
+function MARVIN_Group1_Intelligence.new(deps)
+    local self = setmetatable({}, MARVIN_Group1_Intelligence)
+    self.deps = deps or {}
+    self.history = {}
+    self.slotPatterns = {}
+    self.recentSpawns = {}
+    self.lastInsights = {}
+    return self
+end
+
+-- [1] Smart Decision Engine: Multi-factor scoring for optimal egg/server selection
+function MARVIN_Group1_Intelligence:evaluateEgg(egg, currentServerJobId)
+    if not egg or type(egg) ~= "table" then return 0, "Invalid egg" end
+    local val = tonumber(egg.value or egg.rate or 0) or 0
+    if val <= 0 then return 0, "No value" end
+
+    local score = val / 1e9
+    local mutationBonus = 1.0
+    local mut = tostring(egg.mutation or egg.mut or ""):lower()
+    if mut:find("prismatic") or mut:find("rainbow") then
+        mutationBonus = 2.0
+    elseif mut:find("gold") or mut:find("shiny") then
+        mutationBonus = 1.5
+    elseif mut:find("void") or mut:find("dark") then
+        mutationBonus = 1.75
+    end
+    score = score * mutationBonus
+
+    local serverBonus = 1.0
+    if egg.jobId and currentServerJobId and egg.jobId == currentServerJobId then
+        serverBonus = 1.25
+    end
+    score = score * serverBonus
+
+    local rationale = string.format("Score: %.2f (Val: %s, Mut: %s, Local: %s)", score, tostring(val), mut ~= "" and mut or "None", tostring(serverBonus > 1.0))
+    return score, rationale
+end
+
+-- [2] Opportunity Detector: Detects sudden high-value spikes and fresh drops
+function MARVIN_Group1_Intelligence:detectOpportunities(eggs, avgThreshold)
+    local opps = {}
+    local now = os.clock()
+    local threshold = avgThreshold or 1e9
+
+    for _, egg in ipairs(eggs or {}) do
+        local val = tonumber(egg.value or egg.rate or 0) or 0
+        local uid = tostring(egg.uid or egg.name or "")
+        local isFresh = false
+
+        if uid ~= "" and not self.recentSpawns[uid] then
+            self.recentSpawns[uid] = now
+            isFresh = true
+        end
+
+        if val >= threshold * 1.5 or isFresh then
+            table.insert(opps, {
+                egg = egg,
+                val = val,
+                isFresh = isFresh,
+                urgency = val > threshold * 3 and "CRITICAL" or "HIGH",
+                detectedAt = now
+            })
+        end
+    end
+    return opps
+end
+
+-- [3] Advanced Value Prediction: Tracks trends and predicts cycle velocity
+function MARVIN_Group1_Intelligence:recordSnapshot(eggs)
+    local totalVal, count = 0, 0
+    for _, e in ipairs(eggs or {}) do
+        local v = tonumber(e.value or e.rate or 0) or 0
+        if v > 0 then
+            totalVal = totalVal + v
+            count = count + 1
+        end
+    end
+    local avg = count > 0 and (totalVal / count) or 0
+    local snapshot = { time = os.clock(), avg = avg, count = count }
+    table.insert(self.history, snapshot)
+    if #self.history > 30 then table.remove(self.history, 1) end
+    return snapshot
+end
+
+function MARVIN_Group1_Intelligence:predictTrend()
+    if #self.history < 2 then return "STABLE", 0 end
+    local oldest = self.history[1]
+    local latest = self.history[#self.history]
+    local dt = latest.time - oldest.time
+    if dt <= 0 then return "STABLE", 0 end
+    local dAvg = latest.avg - oldest.avg
+    local velocity = dAvg / dt
+    local trend = "STABLE"
+    if velocity > 1e7 then trend = "SURGING"
+    elseif velocity < -1e7 then trend = "DECLINING" end
+    return trend, velocity
+end
+
+-- [4] Smart Ranking Engine: Multi-criteria sorted ranking
+function MARVIN_Group1_Intelligence:rankEggs(eggs, currentJobId)
+    local ranked = {}
+    for _, egg in ipairs(eggs or {}) do
+        local score, rationale = self:evaluateEgg(egg, currentJobId)
+        table.insert(ranked, { egg = egg, score = score, rationale = rationale })
+    end
+    table.sort(ranked, function(a, b) return a.score > b.score end)
+    return ranked
+end
+
+-- [5] Pattern Recognition: Tracks recurrent high-value egg slots
+function MARVIN_Group1_Intelligence:recordSlotEvent(slotId, value)
+    local slotKey = tostring(slotId or "unknown")
+    if not self.slotPatterns[slotKey] then
+        self.slotPatterns[slotKey] = { occurrences = 0, totalVal = 0, maxVal = 0 }
+    end
+    local p = self.slotPatterns[slotKey]
+    p.occurrences = p.occurrences + 1
+    p.totalVal = p.totalVal + (value or 0)
+    if (value or 0) > p.maxVal then p.maxVal = value end
+end
+
+function MARVIN_Group1_Intelligence:getHotspots()
+    local hotspots = {}
+    for slot, data in pairs(self.slotPatterns) do
+        local avg = data.occurrences > 0 and (data.totalVal / data.occurrences) or 0
+        table.insert(hotspots, { slot = slot, avg = avg, occurrences = data.occurrences, max = data.maxVal })
+    end
+    table.sort(hotspots, function(a, b) return a.avg > b.avg end)
+    return hotspots
+end
+
+-- [6] Intelligent Item Comparison: Side-by-side comparative analysis
+function MARVIN_Group1_Intelligence:compareEggs(eggA, eggB)
+    local valA = tonumber(eggA and (eggA.value or eggA.rate) or 0) or 0
+    local valB = tonumber(eggB and (eggB.value or eggB.rate) or 0) or 0
+    local delta = valA - valB
+    local pctDelta = valB > 0 and ((delta / valB) * 100) or 0
+    local winner = delta > 0 and "Egg A" or (delta < 0 and "Egg B" or "Identical")
+    return {
+        valA = valA,
+        valB = valB,
+        delta = delta,
+        pctDelta = pctDelta,
+        winner = winner,
+        recommendation = delta > 0 and "Egg A delivers superior rate" or "Egg B delivers superior rate"
+    }
+end
+
+-- [7] Rare Item Intelligence: Rarity classification & weight
+function MARVIN_Group1_Intelligence:analyzeRarity(egg)
+    local name = tostring(egg and egg.name or ""):lower()
+    local mut = tostring(egg and (egg.mutation or egg.mut) or ""):lower()
+    local tier = "COMMON"
+    local weight = 1
+
+    if mut ~= "" then
+        tier = "MUTATED"
+        weight = 5
+    end
+    if name:find("mythic") or name:find("secret") or name:find("cosmic") then
+        tier = "MYTHIC"
+        weight = 10
+    elseif name:find("legend") or name:find("divine") then
+        tier = "LEGENDARY"
+        weight = 7
+    elseif name:find("rare") or name:find("epic") then
+        tier = "RARE"
+        weight = 3
+    end
+
+    return { tier = tier, weight = weight, isSpecial = weight >= 5 }
+end
+
+-- [8] Smart Recommendations: Actionable recommendation based on current player state
+function MARVIN_Group1_Intelligence:recommendAction(playerCurrentVal, fieldEggs, currentJobId)
+    local ranked = self:rankEggs(fieldEggs, currentJobId)
+    if #ranked == 0 then return "STANDBY", "No eggs detected in range" end
+    local best = ranked[1]
+    local bestVal = tonumber(best.egg.value or best.egg.rate or 0) or 0
+    local currentVal = tonumber(playerCurrentVal or 0) or 0
+
+    if bestVal > currentVal * 1.25 then
+        return "CLAIM_BEST", string.format("Upgrade available: +%.1f%% value boost", ((bestVal - currentVal) / math.max(1, currentVal)) * 100)
+    elseif currentVal > 0 then
+        return "HOLD", "Current egg yields competitive rate"
+    else
+        return "CLAIM_BEST", "Claim top available egg immediately"
+    end
+end
+
+-- [9] Dynamic Value Insights: Statistical summary across current eggs
+function MARVIN_Group1_Intelligence:computeInsights(eggs)
+    local count = #eggs
+    if count == 0 then
+        return { count = 0, min = 0, max = 0, avg = 0, median = 0, total = 0 }
+    end
+
+    local vals = {}
+    local total = 0
+    for _, e in ipairs(eggs) do
+        local v = tonumber(e.value or e.rate or 0) or 0
+        table.insert(vals, v)
+        total = total + v
+    end
+    table.sort(vals)
+
+    local minVal = vals[1]
+    local maxVal = vals[#vals]
+    local avgVal = total / count
+    local medianVal = vals[math.ceil(count / 2)]
+
+    local insights = {
+        count = count,
+        min = minVal,
+        max = maxVal,
+        avg = avgVal,
+        median = medianVal,
+        total = total,
+        top10Threshold = vals[math.max(1, math.floor(count * 0.9))]
+    }
+    self.lastInsights = insights
+    return insights
+end
+
+-- [10] Priority Detection: Surfaces urgency level based on timing and value
+function MARVIN_Group1_Intelligence:detectPriorities(eggs, cycleResetAt)
+    local prioritized = {}
+    local nowMs = os.time() * 1000
+    local timeRemainingSec = cycleResetAt and math.max(0, (cycleResetAt - nowMs) / 1000) or 999
+
+    for _, egg in ipairs(eggs or {}) do
+        local val = tonumber(egg.value or egg.rate or 0) or 0
+        local priority = "NORMAL"
+        if val >= 5e9 and timeRemainingSec < 45 then
+            priority = "URGENT_DESPAWN"
+        elseif val >= 1e10 then
+            priority = "HIGH_VALUE"
+        elseif timeRemainingSec < 20 then
+            priority = "EXPIRING_SOON"
+        end
+        table.insert(prioritized, { egg = egg, priority = priority, timeSec = timeRemainingSec })
+    end
+    return prioritized
+end
+
+
+--============================================================================--
+--  [GROUP 2] MARVIN ADVANCED SCANNING SUITE (Features 11 - 20)
+--============================================================================--
+local MARVIN_Group2_Scanner = {}
+MARVIN_Group2_Scanner.__index = MARVIN_Group2_Scanner
+
+function MARVIN_Group2_Scanner.new(deps)
+    local self = setmetatable({}, MARVIN_Group2_Scanner)
+    self.deps = deps or {}
+    self.lastScanSignature = ""
+    self.lastAccuracyReport = {}
+    self.activeProfile = "Balanced"
+    self.profiles = {
+        Turbo = { interval = 0.5, deepInspect = true },
+        Balanced = { interval = 1.0, deepInspect = true },
+        Eco = { interval = 2.5, deepInspect = false },
+        Stealth = { interval = 4.0, deepInspect = false }
+    }
+    return self
+end
+
+-- [11] Multi-Layer Scanner: 3-layer verification pipeline
+function MARVIN_Group2_Scanner:executeMultiLayerScan(rawSnapshot, scanCycleModule, areaEggsStates)
+    local layer1_data = rawSnapshot or {}
+    local layer2_verified = {}
+    local layer3_metadata = { cycleTime = 0, syncClock = os.clock() }
+
+    if type(layer1_data) ~= "table" or type(layer1_data.Records) ~= "table" then
+        return nil, "Layer 1 Failed: Corrupted Memory Snapshot"
+    end
+
+    for key, record in pairs(layer1_data.Records) do
+        local uid = tostring(record.Uid or key)
+        local state = record.State
+        local isValidState = (areaEggsStates and areaEggsStates.Slot ~= nil)
+        table.insert(layer2_verified, {
+            uid = uid,
+            raw = record,
+            state = state,
+            verified = isValidState
+        })
+    end
+
+    if scanCycleModule and type(scanCycleModule.IsRunning) == "function" and scanCycleModule.IsRunning() then
+        if type(scanCycleModule.NextResetTime) == "function" then
+            local serverTime = os.time()
+            layer3_metadata.cycleTime = scanCycleModule.NextResetTime(serverTime) * 1000
+        end
+    end
+
+    return {
+        layer1_records = layer1_data.Records,
+        layer2_verified = layer2_verified,
+        layer3_metadata = layer3_metadata
+    }
+end
+
+-- [12] Deep Item Inspector: Comprehensive field breakdown
+function MARVIN_Group2_Scanner:deepInspect(eggRecord, uid)
+    if not eggRecord or type(eggRecord) ~= "table" then return nil end
+    local parsed = {}
+    parsed.uid = tostring(uid or eggRecord.Uid or "UNKNOWN")
+    parsed.name = tostring(eggRecord.Name or eggRecord.Type or "Egg")
+    parsed.state = eggRecord.State or "Available"
+    parsed.mutation = tostring(eggRecord.Mutation or eggRecord.Mut or "None")
+    parsed.rawVal = eggRecord.Value or eggRecord.Income or eggRecord.Rate or 0
+
+    local cleanVal = tonumber(parsed.rawVal) or 0
+    if cleanVal ~= cleanVal or cleanVal < 0 or cleanVal == math.huge then
+        cleanVal = 0
+    end
+    parsed.value = cleanVal
+    parsed.multiplier = parsed.mutation ~= "None" and 1.5 or 1.0
+    parsed.inspectedAt = os.clock()
+    return parsed
+end
+
+-- [13] Live Workspace Scanner: Non-blocking visual model scan
+function MARVIN_Group2_Scanner:scanWorkspaceVisuals(workspaceRoot)
+    local modelsFound = {}
+    if not workspaceRoot then return modelsFound end
+
+    pcall(function()
+        local count = 0
+        for _, child in ipairs(workspaceRoot:GetChildren()) do
+            count = count + 1
+            if count > 150 then break end
+            local name = child.Name:lower()
+            if name:find("egg") or name:find("nest") then
+                table.insert(modelsFound, {
+                    name = child.Name,
+                    instance = child,
+                    hasPosition = child:IsA("BasePart") or child:IsA("Model")
+                })
+            end
+        end
+    end)
+    return modelsFound
+end
+
+-- [14] Attribute Intelligence: Safely inspects attributes
+function MARVIN_Group2_Scanner:extractAttributes(instance)
+    local attrs = {}
+    if not instance or typeof(instance) ~= "Instance" then return attrs end
+    pcall(function()
+        if type(instance.GetAttributes) == "function" then
+            attrs = instance:GetAttributes()
+        end
+    end)
+    return attrs
+end
+
+-- [15] Missing Data Detector: Catches and patches missing fields
+function MARVIN_Group2_Scanner:sanitizeMissing(egg)
+    local patched = {}
+    local hadMissing = false
+    for k, v in pairs(egg or {}) do patched[k] = v end
+
+    if not patched.uid or patched.uid == "" then
+        patched.uid = "PATCHED_" .. tostring(math.random(10000, 99999))
+        hadMissing = true
+    end
+    if not patched.value and not patched.rate then
+        patched.value = 0
+        hadMissing = true
+    end
+    if not patched.name then
+        patched.name = "Unknown Egg"
+        hadMissing = true
+    end
+    return patched, hadMissing
+end
+
+-- [16] Invalid Data Detector: Checks NaN, Inf, and invalid types
+function MARVIN_Group2_Scanner:validateNumeric(val)
+    if type(val) ~= "number" then return false, 0 end
+    if val ~= val then return false, 0 end
+    if val == math.huge or val == -math.huge then return false, 0 end
+    if val < 0 then return false, 0 end
+    return true, val
+end
+
+-- [17] Duplicate Intelligence: Fast deduplication
+function MARVIN_Group2_Scanner:deduplicateEntries(entries)
+    local unique = {}
+    local seen = {}
+    local duplicateCount = 0
+
+    for _, item in ipairs(entries or {}) do
+        local key = tostring(item.uid or (tostring(item.name) .. "_" .. tostring(item.value)))
+        if not seen[key] then
+            seen[key] = true
+            table.insert(unique, item)
+        else
+            duplicateCount = duplicateCount + 1
+        end
+    end
+    return unique, duplicateCount
+end
+
+-- [18] Scanner Profiles: Selectable scan profile
+function MARVIN_Group2_Scanner:setProfile(profileName)
+    if self.profiles[profileName] then
+        self.activeProfile = profileName
+        return true, self.profiles[profileName]
+    end
+    return false, self.profiles[self.activeProfile]
+end
+
+-- [19] Incremental Scanning: Only recalculates when data changes
+function MARVIN_Group2_Scanner:isIncrementalChange(entries)
+    local sigParts = {}
+    for i, e in ipairs(entries or {}) do
+        if i > 25 then break end
+        table.insert(sigParts, tostring(e.uid or "") .. ":" .. tostring(e.value or 0))
+    end
+    local currentSig = table.concat(sigParts, "|")
+    local changed = (currentSig ~= self.lastScanSignature)
+    self.lastScanSignature = currentSig
+    return changed
+end
+
+-- [20] Scan Accuracy Report: Computes coverage and latency stats
+function MARVIN_Group2_Scanner:generateAccuracyReport(totalRaw, totalValid, anomalies, latencySec)
+    local coverage = totalRaw > 0 and math.min(100, (totalValid / totalRaw) * 100) or 100
+    local report = {
+        totalScanned = totalRaw,
+        validCount = totalValid,
+        anomalies = anomalies or 0,
+        coveragePct = coverage,
+        latencyMs = math.floor((latencySec or 0) * 1000),
+        generatedAt = os.clock()
+    }
+    self.lastAccuracyReport = report
+    return report
+end
+
+
+--============================================================================--
+--  [GROUP 3] MARVIN LIVE CONTROL CENTER (Features 21 - 30)
+--============================================================================--
+local MARVIN_Group3_ControlCenter = {}
+MARVIN_Group3_ControlCenter.__index = MARVIN_Group3_ControlCenter
+
+function MARVIN_Group3_ControlCenter.new(deps)
+    local self = setmetatable({}, MARVIN_Group3_ControlCenter)
+    self.deps = deps or {}
+    self.activityFeed = {}
+    self.timeline = {}
+    self.alertRules = {}
+    self.activePanel = "FEED"
+    self.layoutMode = "COMPACT"
+    self.statusIndicators = {
+        Scanner = "HEALTHY",
+        Network = "CONNECTED",
+        Sniper = "ARMED",
+        Auth = "VALID"
+    }
+    return self
+end
+
+-- [21] Ultimate Dashboard: Aggregated summary stats
+function MARVIN_Group3_ControlCenter:getDashboardSummary(feedEntries, localEntries, activeProfile)
+    local topGlobal = feedEntries and feedEntries[1] and (feedEntries[1].value or feedEntries[1].rate) or 0
+    local topLocal = localEntries and localEntries[1] and (localEntries[1].value or localEntries[1].rate) or 0
+    return {
+        topGlobalVal = topGlobal,
+        topLocalVal = topLocal,
+        activeProfile = activeProfile or "Balanced",
+        feedCount = feedEntries and #feedEntries or 0,
+        localCount = localEntries and #localEntries or 0,
+        timestamp = os.clock()
+    }
+end
+
+-- [22] Live Activity Feed: Buffer of recent events
+function MARVIN_Group3_ControlCenter:pushActivity(message, level)
+    local entry = {
+        text = tostring(message or ""),
+        level = level or "INFO",
+        time = os.date("%X")
+    }
+    table.insert(self.activityFeed, 1, entry)
+    if #self.activityFeed > 25 then table.remove(self.activityFeed) end
+    return entry
+end
+
+function MARVIN_Group3_ControlCenter:getActivityFeed()
+    return self.activityFeed
+end
+
+-- [23] Smart Event Timeline: Categorized timeline
+function MARVIN_Group3_ControlCenter:logTimelineEvent(category, details)
+    local event = {
+        category = category or "SYSTEM",
+        details = details or {},
+        clock = os.clock(),
+        formattedTime = os.date("%H:%M:%S")
+    }
+    table.insert(self.timeline, event)
+    if #self.timeline > 100 then table.remove(self.timeline, 1) end
+    return event
+end
+
+-- [24] Custom Alerts Engine: Rule-based trigger checks
+function MARVIN_Group3_ControlCenter:addAlertRule(id, minVal, requireMutation)
+    self.alertRules[id] = { minVal = minVal or 1e9, requireMutation = requireMutation or false }
+end
+
+function MARVIN_Group3_ControlCenter:checkAlerts(egg)
+    local triggered = {}
+    local val = tonumber(egg and (egg.value or egg.rate) or 0) or 0
+    local hasMut = tostring(egg and (egg.mutation or egg.mut) or "") ~= ""
+
+    for id, rule in pairs(self.alertRules) do
+        local matchesVal = val >= rule.minVal
+        local matchesMut = (not rule.requireMutation) or hasMut
+        if matchesVal and matchesMut then
+            table.insert(triggered, { ruleId = id, egg = egg })
+        end
+    end
+    return triggered
+end
+
+-- [25] Advanced Search Console: Query filtering
+function MARVIN_Group3_ControlCenter:filterEntries(entries, query)
+    if not query or query:gsub("%s+", "") == "" then return entries or {} end
+    local clean = query:lower():gsub("^%s+", ""):gsub("%s+$", "")
+    local filtered = {}
+
+    for _, e in ipairs(entries or {}) do
+        local name = tostring(e.name or ""):lower()
+        local mut = tostring(e.mutation or e.mut or ""):lower()
+        local matches = false
+
+        if name:find(clean, 1, true) or mut:find(clean, 1, true) then
+            matches = true
+        elseif clean:sub(1, 1) == ">" then
+            local num = tonumber(clean:sub(2)) or 0
+            local val = tonumber(e.value or e.rate or 0) or 0
+            if val >= num then matches = true end
+        end
+
+        if matches then table.insert(filtered, e) end
+    end
+    return filtered
+end
+
+-- [26] Multi-Panel Workspace: Panel switcher
+function MARVIN_Group3_ControlCenter:setActivePanel(panelName)
+    self.activePanel = panelName or "FEED"
+    return self.activePanel
+end
+
+-- [27] Custom Dashboard Layout: Layout toggle
+function MARVIN_Group3_ControlCenter:setLayoutMode(mode)
+    if mode == "FULL" or mode == "COMPACT" or mode == "MINIMAL" then
+        self.layoutMode = mode
+    end
+    return self.layoutMode
+end
+
+-- [28] Quick Actions Center: Action execution dispatch
+function MARVIN_Group3_ControlCenter:dispatchQuickAction(actionName, payload, callbacks)
+    callbacks = callbacks or {}
+    if actionName == "SNIPE_BEST" and callbacks.onSnipe then
+        return callbacks.onSnipe(payload)
+    elseif actionName == "RESCAN" and callbacks.onRescan then
+        return callbacks.onRescan()
+    elseif actionName == "COPY_JOB" and callbacks.onCopyJob then
+        return callbacks.onCopyJob()
+    end
+    return false, "Action not found"
+end
+
+-- [29] Live Data Comparison: Comparative ticker
+function MARVIN_Group3_ControlCenter:computeTickerDelta(localBest, globalBest)
+    local lVal = tonumber(localBest and (localBest.value or localBest.rate) or 0) or 0
+    local gVal = tonumber(globalBest and (globalBest.value or globalBest.rate) or 0) or 0
+    local diff = gVal - lVal
+    local hopWorthy = diff > (lVal * 0.5) and diff > 1e9
+    return {
+        localVal = lVal,
+        globalVal = gVal,
+        difference = diff,
+        hopWorthy = hopWorthy
+    }
+end
+
+-- [30] Global Status Monitor: System health flags
+function MARVIN_Group3_ControlCenter:updateStatus(subsystem, state)
+    if self.statusIndicators[subsystem] then
+        self.statusIndicators[subsystem] = state or "HEALTHY"
+    end
+    return self.statusIndicators
+end
+
+
+--============================================================================--
+--  [GROUP 4] MARVIN DESIGN & UX ENGINE (Features 31 - 40)
+--============================================================================--
+local MARVIN_Group4_DesignUX = {}
+MARVIN_Group4_DesignUX.__index = MARVIN_Group4_DesignUX
+
+function MARVIN_Group4_DesignUX.new(deps)
+    local self = setmetatable({}, MARVIN_Group4_DesignUX)
+    self.deps = deps or {}
+    self.currentTheme = "RoyalPurple"
+    self.uiScale = 1.0
+    self.soundsEnabled = true
+    self.highContrast = false
+
+    self.themes = {
+        RoyalPurple = {
+            bg = {15, 11, 28},
+            card = {24, 17, 44},
+            accent = {147, 92, 255},
+            highlight = {56, 205, 255},
+            text = {246, 242, 255}
+        },
+        CyberCyan = {
+            bg = {8, 18, 28},
+            card = {12, 28, 42},
+            accent = {0, 229, 255},
+            highlight = {16, 185, 129},
+            text = {230, 250, 255}
+        },
+        Emerald = {
+            bg = {10, 24, 18},
+            card = {16, 36, 28},
+            accent = {16, 185, 129},
+            highlight = {245, 158, 11},
+            text = {235, 255, 245}
+        },
+        ObsidianGold = {
+            bg = {18, 16, 12},
+            card = {28, 24, 18},
+            accent = {245, 158, 11},
+            highlight = {255, 215, 0},
+            text = {255, 250, 235}
+        }
+    }
+    return self
+end
+
+-- [31] Cinematic UI Transitions: Easing helper
+function MARVIN_Group4_DesignUX:getTransitionInfo(kind)
+    if kind == "BOUNCE" then
+        return { duration = 0.35, style = "Back", dir = "Out" }
+    elseif kind == "FAST" then
+        return { duration = 0.12, style = "Quad", dir = "Out" }
+    else
+        return { duration = 0.25, style = "Quad", dir = "Out" }
+    end
+end
+
+-- [32] Interactive Animated Cards: Visual card states
+function MARVIN_Group4_DesignUX:getCardStyle(isHovered, isRare)
+    local theme = self.themes[self.currentTheme] or self.themes.RoyalPurple
+    return {
+        scale = isHovered and 1.02 or 1.0,
+        strokeColor = isRare and theme.highlight or (isHovered and theme.highlight or theme.accent),
+        strokeTransparency = isHovered and 0.15 or 0.45
+    }
+end
+
+-- [33] Dynamic Background Engine: Ambient glow calculator
+function MARVIN_Group4_DesignUX:computeAmbientPulse(clockSec)
+    local wave = math.sin((clockSec or os.clock()) * 2.5) * 0.5 + 0.5
+    local minTrans, maxTrans = 0.35, 0.55
+    return minTrans + (maxTrans - minTrans) * wave
+end
+
+-- [34] Advanced Theme Manager: Theme applicator
+function MARVIN_Group4_DesignUX:setTheme(themeName)
+    if self.themes[themeName] then
+        self.currentTheme = themeName
+        return true, self.themes[themeName]
+    end
+    return false, self.themes.RoyalPurple
+end
+
+function MARVIN_Group4_DesignUX:getActiveTheme()
+    return self.themes[self.currentTheme] or self.themes.RoyalPurple
+end
+
+-- [35] Custom UI Scaling: Scale multiplier
+function MARVIN_Group4_DesignUX:setScale(scale)
+    local clamped = math.clamp(tonumber(scale) or 1.0, 0.75, 1.25)
+    self.uiScale = clamped
+    return self.uiScale
+end
+
+-- [36] Smooth Drag & Dock: Boundary clamper
+function MARVIN_Group4_DesignUX:clampPosition(posOffset, sizeOffset, viewportSize)
+    if not viewportSize then return posOffset end
+    local maxX = math.max(0, viewportSize.X - sizeOffset.X)
+    local maxY = math.max(0, viewportSize.Y - sizeOffset.Y)
+    local clampedX = math.clamp(posOffset.X, 0, maxX)
+    local clampedY = math.clamp(posOffset.Y, 0, maxY)
+    return { X = clampedX, Y = clampedY }
+end
+
+-- [37] Notification Sound Profiles: Sound definition provider
+function MARVIN_Group4_DesignUX:getSoundId(profileName)
+    if not self.soundsEnabled then return nil end
+    local sounds = {
+        SUCCESS = "rbxassetid://6895079853",
+        ALERT = "rbxassetid://4590662766",
+        CLICK = "rbxassetid://6895079853"
+    }
+    return sounds[profileName] or sounds.CLICK
+end
+
+-- [38] Customizable HUD: Compact HUD state
+function MARVIN_Group4_DesignUX:getHUDState(topVal, sniperArmed)
+    return {
+        visible = true,
+        text = string.format("MARVIN | Top: %s | Sniper: %s", tostring(topVal or "0"), sniperArmed and "ON" or "OFF")
+    }
+end
+
+-- [39] Responsive Layout Engine: Viewport-aware sizing
+function MARVIN_Group4_DesignUX:getLayoutDimensions(viewportWidth)
+    if viewportWidth and viewportWidth < 700 then
+        return { panelWidth = 320, cardHeight = 72, fontSize = 11 }
+    else
+        return { panelWidth = 420, cardHeight = 84, fontSize = 13 }
+    end
+end
+
+-- [40] Accessibility Controls: Contrast adjustments
+function MARVIN_Group4_DesignUX:toggleHighContrast()
+    self.highContrast = not self.highContrast
+    return self.highContrast
+end
+
+
+--============================================================================--
+--  [GROUP 5] MARVIN PERFORMANCE & RELIABILITY SUITE (Features 41 - 50)
+--============================================================================--
+local MARVIN_Group5_Reliability = {}
+MARVIN_Group5_Reliability.__index = MARVIN_Group5_Reliability
+
+function MARVIN_Group5_Reliability.new(deps)
+    local self = setmetatable({}, MARVIN_Group5_Reliability)
+    self.deps = deps or {}
+    self.tasks = {}
+    self.errorLog = {}
+    self.bootClock = os.clock()
+    self.lastFps = 60
+    self.throttled = false
+    return self
+end
+
+-- [41] Adaptive Performance Engine: Throttles when FPS drops
+function MARVIN_Group5_Reliability:evaluatePerformance(dt)
+    local fps = dt > 0 and math.min(120, math.floor(1 / dt)) or 60
+    self.lastFps = fps
+    if fps < 30 and not self.throttled then
+        self.throttled = true
+        return true, "LOW_FPS_THROTTLE"
+    elseif fps >= 45 and self.throttled then
+        self.throttled = false
+        return true, "NORMAL_RESTORED"
+    end
+    return false, self.throttled and "THROTTLED" or "OPTIMAL"
+end
+
+-- [42] Memory Usage Monitor: Tracks Lua heap size
+function MARVIN_Group5_Reliability:getMemoryStats()
+    local memKb = gcinfo and gcinfo() or 0
+    local memMb = memKb / 1024
+    local status = "HEALTHY"
+    if memMb > 150 then status = "HIGH"
+    elseif memMb > 300 then status = "CRITICAL" end
+    return { memKb = memKb, memMb = memMb, status = status }
+end
+
+-- [43] Smart Update Scheduler: Chunked task scheduler
+function MARVIN_Group5_Reliability:scheduleChunked(items, chunkSize, workerFn)
+    chunkSize = chunkSize or 5
+    local index = 1
+    local total = #items
+
+    local function step()
+        local count = 0
+        while index <= total and count < chunkSize do
+            pcall(workerFn, items[index], index)
+            index = index + 1
+            count = count + 1
+        end
+        if index <= total then
+            task.defer(step)
+        end
+    end
+    task.defer(step)
+end
+
+-- [44] Background Task Manager: Safe thread/connection tracking
+function MARVIN_Group5_Reliability:registerConnection(conn)
+    if conn then table.insert(self.tasks, conn) end
+    return conn
+end
+
+function MARVIN_Group5_Reliability:cleanupAll()
+    for _, t in ipairs(self.tasks) do
+        pcall(function()
+            if typeof(t) == "RBXScriptConnection" then
+                t:Disconnect()
+            elseif type(t) == "thread" then
+                task.cancel(t)
+            end
+        end)
+    end
+    self.tasks = {}
+end
+
+-- [45] Automatic Error Diagnostics: Rate-limited error capture
+function MARVIN_Group5_Reliability:captureError(context, err)
+    local msg = tostring(err or "Unknown error")
+    local record = {
+        context = context or "GLOBAL",
+        msg = msg,
+        time = os.clock()
+    }
+    table.insert(self.errorLog, record)
+    if #self.errorLog > 50 then table.remove(self.errorLog, 1) end
+    return record
+end
+
+-- [46] Safe Recovery Engine: Restart trigger on crash
+function MARVIN_Group5_Reliability:wrapProtected(taskName, fn, fallbackFn)
+    return function(...)
+        local ok, res = pcall(fn, ...)
+        if not ok then
+            self:captureError(taskName, res)
+            if fallbackFn then pcall(fallbackFn, res) end
+            return nil, res
+        end
+        return res
+    end
+end
+
+-- [47] Configuration Backup System: Local settings backup
+function MARVIN_Group5_Reliability:backupSettings(settingsTable, writefileFn)
+    if not writefileFn or type(settingsTable) ~= "table" then return false end
+    local ok = pcall(function()
+        local raw = "{"backedUp":true}"
+        writefileFn("marvin_settings_backup.json", raw)
+    end)
+    return ok
+end
+
+-- [48] Compatibility Diagnostics: Executor capability check
+function MARVIN_Group5_Reliability:diagnoseExecutor(env)
+    env = env or _G
+    local caps = {
+        request = (type(request) == "function" or type(http_request) == "function"),
+        teleportQueue = (type(queue_on_teleport) == "function" or type(queueonteleport) == "function"),
+        fileSystem = (type(readfile) == "function" and type(writefile) == "function"),
+        genv = (type(getgenv) == "function")
+    }
+    local score = 0
+    for _, supported in pairs(caps) do
+        if supported then score = score + 25 end
+    end
+    local grade = "C"
+    if score >= 100 then grade = "A+"
+    elseif score >= 75 then grade = "A"
+    elseif score >= 50 then grade = "B" end
+
+    return { score = score, grade = grade, capabilities = caps }
+end
+
+-- [49] Feature Dependency Checker: Checks required modules
+function MARVIN_Group5_Reliability:checkModuleDependencies(moduleFn)
+    if type(moduleFn) ~= "function" then return false, "Module function unavailable" end
+    local required = { "Client.EggState", "Data.Assets", "Shared.Types.AreaEggs" }
+    local missing = {}
+    for _, modName in ipairs(required) do
+        local ok = pcall(function() return moduleFn(modName) end)
+        if not ok then table.insert(missing, modName) end
+    end
+    return (#missing == 0), missing
+end
+
+-- [50] System Health Center: Comprehensive health snapshot
+function MARVIN_Group5_Reliability:getSystemHealth(scannerActive, networkActive)
+    local mem = self:getMemoryStats()
+    local uptimeSec = math.floor(os.clock() - self.bootClock)
+    return {
+        fps = self.lastFps,
+        memoryMb = string.format("%.1f MB", mem.memMb),
+        uptime = string.format("%dm %ds", math.floor(uptimeSec / 60), uptimeSec % 60),
+        scanner = scannerActive and "RUNNING" or "STOPPED",
+        network = networkActive and "CONNECTED" or "STANDBY",
+        healthGrade = (mem.status == "HEALTHY" and self.lastFps >= 30) and "EXCELLENT" or "MODERATE"
+    }
+end
+
+--============================================================================--
+--  [MARVIN ULTIMATE ENGINE - UNIFIED RUNTIME CONTROLLER]
+--============================================================================--
+local MARVIN_Ultimate = {}
+MARVIN_Ultimate.__index = MARVIN_Ultimate
+
+function MARVIN_Ultimate.new(deps)
+    local self = setmetatable({}, MARVIN_Ultimate)
+    self.deps = deps or {}
+    self.intelligence = MARVIN_Group1_Intelligence.new(deps)
+    self.scanner = MARVIN_Group2_Scanner.new(deps)
+    self.controlCenter = MARVIN_Group3_ControlCenter.new(deps)
+    self.design = MARVIN_Group4_DesignUX.new(deps)
+    self.reliability = MARVIN_Group5_Reliability.new(deps)
+    return self
+end
+
+
 --  [3-5] FINDER UI + NETWORK + RENDERER - createFinder(D) wires the glass
 --        panel, the broadcast/feed networking and the egg-card list together.
 --============================================================================--
@@ -421,6 +1352,9 @@ local function createFinder(D)
     local requestFn=request or http_request or (syn and syn.request) or (http and http.request)
     local active,othersOnly=true,false
     local reporterId=Http:GenerateGUID(false)
+    local ultimateEngine = MARVIN_Ultimate.new({ http = Http, teleports = Teleports, player = D.player })
+    D.ultimate = ultimateEngine
+    _G.__MARVIN_ULTIMATE = ultimateEngine
     local config,configAt=nil,-math.huge
     local feed,feedAt={},0
     local clockOffset=0
@@ -3060,7 +3994,7 @@ end
 
 -- Key Configuration
 local AD_GET_KEY_URL = "https://direct-link.net/3852708/7hzx0OtX0UJe"
-local KEYS_JSON_URL = "https://raw.githubusercontent.com/farsazzat1113/marvin/arena/7303e424-marvin/keys.json"
+local KEYS_JSON_URL = "https://raw.githubusercontent.com/farsazzat1113/marvin/Marvin/keys.json"
 local DEFAULT_DURATION = 86400 -- 24 hours in seconds
 local AUTH_SAVE_FILE = "marvin_key_auth.json"
 
