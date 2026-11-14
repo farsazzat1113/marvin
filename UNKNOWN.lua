@@ -26,7 +26,7 @@ local function startUnknown()
 --============================================================================--
 
 local HttpService = game:GetService("HttpService")
-local RAW_SCRIPT_URL = "https://raw.githubusercontent.com/farsazzat1113/marvin/Marvin/UNKNOWN.lua?v=" .. tostring(os.time())
+local RAW_SCRIPT_URL = "https://raw.githubusercontent.com/farsazzat1113/marvin/marvin-smart-value-scanner-work/UNKNOWN.lua?v=" .. tostring(os.time())
 local autoExecuteEnabled = true
 if type(readfile) == "function" then
     pcall(function()
@@ -3060,7 +3060,7 @@ end
 
 -- Key Configuration
 local AD_GET_KEY_URL = "https://direct-link.net/3852708/7hzx0OtX0UJe"
-local KEYS_JSON_URL = "https://raw.githubusercontent.com/farsazzat1113/marvin/arena/7303e424-marvin/keys.json"
+local KEYS_JSON_URL = "https://raw.githubusercontent.com/farsazzat1113/marvin/marvin-smart-value-scanner-work/keys.json"
 local DEFAULT_DURATION = 86400 -- 24 hours in seconds
 local AUTH_SAVE_FILE = "marvin_key_auth.json"
 
