@@ -773,7 +773,25 @@ local function createFinder(D)
     resetTimer.TextTruncate=Enum.TextTruncate.AtEnd
     resetTimer.Active=false
     local refreshing=false
-    local list=D.make('ScrollingFrame',{Position=UDim2.fromOffset(10,102),Size=UDim2.new(1,-20,1,-284),BackgroundTransparency=1,BorderSizePixel=0,AutomaticCanvasSize=Enum.AutomaticSize.None,CanvasSize=UDim2.new(),ScrollBarThickness=6,ScrollBarImageColor3=Color3.fromRGB(56,205,255),ScrollBarImageTransparency=0.1},panel)
+    -- Live Top 4 strip: compact read-only summary above the existing result list.
+    local top4Panel=D.make('Frame',{Name='MarvinLiveTop4',Position=UDim2.fromOffset(10,102),Size=UDim2.new(1,-20,0,76),BackgroundColor3=Color3.fromRGB(17,12,34),BackgroundTransparency=0.08,BorderSizePixel=0},panel)
+    D.make('UICorner',{CornerRadius=UDim.new(0,11)},top4Panel)
+    D.make('UIStroke',{Color=Color3.fromRGB(147,92,255),Transparency=0.35,Thickness=1},top4Panel)
+    local top4Title=D.label(top4Panel,'✦ LIVE TOP 4  •  HIGHEST VALUE',UDim2.fromOffset(8,2),UDim2.new(1,-16,0,15),Color3.fromRGB(211,185,255),10)
+    top4Title.Font=Enum.Font.GothamBold
+    local top4Cards={}
+    for i=1,4 do
+        local tile=D.make('Frame',{Name='Top4Slot'..i,Position=UDim2.new((i-1)*0.25,3,0,20),Size=UDim2.new(0.25,-6,0,50),BackgroundColor3=Color3.fromRGB(34,24,58),BackgroundTransparency=0.08,BorderSizePixel=0},top4Panel)
+        D.make('UICorner',{CornerRadius=UDim.new(0,7)},tile)
+        D.make('UIStroke',{Color=Color3.fromRGB(110,78,170),Transparency=0.58,Thickness=1},tile)
+        local icon=D.make('ImageLabel',{Name='Icon',Position=UDim2.fromOffset(3,5),Size=UDim2.fromOffset(38,38),BackgroundTransparency=1,Image='',ScaleType=Enum.ScaleType.Fit},tile)
+        local name=D.label(tile,'Waiting…',UDim2.fromOffset(43,4),UDim2.new(1,-46,0,21),Color3.fromRGB(245,240,255),9)
+        name.Font=Enum.Font.GothamBold;name.TextXAlignment=Enum.TextXAlignment.Left;name.TextTruncate=Enum.TextTruncate.AtEnd
+        local value=D.label(tile,'—',UDim2.fromOffset(43,25),UDim2.new(1,-46,0,19),Color3.fromRGB(104,242,166),9)
+        value.Font=Enum.Font.GothamBlack;value.TextXAlignment=Enum.TextXAlignment.Left;value.TextTruncate=Enum.TextTruncate.AtEnd
+        top4Cards[i]={icon=icon,name=name,value=value,tile=tile}
+    end
+    local list=D.make('ScrollingFrame',{Position=UDim2.fromOffset(10,186),Size=UDim2.new(1,-20,1,-368),BackgroundTransparency=1,BorderSizePixel=0,AutomaticCanvasSize=Enum.AutomaticSize.None,CanvasSize=UDim2.new(),ScrollBarThickness=6,ScrollBarImageColor3=Color3.fromRGB(56,205,255),ScrollBarImageTransparency=0.1},panel)
     
     --========================================================================--
     --  [3] MARVIN GLASS PREMIUM ANIMATED THEME
@@ -2476,6 +2494,22 @@ local function createFinder(D)
             end
             D.gui:SetAttribute('MarvinTop4Count',#top4)
         end)
+        -- Refresh the visible Top 4 tiles from the exact same ranked entries.
+        for i=1,4 do
+            local tile=top4Cards[i]
+            local e=entries[i]
+            if e then
+                tile.tile.Visible=true
+                tile.icon.Image=type(e.icon)=='string' and e.icon or ''
+                tile.name.Text='#'..i..' '..tostring(e.name or 'Unknown')
+                tile.value.Text=type(e.rate)=='number' and D.money(e.rate) or 'Value unavailable'
+                tile.value.TextColor3=e.estimated and Color3.fromRGB(255,211,112) or Color3.fromRGB(104,242,166)
+            else
+                tile.icon.Image=''
+                tile.name.Text='No result'
+                tile.value.Text='—'
+            end
+        end
         -- Keep the old canvas extent while rebuilding so Roblox does not clamp
         -- the scroll position to zero when the rows are temporarily removed.
         local savedScroll=list.CanvasPosition
