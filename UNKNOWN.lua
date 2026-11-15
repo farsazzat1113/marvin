@@ -2249,6 +2249,9 @@ local function createFinder(D)
         if not amount or amount<1 or amount>50 then return nil end
         return amount*1e9
     end
+    local autoJoinCandidates={}
+    local autoJoinCandidateIndex=1
+    local autoJoinRetryRequested=false
     minValueInput.FocusLost:Connect(function()
         local parsed=parseAutoJoinMinValue(minValueInput.Text)
         if parsed then
@@ -2266,9 +2269,6 @@ local function createFinder(D)
     end)
     -- Smart Auto Join: targets top eggs with zero-delay sniping and multi-server fallback.
     local autoJoinBusy=false
-    local autoJoinCandidates={}
-    local autoJoinCandidateIndex=1
-    local autoJoinRetryRequested=false
     local autoJoinButton=D.make('TextButton',{Name='AutoJoin',Text='SMART JOIN: OFF',Position=UDim2.new(0,10,1,-52),Size=UDim2.new(1,-20,0,40),BackgroundColor3=Color3.fromRGB(200,45,45),TextColor3=Color3.new(1,1,1),TextSize=13,Font=Enum.Font.GothamBold},panel)
     D.make('UICorner',{CornerRadius=UDim.new(0,6)},autoJoinButton)
     autoJoinButton.TextScaled=true;autoJoinButton.TextWrapped=false
