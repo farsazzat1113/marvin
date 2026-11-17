@@ -48,7 +48,7 @@ local function queueAutoExecute()
     if type(fluxus) == "table" and type(fluxus.queue_on_teleport) == "function" then
         table.insert(candidates, fluxus.queue_on_teleport)
     end
-    local payload = 'local h=game:GetService("HttpService");local ok,s=pcall(function()return h:JSONDecode(readfile("tenshi_beta_ui.json"))end);if not ok or type(s)~="table" or s.autoExecute~=false then loadstring(game:HttpGet("' .. RAW_SCRIPT_URL .. '"))() end'
+    local payload = 'local h=game:GetService("HttpService");local ok,s=pcall(function()return h:JSONDecode(readfile("tenshi_beta_ui.json"))end);if not ok or type(s)~="table" or s.autoExecute~=false then task.spawn(function()pcall(function()loadstring(game:HttpGet("' .. RAW_SCRIPT_URL .. '"))()end)end) end'
     for _, callback in ipairs(candidates) do
         for attempt = 1, 3 do
             local ok = pcall(callback, payload)
@@ -332,7 +332,966 @@ local function readTraitNames(record)
     add(record.BaseMutation);table.sort(names)
     return names,known
 end
+
+
 --============================================================================--
+--  [MARVIN VISUAL DESIGN ENGINE - INDEPENDENT VISUAL SYSTEM]
+--  Architecture:
+--    1. CSS/TypeScript-Inspired Design Tokens (Themes, Radii, Strokes, Typography)
+--    2. Safe Roblox Translation Layer (Parser, Snapshot, Restore)
+--    3. Visual Adapter (Non-invasive mapper for Panel, Controls, Cards, Launcher)
+--    4. Safe Mode Adaptation & Reduced Motion Support
+--============================================================================--
+local MARVIN_VisualDesignEngine = {}
+MARVIN_VisualDesignEngine.__index = MARVIN_VisualDesignEngine
+
+MARVIN_VisualDesignEngine.Tokens = {
+    Themes = {
+        RoyalAmethyst = {
+            name = "Royal Amethyst",
+            background = Color3.fromRGB(15, 11, 28),
+            backgroundTrans = 0.05,
+            surface = Color3.fromRGB(24, 17, 44),
+            surfaceTrans = 0.12,
+            headerBar = Color3.fromRGB(18, 12, 34),
+            cardBg = Color3.fromRGB(20, 16, 38),
+            cardTrans = 0.08,
+            border = Color3.fromRGB(147, 92, 255),
+            borderTrans = 0.35,
+            borderHighlight = Color3.fromRGB(56, 205, 255),
+            glow = Color3.fromRGB(168, 85, 247),
+            textPrimary = Color3.fromRGB(246, 242, 255),
+            textMuted = Color3.fromRGB(172, 160, 202),
+            accentCyan = Color3.fromRGB(56, 205, 255),
+            accentGold = Color3.fromRGB(255, 215, 0),
+            accentGreen = Color3.fromRGB(16, 185, 129),
+            accentDanger = Color3.fromRGB(239, 68, 68),
+            activeTab = Color3.fromRGB(120, 62, 220),
+            inactiveTab = Color3.fromRGB(30, 22, 52),
+            gradientMain = {
+                Rotation = 35,
+                Colors = {
+                    { 0.0, Color3.fromRGB(168, 85, 247) },
+                    { 1.0, Color3.fromRGB(124, 58, 237) }
+                },
+                animated = true,
+                animationType = "rotate",
+                speed = 8
+            },
+            gradientCard = {
+                Rotation = 20,
+                Colors = {
+                    { 0.0, Color3.fromRGB(25, 18, 48) },
+                    { 0.5, Color3.fromRGB(18, 14, 36) },
+                    { 1.0, Color3.fromRGB(28, 20, 56) }
+                },
+                animated = true,
+                animationType = "shimmer",
+                speed = 4
+            }
+        },
+        CyberpunkCyan = {
+            name = "Cyberpunk Cyan",
+            background = Color3.fromRGB(8, 18, 28),
+            backgroundTrans = 0.05,
+            surface = Color3.fromRGB(12, 28, 42),
+            surfaceTrans = 0.12,
+            headerBar = Color3.fromRGB(10, 22, 36),
+            cardBg = Color3.fromRGB(14, 30, 46),
+            cardTrans = 0.08,
+            border = Color3.fromRGB(0, 229, 255),
+            borderTrans = 0.35,
+            borderHighlight = Color3.fromRGB(16, 185, 129),
+            glow = Color3.fromRGB(0, 229, 255),
+            textPrimary = Color3.fromRGB(230, 250, 255),
+            textMuted = Color3.fromRGB(140, 180, 200),
+            accentCyan = Color3.fromRGB(0, 229, 255),
+            accentGold = Color3.fromRGB(255, 200, 0),
+            accentGreen = Color3.fromRGB(16, 185, 129),
+            accentDanger = Color3.fromRGB(255, 75, 75),
+            activeTab = Color3.fromRGB(0, 160, 220),
+            inactiveTab = Color3.fromRGB(15, 35, 52),
+            gradientMain = {
+                Rotation = 30,
+                Colors = {
+                    { 0.0, Color3.fromRGB(0, 229, 255) },
+                    { 1.0, Color3.fromRGB(14, 116, 144) }
+                },
+                animated = true,
+                animationType = "rotate",
+                speed = 7
+            },
+            gradientCard = {
+                Rotation = 15,
+                Colors = {
+                    { 0.0, Color3.fromRGB(12, 32, 48) },
+                    { 0.5, Color3.fromRGB(10, 24, 38) },
+                    { 1.0, Color3.fromRGB(16, 38, 58) }
+                },
+                animated = true,
+                animationType = "shimmer",
+                speed = 3.5
+            }
+        },
+        EmeraldMatrix = {
+            name = "Emerald Matrix",
+            background = Color3.fromRGB(10, 24, 18),
+            backgroundTrans = 0.05,
+            surface = Color3.fromRGB(16, 36, 28),
+            surfaceTrans = 0.12,
+            headerBar = Color3.fromRGB(12, 28, 22),
+            cardBg = Color3.fromRGB(18, 40, 32),
+            cardTrans = 0.08,
+            border = Color3.fromRGB(16, 185, 129),
+            borderTrans = 0.35,
+            borderHighlight = Color3.fromRGB(52, 211, 153),
+            glow = Color3.fromRGB(16, 185, 129),
+            textPrimary = Color3.fromRGB(235, 255, 245),
+            textMuted = Color3.fromRGB(150, 195, 175),
+            accentCyan = Color3.fromRGB(52, 211, 153),
+            accentGold = Color3.fromRGB(245, 158, 11),
+            accentGreen = Color3.fromRGB(16, 185, 129),
+            accentDanger = Color3.fromRGB(239, 68, 68),
+            activeTab = Color3.fromRGB(5, 150, 105),
+            inactiveTab = Color3.fromRGB(20, 48, 38),
+            gradientMain = {
+                Rotation = 25,
+                Colors = {
+                    { 0.0, Color3.fromRGB(16, 185, 129) },
+                    { 1.0, Color3.fromRGB(4, 120, 87) }
+                },
+                animated = true,
+                animationType = "rotate",
+                speed = 7.5
+            },
+            gradientCard = {
+                Rotation = 20,
+                Colors = {
+                    { 0.0, Color3.fromRGB(16, 42, 34) },
+                    { 0.5, Color3.fromRGB(12, 32, 26) },
+                    { 1.0, Color3.fromRGB(22, 52, 42) }
+                },
+                animated = true,
+                animationType = "shimmer",
+                speed = 4
+            }
+        },
+        ObsidianGold = {
+            name = "Obsidian Gold",
+            background = Color3.fromRGB(18, 16, 12),
+            backgroundTrans = 0.05,
+            surface = Color3.fromRGB(28, 24, 18),
+            surfaceTrans = 0.12,
+            headerBar = Color3.fromRGB(22, 19, 14),
+            cardBg = Color3.fromRGB(30, 26, 20),
+            cardTrans = 0.08,
+            border = Color3.fromRGB(245, 158, 11),
+            borderTrans = 0.35,
+            borderHighlight = Color3.fromRGB(255, 215, 0),
+            glow = Color3.fromRGB(245, 158, 11),
+            textPrimary = Color3.fromRGB(255, 250, 235),
+            textMuted = Color3.fromRGB(200, 185, 160),
+            accentCyan = Color3.fromRGB(255, 215, 0),
+            accentGold = Color3.fromRGB(255, 215, 0),
+            accentGreen = Color3.fromRGB(16, 185, 129),
+            accentDanger = Color3.fromRGB(239, 68, 68),
+            activeTab = Color3.fromRGB(180, 110, 10),
+            inactiveTab = Color3.fromRGB(38, 32, 24),
+            gradientMain = {
+                Rotation = 25,
+                Colors = {
+                    { 0.0, Color3.fromRGB(255, 215, 0) },
+                    { 1.0, Color3.fromRGB(217, 119, 6) }
+                },
+                animated = true,
+                animationType = "rotate",
+                speed = 8
+            },
+            gradientCard = {
+                Rotation = 20,
+                Colors = {
+                    { 0.0, Color3.fromRGB(32, 28, 22) },
+                    { 0.5, Color3.fromRGB(24, 20, 16) },
+                    { 1.0, Color3.fromRGB(40, 34, 26) }
+                },
+                animated = true,
+                animationType = "shimmer",
+                speed = 4.5
+            }
+        },
+        SafeModeClean = {
+            name = "Safe Mode Clean",
+            background = Color3.fromRGB(20, 20, 24),
+            backgroundTrans = 0,
+            surface = Color3.fromRGB(30, 30, 36),
+            surfaceTrans = 0,
+            headerBar = Color3.fromRGB(25, 25, 30),
+            cardBg = Color3.fromRGB(28, 28, 34),
+            cardTrans = 0,
+            border = Color3.fromRGB(100, 100, 115),
+            borderTrans = 0.2,
+            borderHighlight = Color3.fromRGB(140, 140, 160),
+            glow = Color3.fromRGB(80, 80, 95),
+            textPrimary = Color3.fromRGB(255, 255, 255),
+            textMuted = Color3.fromRGB(180, 180, 190),
+            accentCyan = Color3.fromRGB(80, 180, 230),
+            accentGold = Color3.fromRGB(220, 180, 60),
+            accentGreen = Color3.fromRGB(40, 180, 100),
+            accentDanger = Color3.fromRGB(220, 60, 60),
+            activeTab = Color3.fromRGB(50, 50, 65),
+            inactiveTab = Color3.fromRGB(28, 28, 34),
+            gradientMain = nil,
+            gradientCard = nil
+        }
+    },
+    Radii = {
+        xs = 4,
+        sm = 6,
+        md = 10,
+        lg = 14,
+        pill = 999
+    },
+    Strokes = {
+        thin = 1.0,
+        normal = 1.2,
+        thick = 2.0
+    }
+}
+
+function MARVIN_VisualDesignEngine.new(options)
+    local self = setmetatable({}, MARVIN_VisualDesignEngine)
+    options = options or {}
+    self.activeThemeKey = options.theme or "RoyalAmethyst"
+    self.safeMode = options.safeMode or false
+    self.originalProperties = {}
+    self.adaptedElements = {}
+    self.hoverBound = {}
+    self.gradientAnimations = {}
+    self.tweens = {}
+    return self
+end
+
+function MARVIN_VisualDesignEngine:getTheme()
+    if self.safeMode then
+        return self.Tokens.Themes.SafeModeClean
+    end
+    return self.Tokens.Themes[self.activeThemeKey] or self.Tokens.Themes.RoyalAmethyst
+end
+
+function MARVIN_VisualDesignEngine:setTheme(themeKey)
+    if self.Tokens.Themes[themeKey] then
+        self.activeThemeKey = themeKey
+        self:reapplyActiveTheme()
+        return true
+    end
+    return false
+end
+
+function MARVIN_VisualDesignEngine:setSafeMode(enabled)
+    self.safeMode = (enabled == true)
+    if self.safeMode then
+        self:stopAllGradientAnimations()
+    end
+    self:reapplyActiveTheme()
+end
+
+function MARVIN_VisualDesignEngine:snapshot(instance, properties)
+    if not instance or self.originalProperties[instance] then return end
+    local snap = {}
+    for _, prop in ipairs(properties) do
+        pcall(function()
+            snap[prop] = instance[prop]
+        end)
+    end
+    self.originalProperties[instance] = snap
+end
+
+function MARVIN_VisualDesignEngine:restore(instance)
+    local snap = self.originalProperties[instance]
+    if not snap or not instance then return end
+    for prop, val in pairs(snap) do
+        pcall(function()
+            instance[prop] = val
+        end)
+    end
+end
+
+function MARVIN_VisualDesignEngine:applyCorner(instance, radius)
+    if not instance then return nil end
+    local corner = instance:FindFirstChild("MARVIN_Design_Corner") or instance:FindFirstChildOfClass("UICorner")
+    if not corner then
+        corner = Instance.new("UICorner")
+        corner.Name = "MARVIN_Design_Corner"
+        corner.Parent = instance
+    end
+    -- Deduplicate: ensure no duplicate UICorner instances exist
+    pcall(function()
+        for _, ch in ipairs(instance:GetChildren()) do
+            if ch:IsA("UICorner") and ch ~= corner then
+                ch:Destroy()
+            end
+        end
+    end)
+    corner.CornerRadius = UDim.new(0, radius)
+    return corner
+end
+
+function MARVIN_VisualDesignEngine:applyStroke(instance, color, thickness, transparency)
+    if not instance then return nil end
+    local stroke = instance:FindFirstChild("MARVIN_Design_Stroke") or instance:FindFirstChildOfClass("UIStroke")
+    if not stroke then
+        stroke = Instance.new("UIStroke")
+        stroke.Name = "MARVIN_Design_Stroke"
+        stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+        stroke.Parent = instance
+    end
+    -- Deduplicate: ensure no duplicate UIStroke instances exist
+    pcall(function()
+        for _, ch in ipairs(instance:GetChildren()) do
+            if ch:IsA("UIStroke") and ch ~= stroke then
+                ch:Destroy()
+            end
+        end
+    end)
+    stroke.Color = color or Color3.fromRGB(147, 92, 255)
+    stroke.Thickness = thickness or 1.2
+    stroke.Transparency = transparency or 0.35
+    return stroke
+end
+
+function MARVIN_VisualDesignEngine:animateGradient(grad, animType, speed)
+    if not grad or self.safeMode then return end
+    animType = animType or "rotate"
+    speed = speed or 6
+
+    self:stopGradientAnimation(grad)
+
+    pcall(function()
+        local Tweens = game:GetService("TweenService")
+        if animType == "rotate" then
+            local tween = Tweens:Create(grad,
+                TweenInfo.new(speed, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1),
+                {Rotation = 360}
+            )
+            tween:Play()
+            self.gradientAnimations[grad] = { tween = tween, animType = animType, speed = speed }
+        elseif animType == "shimmer" then
+            grad.Offset = Vector2.new(-1, 0)
+            local tween = Tweens:Create(grad,
+                TweenInfo.new(speed, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+                {Offset = Vector2.new(1, 0)}
+            )
+            tween:Play()
+            self.gradientAnimations[grad] = { tween = tween, animType = animType, speed = speed }
+        end
+    end)
+end
+
+function MARVIN_VisualDesignEngine:stopGradientAnimation(grad)
+    if not grad then return end
+    local anim = self.gradientAnimations[grad]
+    if anim and anim.tween then
+        pcall(function() anim.tween:Cancel() end)
+    end
+    self.gradientAnimations[grad] = nil
+end
+
+function MARVIN_VisualDesignEngine:stopAllGradientAnimations()
+    for grad, anim in pairs(self.gradientAnimations) do
+        if anim and anim.tween then
+            pcall(function() anim.tween:Cancel() end)
+        end
+    end
+    self.gradientAnimations = {}
+end
+
+function MARVIN_VisualDesignEngine:applyGradient(instance, gradientDef)
+    if not instance then return nil end
+    local grad = instance:FindFirstChild("MARVIN_Design_Gradient") or instance:FindFirstChildOfClass("UIGradient")
+    if not gradientDef then
+        if grad and grad.Name == "MARVIN_Design_Gradient" then
+            self:stopGradientAnimation(grad)
+            pcall(function() grad:Destroy() end)
+        end
+        return nil
+    end
+
+    if not grad then
+        grad = Instance.new("UIGradient")
+        grad.Name = "MARVIN_Design_Gradient"
+        grad.Parent = instance
+    end
+
+    -- Deduplicate: ensure no duplicate UIGradient instances exist
+    pcall(function()
+        for _, ch in ipairs(instance:GetChildren()) do
+            if ch:IsA("UIGradient") and ch ~= grad and ch.Name == "MARVIN_Design_Gradient" then
+                self:stopGradientAnimation(ch)
+                ch:Destroy()
+            end
+        end
+    end)
+
+    grad.Rotation = gradientDef.Rotation or 25
+    local keypoints = {}
+    for _, pt in ipairs(gradientDef.Colors or {}) do
+        table.insert(keypoints, ColorSequenceKeypoint.new(pt[1], pt[2]))
+    end
+    if #keypoints >= 2 then
+        grad.Color = ColorSequence.new(keypoints)
+    end
+
+    -- Support animated color gradients
+    if gradientDef.animated and not self.safeMode then
+        self:animateGradient(grad, gradientDef.animationType or "rotate", gradientDef.speed or 6)
+    else
+        self:stopGradientAnimation(grad)
+    end
+
+    return grad
+end
+
+function MARVIN_VisualDesignEngine:adaptPanel(panel, bar, heading, crown, strokeGrad)
+    local theme = self:getTheme()
+    if panel then
+        self:snapshot(panel, {"BackgroundColor3", "BackgroundTransparency"})
+        panel.BackgroundColor3 = theme.background
+        panel.BackgroundTransparency = theme.backgroundTrans
+        self:applyCorner(panel, self.Tokens.Radii.lg)
+        local stroke = self:applyStroke(panel, theme.border, self.Tokens.Strokes.normal, theme.borderTrans)
+        self.adaptedElements["panel"] = panel
+        self.adaptedElements["panelStroke"] = stroke
+
+        -- Animated gradient on panel border if theme provides one
+        if stroke then
+            local gradObj = stroke:FindFirstChildOfClass("UIGradient") or strokeGrad
+            if gradObj and theme.gradientMain then
+                self:applyGradient(stroke, theme.gradientMain)
+            end
+        end
+    end
+
+    if bar then
+        self:snapshot(bar, {"BackgroundColor3", "BackgroundTransparency"})
+        bar.BackgroundColor3 = theme.headerBar
+        bar.BackgroundTransparency = 0
+        self:applyCorner(bar, self.Tokens.Radii.sm)
+        self.adaptedElements["bar"] = bar
+    end
+
+    if heading then
+        self:snapshot(heading, {"TextColor3", "Font"})
+        heading.TextColor3 = theme.textPrimary
+        heading.Font = Enum.Font.GothamBold
+        self.adaptedElements["heading"] = heading
+    end
+
+    if crown then
+        self:snapshot(crown, {"TextColor3"})
+        crown.TextColor3 = theme.accentGold
+        self.adaptedElements["crown"] = crown
+    end
+end
+
+function MARVIN_VisualDesignEngine:adaptScopeTabs(activeTab, inactiveTab)
+    local theme = self:getTheme()
+    if activeTab then
+        self:snapshot(activeTab, {"BackgroundColor3", "TextColor3"})
+        activeTab.BackgroundColor3 = theme.activeTab
+        activeTab.TextColor3 = theme.textPrimary
+        self:applyCorner(activeTab, self.Tokens.Radii.sm)
+        self:applyStroke(activeTab, theme.borderHighlight, 1, 0.25)
+    end
+    if inactiveTab then
+        self:snapshot(inactiveTab, {"BackgroundColor3", "TextColor3"})
+        inactiveTab.BackgroundColor3 = theme.inactiveTab
+        inactiveTab.TextColor3 = theme.textMuted
+        self:applyCorner(inactiveTab, self.Tokens.Radii.sm)
+        self:applyStroke(inactiveTab, theme.border, 1, 0.6)
+    end
+end
+
+function MARVIN_VisualDesignEngine:adaptControlButton(btn, isPrimary, accentColor)
+    if not btn then return end
+    local theme = self:getTheme()
+    self:snapshot(btn, {"BackgroundColor3", "TextColor3"})
+    local bg = isPrimary and theme.activeTab or theme.surface
+    btn.BackgroundColor3 = bg
+    btn.TextColor3 = theme.textPrimary
+    self:applyCorner(btn, self.Tokens.Radii.sm)
+    self:applyStroke(btn, accentColor or theme.border, 1, theme.borderTrans)
+end
+
+function MARVIN_VisualDesignEngine:adaptControls(rarity, autoJoinButton, refreshButton, settingsButton)
+    if rarity then
+        self:adaptControlButton(rarity, false)
+        self.adaptedElements["rarity"] = rarity
+    end
+    if autoJoinButton then
+        self:adaptControlButton(autoJoinButton, true)
+        self.adaptedElements["autoJoin"] = autoJoinButton
+    end
+    if refreshButton then
+        self:adaptControlButton(refreshButton, false)
+        self.adaptedElements["refresh"] = refreshButton
+    end
+    if settingsButton then
+        self:adaptControlButton(settingsButton, false)
+        self.adaptedElements["settings"] = settingsButton
+    end
+end
+
+function MARVIN_VisualDesignEngine:adaptEggCard(row, cardGradient, stroke, isTopRank, joinButton)
+    if not row then return end
+    local theme = self:getTheme()
+    row.BackgroundColor3 = theme.cardBg
+    row.BackgroundTransparency = theme.cardTrans
+    self:applyCorner(row, self.Tokens.Radii.md)
+
+    if stroke then
+        stroke.Color = isTopRank and theme.borderHighlight or theme.border
+        stroke.Transparency = isTopRank and 0.2 or theme.borderTrans
+        stroke.Thickness = isTopRank and 1.5 or 1.1
+    end
+
+    if cardGradient and theme.gradientCard then
+        local grad = self:applyGradient(row, theme.gradientCard)
+        -- Shimmer animated gradient on top rank card
+        if isTopRank and grad and theme.gradientCard.animated and not self.safeMode then
+            self:animateGradient(grad, "shimmer", 3.5)
+        end
+    end
+
+    if joinButton then
+        self:applyCorner(joinButton, self.Tokens.Radii.sm)
+    end
+end
+
+function MARVIN_VisualDesignEngine:adaptLauncher(openBtn, caption, openGrad)
+    local theme = self:getTheme()
+    if openBtn then
+        self:snapshot(openBtn, {"BackgroundColor3"})
+        openBtn.BackgroundColor3 = theme.surface
+        self:applyCorner(openBtn, self.Tokens.Radii.pill)
+        local stroke = self:applyStroke(openBtn, theme.borderHighlight, 1.5, 0.25)
+        if stroke and openGrad and theme.gradientMain and not self.safeMode then
+            self:animateGradient(openGrad, "rotate", 6)
+        end
+    end
+    if caption then
+        self:snapshot(caption, {"TextColor3"})
+        caption.TextColor3 = theme.textPrimary
+    end
+end
+
+function MARVIN_VisualDesignEngine:bindHoverMotion(btn, scaleVal)
+    if not btn then return end
+    if self.hoverBound[btn] then return end
+    self.hoverBound[btn] = true
+
+    pcall(function()
+        local scale = btn:FindFirstChild("MARVIN_Design_Scale") or btn:FindFirstChildOfClass("UIScale")
+        if not scale then
+            scale = Instance.new("UIScale")
+            scale.Name = "MARVIN_Design_Scale"
+            scale.Parent = btn
+        end
+        -- Deduplicate UIScale
+        for _, ch in ipairs(btn:GetChildren()) do
+            if ch:IsA("UIScale") and ch ~= scale then
+                ch:Destroy()
+            end
+        end
+
+        local Tweens = game:GetService("TweenService")
+        btn.MouseEnter:Connect(function()
+            if self.safeMode then return end
+            Tweens:Create(scale, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = scaleVal or 1.03}):Play()
+        end)
+        btn.MouseLeave:Connect(function()
+            Tweens:Create(scale, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 1.0}):Play()
+        end)
+    end)
+end
+
+function MARVIN_VisualDesignEngine:reapplyActiveTheme()
+    local theme = self:getTheme()
+    if self.adaptedElements["panel"] then
+        local p = self.adaptedElements["panel"]
+        p.BackgroundColor3 = theme.background
+        p.BackgroundTransparency = theme.backgroundTrans
+        local stroke = self:applyStroke(p, theme.border, self.Tokens.Strokes.normal, theme.borderTrans)
+        if stroke and theme.gradientMain then
+            self:applyGradient(stroke, theme.gradientMain)
+        end
+    end
+    if self.adaptedElements["bar"] then
+        self.adaptedElements["bar"].BackgroundColor3 = theme.headerBar
+    end
+    if self.adaptedElements["heading"] then
+        self.adaptedElements["heading"].TextColor3 = theme.textPrimary
+    end
+    if self.adaptedElements["crown"] then
+        self.adaptedElements["crown"].TextColor3 = theme.accentGold
+    end
+    if self.adaptedElements["rarity"] then
+        self:adaptControlButton(self.adaptedElements["rarity"], false)
+    end
+    if self.adaptedElements["autoJoin"] then
+        self:adaptControlButton(self.adaptedElements["autoJoin"], true)
+    end
+    if self.adaptedElements["refresh"] then
+        self:adaptControlButton(self.adaptedElements["refresh"], false)
+    end
+    if self.adaptedElements["settings"] then
+        self:adaptControlButton(self.adaptedElements["settings"], false)
+    end
+end
+
+
+--============================================================================--
+--  [SMART SNIPER + DIRECT EGG TELEPORT SYSTEM]
+--  Features:
+--    1. Finds target egg servers & queues destination data.
+--    2. Seamless server join via TeleportToPlaceInstance.
+--    3. Full character load detection (HumanoidRootPart/Humanoid readiness).
+--    4. Multi-stage spatial resolution of target egg location in workspace/memory.
+--    5. Safe position offset (avoids normal base/house spawn when available).
+--    6. Arrival distance & egg availability verification.
+--    7. Server-authoritative acquisition confirmation respect.
+--    8. Safe fallback if target is not resolved.
+--============================================================================--
+local MARVIN_SmartSniperTeleport = {}
+MARVIN_SmartSniperTeleport.__index = MARVIN_SmartSniperTeleport
+
+local SNIPER_SETTING_KEY = "MARVIN_DIRECT_TELEPORT_TARGET"
+
+function MARVIN_SmartSniperTeleport.new(deps)
+    local self = setmetatable({}, MARVIN_SmartSniperTeleport)
+    self.deps = deps or {}
+    self.Teleports = game:GetService("TeleportService")
+    self.Players = game:GetService("Players")
+    self.player = self.deps.player or self.Players.LocalPlayer
+    self.activeTarget = nil
+    self.isTeleporting = false
+    self.status = "IDLE"
+    return self
+end
+
+function MARVIN_SmartSniperTeleport:queueTarget(entry)
+    if type(entry) ~= "table" then return false end
+    local uid = entry.uid or entry.key
+    if not uid then return false end
+    local targetData = {
+        uid = tostring(uid),
+        key = tostring(entry.key or uid),
+        name = tostring(entry.name or "Unknown Egg"),
+        placeId = tonumber(entry.placeId) or game.PlaceId,
+        jobId = tostring(entry.jobId or ""),
+        rate = tonumber(entry.rate) or 0,
+        area = tostring(entry.area or ""),
+        queuedAt = os.time(),
+        directTeleport = true
+    }
+    self.activeTarget = targetData
+    pcall(function()
+        self.Teleports:SetTeleportSetting(SNIPER_SETTING_KEY, targetData)
+    end)
+    if type(writefile) == "function" then
+        pcall(function()
+            local HttpService = game:GetService("HttpService")
+            writefile("marvin_sniper_target.json", HttpService:JSONEncode(targetData))
+        end)
+    end
+    return true
+end
+
+function MARVIN_SmartSniperTeleport:getQueuedTarget()
+    local target = nil
+    pcall(function()
+        local saved = self.Teleports:GetTeleportSetting(SNIPER_SETTING_KEY)
+        if type(saved) == "table" and (saved.uid or saved.key) and saved.directTeleport == true then
+            if os.time() - (tonumber(saved.queuedAt) or 0) < 300 then
+                target = saved
+            end
+        end
+    end)
+    if not target and type(readfile) == "function" then
+        pcall(function()
+            local HttpService = game:GetService("HttpService")
+            local content = readfile("marvin_sniper_target.json")
+            local parsed = HttpService:JSONDecode(content)
+            if type(parsed) == "table" and (parsed.uid or parsed.key) and parsed.directTeleport == true then
+                if os.time() - (tonumber(parsed.queuedAt) or 0) < 300 then
+                    target = parsed
+                end
+            end
+        end)
+    end
+    if not target and self.activeTarget then
+        target = self.activeTarget
+    end
+    return target
+end
+
+function MARVIN_SmartSniperTeleport:clearQueuedTarget()
+    self.activeTarget = nil
+    pcall(function()
+        self.Teleports:SetTeleportSetting(SNIPER_SETTING_KEY, nil)
+    end)
+    if type(writefile) == "function" then
+        pcall(function()
+            pcall(delfile or function() end, "marvin_sniper_target.json")
+        end)
+    end
+end
+
+function MARVIN_SmartSniperTeleport:locateEggPosition(uid, eggStateModule)
+    if not uid then return nil end
+    local cleanUid = tostring(uid)
+
+    local folder = workspace:FindFirstChild("AreaEggSlotsClient")
+    local model = (folder and folder:FindFirstChild(cleanUid)) or workspace:FindFirstChild(cleanUid)
+    if model and model:IsA("Model") then
+        local pivot = model:GetPivot()
+        if pivot and pivot.Position then
+            return pivot.Position, "MODEL_PIVOT", model
+        end
+        local part = model:FindFirstChildWhichIsA("BasePart")
+        if part then
+            return part.Position, "MODEL_PART", model
+        end
+    end
+
+    if eggStateModule and type(eggStateModule.ReadFieldEggs) == "function" then
+        local ok, snapshot = pcall(eggStateModule.ReadFieldEggs)
+        if ok and type(snapshot) == "table" and type(snapshot.Records) == "table" then
+            for recKey, record in pairs(snapshot.Records) do
+                local rUid = tostring(record.Uid or recKey)
+                if rUid == cleanUid then
+                    if typeof(record.BottomCFrame) == "CFrame" then
+                        return record.BottomCFrame.Position, "RECORD_BOTTOM_CFRAME", nil
+                    elseif typeof(record.CFrame) == "CFrame" then
+                        return record.CFrame.Position, "RECORD_CFRAME", nil
+                    end
+                end
+            end
+        end
+    end
+
+    if folder then
+        for _, child in ipairs(folder:GetChildren()) do
+            if child.Name == cleanUid or child:GetAttribute("Uid") == cleanUid then
+                local pivot = child:GetPivot()
+                if pivot then return pivot.Position, "FOLDER_CHILD_PIVOT", child end
+            end
+        end
+    end
+
+    return nil, "NOT_FOUND", nil
+end
+
+function MARVIN_SmartSniperTeleport:teleportToSafePosition(character, eggPos)
+    if not character or not eggPos then return false, "Missing character or position" end
+    local rootPart = character:FindFirstChild("HumanoidRootPart")
+    local humanoid = character:FindFirstChildWhichIsA("Humanoid")
+    if not rootPart or not humanoid then return false, "Missing HumanoidRootPart" end
+
+    local safeOffset = Vector3.new(2.5, 2.0, 2.5)
+    local safePos = eggPos + safeOffset
+    local lookAtCFrame = CFrame.new(safePos, Vector3.new(eggPos.X, safePos.Y, eggPos.Z))
+
+    pcall(function()
+        rootPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+        rootPart.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+    end)
+
+    local cframeOk, cframeErr = pcall(function()
+        rootPart.CFrame = lookAtCFrame
+    end)
+    if not cframeOk then
+        return false, "Failed to set character CFrame: " .. tostring(cframeErr)
+    end
+
+    return true, safePos
+end
+
+function MARVIN_SmartSniperTeleport:teleportToLocalEgg(entry, eggStateModule)
+    if not entry then return false, "No target entry provided" end
+    local targetUid = entry.uid or entry.key
+    if not targetUid then return false, "Target entry missing UID" end
+    local player = self.player or self.Players.LocalPlayer
+    local character = player and player.Character
+    if not character then return false, "Player character not loaded" end
+    local eggPos = self:locateEggPosition(targetUid, eggStateModule)
+    if not eggPos then return false, "Target egg position could not be located" end
+    local ok, res = self:teleportToSafePosition(character, eggPos)
+    if ok then
+        self:verifyArrivalAndAvailability(character, eggPos, targetUid, eggStateModule, nil)
+        return true, res
+    end
+    return false, res or "Teleportation failed"
+end
+
+function MARVIN_SmartSniperTeleport:verifyArrivalAndAvailability(character, eggPos, uid, eggStateModule, onConfirmed)
+    if not character or not eggPos then return false end
+    local rootPart = character:FindFirstChild("HumanoidRootPart")
+    if not rootPart then return false end
+
+    local dist = (rootPart.Position - eggPos).Magnitude
+    local arrived = (dist <= 18)
+
+    if not arrived then
+        self.status = "TRANSIT_INCOMPLETE"
+        return false, "Arrival distance check pending"
+    end
+
+    self.status = "ARRIVED_AT_EGG"
+
+    local isAvailable = false
+    if eggStateModule and type(eggStateModule.ReadFieldEggs) == "function" then
+        local ok, snapshot = pcall(eggStateModule.ReadFieldEggs)
+        if ok and type(snapshot) == "table" and type(snapshot.Records) == "table" then
+            for recKey, record in pairs(snapshot.Records) do
+                if tostring(record.Uid or recKey) == tostring(uid) then
+                    isAvailable = (record.State == nil or record.State == 0 or tostring(record.State):lower() == "available")
+                    break
+                end
+            end
+        end
+    else
+        isAvailable = true
+    end
+
+    if isAvailable then
+        self.status = "EGG_AVAILABLE_CONFIRMED"
+        if onConfirmed then pcall(onConfirmed, true) end
+        return true, "Egg arrived and confirmed available"
+    else
+        self.status = "EGG_UNAVAILABLE"
+        if onConfirmed then pcall(onConfirmed, false) end
+        return false, "Egg no longer available"
+    end
+end
+
+function MARVIN_SmartSniperTeleport:awaitServerAcquisitionConfirmation(character, uid, eggStateModule, onResult)
+    if not eggStateModule or type(eggStateModule.ReadFieldEggs) ~= "function" then
+        if onResult then pcall(onResult, false, "Server module unavailable for confirmation") end
+        return
+    end
+
+    self.confirmationTicket = (self.confirmationTicket or 0) + 1
+    local currentTicket = self.confirmationTicket
+    local consecutiveMissing = 0
+
+    task.spawn(function()
+        local timeout = os.clock() + 10.0
+        while os.clock() < timeout do
+            if self.confirmationTicket ~= currentTicket then return end
+            if not character or not character.Parent then return end
+
+            local ok, snapshot = pcall(eggStateModule.ReadFieldEggs)
+            if ok and type(snapshot) == "table" and type(snapshot.Records) == "table" then
+                local found = false
+                for recKey, record in pairs(snapshot.Records) do
+                    if tostring(record.Uid or recKey) == tostring(uid) then
+                        found = true
+                        consecutiveMissing = 0
+                        if record.Carrier or record.State == 1 or tostring(record.State):lower() == "carried" then
+                            if onResult then pcall(onResult, true, "Game server confirmed egg acquisition.") end
+                            return
+                        end
+                        break
+                    end
+                end
+                if not found then
+                    consecutiveMissing = consecutiveMissing + 1
+                    if consecutiveMissing >= 2 then
+                        if onResult then pcall(onResult, true, "Game server confirmed egg acquisition (despawned from field).") end
+                        return
+                    end
+                end
+            end
+            task.wait(0.4)
+        end
+        if self.confirmationTicket == currentTicket and onResult then
+            pcall(onResult, false, "Server confirmation timed out without claiming.")
+        end
+    end)
+end
+
+function MARVIN_SmartSniperTeleport:runDirectTeleportRoutine(eggStateModule, onStatusUpdate)
+    local target = self:getQueuedTarget()
+    if not target then return end
+
+    local updateStatus = function(msg)
+        self.status = msg
+        if onStatusUpdate then pcall(onStatusUpdate, msg) end
+    end
+
+    updateStatus("SMART_SNIPER: Loaded into server. Waiting for character...")
+
+    local player = self.player or self.Players.LocalPlayer
+    if not player then return end
+
+    local character = player.Character or (player.CharacterAdded and player.CharacterAdded:Wait())
+    if not character then
+        updateStatus("FALLBACK: Player character unavailable")
+        self:clearQueuedTarget()
+        return
+    end
+
+    local rootPart = character:WaitForChild("HumanoidRootPart", 12)
+    if not rootPart then
+        updateStatus("FALLBACK: Character root part timeout")
+        self:clearQueuedTarget()
+        return
+    end
+
+    task.wait(0.35)
+
+    updateStatus("SMART_SNIPER: Resolving target egg location (" .. tostring(target.name) .. ")...")
+
+    local eggPos, method, model = nil, nil, nil
+    local deadline = os.clock() + 8.0
+    while os.clock() < deadline and not eggPos do
+        eggPos, method, model = self:locateEggPosition(target.uid, eggStateModule)
+        if not eggPos then task.wait(0.4) end
+    end
+
+    if not eggPos then
+        updateStatus("FALLBACK: Target egg not found in this instance. Remaining at safe spawn.")
+        self:clearQueuedTarget()
+        return
+    end
+
+    updateStatus("SMART_SNIPER: Direct teleport to egg next to safe offset...")
+    local ok, safePos = self:teleportToSafePosition(character, eggPos)
+
+    if ok then
+        task.wait(0.2)
+        local verified, reason = self:verifyArrivalAndAvailability(character, eggPos, target.uid, eggStateModule, function(available)
+            if available then
+                updateStatus("SUCCESS: Arrived next to " .. tostring(target.name) .. "! Egg availability confirmed. Standing by for server confirmation.")
+                self:awaitServerAcquisitionConfirmation(character, target.uid, eggStateModule, function(confirmed, msg)
+                    if confirmed then
+                        updateStatus("SERVER CONFIRMED: " .. tostring(target.name) .. " acquired by server authority.")
+                    else
+                        updateStatus("NOTICE: Server confirmation closed (" .. tostring(msg) .. ").")
+                    end
+                end)
+            else
+                updateStatus("NOTICE: Arrived at location. Target egg was already claimed or despawned.")
+            end
+        end)
+    else
+        updateStatus("FALLBACK: Direct teleport offset failed. Safe fallback engaged.")
+    end
+
+    self:clearQueuedTarget()
+end
+
+
 --  [3-5] FINDER UI + NETWORK + RENDERER - createFinder(D) wires the glass
 --        panel, the broadcast/feed networking and the egg-card list together.
 --============================================================================--
@@ -421,6 +1380,15 @@ local function createFinder(D)
     local requestFn=request or http_request or (syn and syn.request) or (http and http.request)
     local active,othersOnly=true,false
     local reporterId=Http:GenerateGUID(false)
+
+    local designEngine = MARVIN_VisualDesignEngine.new({ theme = "RoyalAmethyst", safeMode = false })
+    D.designEngine = designEngine
+    _G.__MARVIN_DESIGN = designEngine
+
+    local sniperTeleport = MARVIN_SmartSniperTeleport.new({ player = D.player, teleports = Teleports })
+    D.sniperTeleport = sniperTeleport
+    _G.__MARVIN_SNIPER_TELEPORT = sniperTeleport
+
     local config,configAt=nil,-math.huge
     local feed,feedAt={},0
     local clockOffset=0
@@ -452,6 +1420,11 @@ local function createFinder(D)
         }
         joinedEgg=saved
         pcall(function() Teleports:SetTeleportSetting(joinedEggSettingKey,saved) end)
+        pcall(function()
+            if sniperTeleport then
+                sniperTeleport:queueTarget(entry)
+            end
+        end)
     end
     D.joinedEgg=joinedEgg
     local localHighlight
@@ -460,9 +1433,33 @@ local function createFinder(D)
     local settingsPath='tenshi_beta_ui.json'
     local settings={}
     if type(readfile)=='function' then pcall(function() local data=Http:JSONDecode(readfile(settingsPath));if type(data)=='table' then settings=data end end) end
-    -- Auto Steal defaults ON. It only acts on eggs the join flow tracked, plus
-    -- the best local egg while Auto Join is armed - never on random field eggs.
-    local autoStealEnabled=type(settings.autoSteal)~='boolean' or settings.autoSteal
+    if type(settings.safeMode)=='boolean' and settings.safeMode and designEngine then
+        designEngine:enableSafeMode()
+    end
+    -- Auto Steal removed per user request
+    local autoJoinSettingKey='UNKNOWNAutoJoinEnabledV1'
+    local autoJoinEnabled=false
+    pcall(function()
+        local saved=Teleports:GetTeleportSetting(autoJoinSettingKey)
+        if type(saved)=='boolean' then autoJoinEnabled=saved end
+    end)
+    if not autoJoinEnabled and type(settings.autoJoin)=='boolean' then
+        autoJoinEnabled=settings.autoJoin
+    end
+    local failedJobIds={}
+    local function isJobFailed(jobId)
+        local expiry=failedJobIds[jobId]
+        if expiry and os.clock()<expiry then return true end
+        if expiry then failedJobIds[jobId]=nil end
+        return false
+    end
+    pcall(function()
+        local lastTarget=Teleports:GetTeleportSetting('UNKNOWNLastTargetJobId')
+        if type(lastTarget)=='string' and lastTarget~='' and lastTarget~=game.JobId then
+            failedJobIds[lastTarget]=os.clock()+240
+            warn('[MARVIN Smart Join] Redirected by Roblox away from '..lastTarget..' (server was likely full)')
+        end
+    end)
     local autoJoinMinValue=1e9
     local autoJoinMinValueSettingKey='UNKNOWNAutoJoinMinValueV1'
     -- TeleportSetting is the freshest value across a server hop; local JSON may be stale.
@@ -506,7 +1503,7 @@ local function createFinder(D)
         for i=1,4 do if type(value[i])~='number' or value[i]~=value[i] or math.abs(value[i])>5000 then return end end
         target.Position=UDim2.new(value[1],value[2],value[3],value[4])
     end
-    if settings.desktopLayoutVersion==2 then restorePosition(panel,settings.panel) end
+    restorePosition(panel,settings.panel)
     restorePosition(open,settings.icon)
     D.publicGuiPercent=function(value,factor)
         local n=tonumber(value) or (tonumber(factor) or 1)*100
@@ -530,16 +1527,16 @@ local function createFinder(D)
     local sizePercent=D.publicGuiPercent(settings.sizePercent,settings.sizeFactor)
     local sizeFactor=sizePercent/100
     local launcherScale=D.make('UIScale',{Scale=0.8},open)
+    pcall(function() designEngine:adaptLauncher(open, iconCaption) end)
     local function fitFinder()
         local view=D.gui.AbsoluteSize
         if view.X<=0 or view.Y<=0 then return end
-        local baseWidth,baseHeight=1500,850
-        local scale=math.min(1.08*sizeFactor,view.X*0.90/baseWidth,view.Y*0.88/baseHeight)
-        scale=math.max(0.42,scale)
+        local landscape=view.X>view.Y
+        local width=math.min(321.6*sizeFactor,view.X*(landscape and 0.40 or 0.92),view.X-16)
+        local height=math.min(592*sizeFactor,view.Y*0.90)
+        local scale=math.min(0.8*sizeFactor,width/402,height/680)
         responsiveScale.Scale=scale
-        panel.AnchorPoint=Vector2.new(0.5,0.5)
-        panel.Position=UDim2.fromScale(0.5,0.5)
-        panel.Size=UDim2.fromOffset(baseWidth,baseHeight)
+        panel.Size=UDim2.fromOffset(402,height/scale)
         launcherScale.Scale=math.min(0.8,math.max(0.5,math.min(view.X,view.Y)/650))
         local function keepVisible(target,caption)
             local size=target.AbsoluteSize
@@ -564,10 +1561,10 @@ local function createFinder(D)
         if type(writefile)~='function' then return end
         pcall(function()
             local function coords(p) return {p.X.Scale,p.X.Offset,p.Y.Scale,p.Y.Offset} end
-            writefile(settingsPath,Http:JSONEncode({desktopLayoutVersion=2,myServer=othersOnly,minRank=minRank,rarityMenu='mythic-up-v1',serversMinValue=serversMinValue,autoJoinMinValue=autoJoinMinValue,autoExecute=autoExecuteEnabled,autoSteal=autoStealEnabled,sizeFactor=sizeFactor,sizePercent=sizePercent,panel=coords(panel.Position),icon=coords(open.Position)}))
+            writefile(settingsPath,Http:JSONEncode({myServer=othersOnly,minRank=minRank,rarityMenu='mythic-up-v1',serversMinValue=serversMinValue,autoJoinMinValue=autoJoinMinValue,autoJoin=autoJoinEnabled,autoExecute=autoExecuteEnabled,sizeFactor=sizeFactor,sizePercent=sizePercent,panel=coords(panel.Position),icon=coords(open.Position)}))
         end)
     end
-    local settingsButton=D.make('TextButton',{Name='SettingsButton',Text='SETTINGS',Position=UDim2.new(0,0,0,7),Size=UDim2.fromOffset(92,34),BackgroundColor3=Color3.fromRGB(42,44,52),BackgroundTransparency=0,TextColor3=Color3.fromRGB(255,255,255),TextSize=12,Font=Enum.Font.GothamBold,BorderSizePixel=0,ZIndex=20},panel)
+    local settingsButton=D.make('TextButton',{Name='SettingsButton',Text='SETTINGS',Position=UDim2.new(0,8,0,7),Size=UDim2.fromOffset(80,30),BackgroundColor3=Color3.fromRGB(42,44,52),BackgroundTransparency=0,TextColor3=Color3.fromRGB(255,255,255),TextSize=12,Font=Enum.Font.GothamBold,BorderSizePixel=0,ZIndex=20},panel)
     D.make('UICorner',{CornerRadius=UDim.new(0,5)},settingsButton)
     local settingsOverlay=D.make('Frame',{Name='SettingsOverlay',Position=UDim2.fromScale(0,0),Size=UDim2.fromScale(1,1),BackgroundColor3=Color3.fromRGB(18,20,26),BackgroundTransparency=0.04,BorderSizePixel=0,Visible=false,ZIndex=30},panel)
     D.make('UICorner',{CornerRadius=UDim.new(0,5)},settingsOverlay)
@@ -618,18 +1615,7 @@ local function createFinder(D)
         saveSettings()
         if not autoExecuteEnabled then autoExecuteQueued=false end
     end)
-    local autoStealToggle=D.make('TextButton',{Name='AutoStealToggle',Text='',Position=UDim2.fromOffset(14,178),Size=UDim2.new(1,-28,0,46),BackgroundColor3=Color3.fromRGB(40,135,75),TextColor3=Color3.fromRGB(255,255,255),TextSize=14,Font=Enum.Font.GothamBold,BorderSizePixel=0,ZIndex=31},settingsOverlay)
-    D.make('UICorner',{CornerRadius=UDim.new(0,6)},autoStealToggle)
-    local function refreshAutoStealToggle()
-        autoStealToggle.Text=autoStealEnabled and 'AUTO STEAL: ON' or 'AUTO STEAL: OFF'
-        autoStealToggle.BackgroundColor3=autoStealEnabled and Color3.fromRGB(40,135,75) or Color3.fromRGB(155,48,52)
-    end
-    refreshAutoStealToggle()
-    autoStealToggle.Activated:Connect(function()
-        autoStealEnabled=not autoStealEnabled
-        refreshAutoStealToggle()
-        saveSettings()
-    end)
+
     D.saveGuiBeforeTeleport=saveSettings
     heading.Size=UDim2.fromOffset(185,32)
     heading.TextSize=19
@@ -711,12 +1697,26 @@ local function createFinder(D)
         end
     end)
     D.gui.Destroying:Connect(function() moveConnection:Disconnect();endConnection:Disconnect();drag=nil end)
-    local status=D.label(panel,'Connecting…',UDim2.fromOffset(14,52),UDim2.new(1,-28,0,48),Color3.fromRGB(210,218,240),14)
+    local status=D.label(panel,'Connecting…',UDim2.fromOffset(10,82),UDim2.new(1,-20,0,18),Color3.fromRGB(210,218,240),11)
     status.Visible=true
     status.TextWrapped=true
+    status.TextScaled=false
+    status.TextXAlignment=Enum.TextXAlignment.Center
+    if sniperTeleport then
+        task.spawn(function()
+            pcall(function()
+                sniperTeleport:runDirectTeleportRoutine(D.eggState, function(msg)
+                    warn("[MARVIN Direct Teleport] " .. tostring(msg))
+                    if status and status.Parent then
+                        status.Text = tostring(msg):sub(1, 42)
+                    end
+                end)
+            end)
+        end)
+    end
     local discordSubtitle=D.label(panel,DISCORD,UDim2.fromOffset(10,27),UDim2.fromOffset(205,14),Color3.new(1,1,1),11)
     discordSubtitle.TextSize=11
-    discordSubtitle.TextScaled=true;discordSubtitle.TextWrapped=false;discordSubtitle.Visible=true
+    discordSubtitle.TextScaled=true;discordSubtitle.TextWrapped=false;discordSubtitle.Visible=false
     D.make('UITextSizeConstraint',{MinTextSize=1,MaxTextSize=11},discordSubtitle)
     local page={Text=''}
     local scope=D.make('TextButton',{Name='AllServers',Text='ALL SERVERS',Position=UDim2.new(0,10,1,-176),Size=UDim2.new(0.5,-15,0,34),BackgroundColor3=Color3.fromRGB(67,70,80),TextColor3=Color3.new(1,1,1),TextSize=14},panel)
@@ -756,31 +1756,32 @@ local function createFinder(D)
         rarity.Text=rarityButtonText()
         queryEpoch+=1;feed={};pageOffset=0;feedAt=-math.huge;saveSettings()
     end)
-    local refreshButton=D.make('TextButton',{Text='REFRESH',Position=UDim2.fromOffset(10,54),Size=UDim2.new(1,-20,0,30),BackgroundColor3=Color3.fromRGB(115,215,45),BackgroundTransparency=0.15,TextColor3=Color3.new(1,1,1),TextSize=14},panel)
-    local resetTimer=D.label(refreshButton,'RESET --:--',UDim2.fromOffset(8,0),UDim2.new(0.28,-8,1,0),Color3.fromRGB(230,245,255),13)
+    local refreshButton=D.make('TextButton',{Text='REFRESH',Position=UDim2.fromOffset(10,48),Size=UDim2.new(1,-20,0,30),BackgroundColor3=Color3.fromRGB(115,215,45),BackgroundTransparency=0.15,TextColor3=Color3.new(1,1,1),TextSize=14},panel)
+    local resetTimer=D.label(refreshButton,'RESET --:--',UDim2.fromOffset(8,0),UDim2.new(0.32,-8,1,0),Color3.fromRGB(230,245,255),12)
     resetTimer.TextXAlignment=Enum.TextXAlignment.Left
     resetTimer.TextTruncate=Enum.TextTruncate.AtEnd
     resetTimer.Active=false
     local refreshing=false
-    local list=D.make('ScrollingFrame',{Position=UDim2.fromOffset(14,92),Size=UDim2.new(1,-16,1,-278),BackgroundTransparency=1,BorderSizePixel=0,AutomaticCanvasSize=Enum.AutomaticSize.None,CanvasSize=UDim2.new(),ScrollBarThickness=6,ScrollBarImageColor3=Color3.fromRGB(150,132,190),ScrollBarImageTransparency=0.1},panel)
+    local list=D.make('ScrollingFrame',{Position=UDim2.fromOffset(10,102),Size=UDim2.new(1,-20,1,-284),BackgroundTransparency=1,BorderSizePixel=0,AutomaticCanvasSize=Enum.AutomaticSize.None,CanvasSize=UDim2.new(),ScrollBarThickness=6,ScrollBarImageColor3=Color3.fromRGB(56,205,255),ScrollBarImageTransparency=0.1},panel)
     
     --========================================================================--
-    --  [3] MARVIN DESKTOP THEME 2.0 (visual-only)
-    --  Wide midnight dashboard, animated energy sweep, moving nebulae and
-    --  restrained neon accents. No gameplay callbacks or data flow are changed.
+    --  [3] MARVIN GLASS PREMIUM ANIMATED THEME
+    --  Sleek, compact glassmorphism panel (~402px) with continuous rotating
+    --  neon gradient border, breathing nebulae, twinkling starfield, animated
+    --  wordmark shimmer, tactile button physics, and responsive entrance pop.
     --========================================================================--
     local Theme = {
-        bg        = Color3.fromRGB(5, 10, 22),
-        bgDeep    = Color3.fromRGB(4, 8, 18),
-        glass     = Color3.fromRGB(13, 24, 42),
-        glassHigh = Color3.fromRGB(20, 38, 61),
-        accent    = Color3.fromRGB(53, 216, 255),
-        accentHot = Color3.fromRGB(159, 93, 255),
-        cyan      = Color3.fromRGB(92, 231, 255),
-        text      = Color3.fromRGB(239, 247, 255),
-        muted     = Color3.fromRGB(143, 166, 195),
-        green     = Color3.fromRGB(65, 238, 167),
-        tabActive = Color3.fromRGB(24, 93, 131),
+        bg        = Color3.fromRGB(12, 9, 24),     -- panel base obsidian purple
+        bgDeep    = Color3.fromRGB(7, 5, 16),      -- title bar
+        glass     = Color3.fromRGB(24, 18, 44),    -- resting control surface
+        glassHigh = Color3.fromRGB(38, 28, 68),    -- raised / input surface
+        accent    = Color3.fromRGB(147, 92, 255),  -- signature neon purple
+        accentHot = Color3.fromRGB(213, 96, 255),  -- bright hot magenta/purple
+        cyan      = Color3.fromRGB(56, 205, 255),  -- electric cyan
+        text      = Color3.fromRGB(245, 240, 255),
+        muted     = Color3.fromRGB(176, 162, 210),
+        green     = Color3.fromRGB(52, 235, 150),
+        tabActive = Color3.fromRGB(96, 58, 170),
     }
     D.theme = Theme
     local starTweens = {}
@@ -790,73 +1791,75 @@ local function createFinder(D)
     panel.BackgroundTransparency = 0
     panel.ClipsDescendants = true
     local glassCorner = panel:FindFirstChildOfClass('UICorner')
-    if glassCorner then glassCorner.CornerRadius = UDim.new(0, 20) end
+    if glassCorner then glassCorner.CornerRadius = UDim.new(0, 16) end
 
     local panelGradient = D.make('UIGradient', {
         Rotation = 24,
         Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, Color3.fromRGB(5, 11, 25)),
-            ColorSequenceKeypoint.new(0.48, Color3.fromRGB(11, 18, 39)),
-            ColorSequenceKeypoint.new(1, Color3.fromRGB(17, 10, 36)),
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(12, 8, 26)),
+            ColorSequenceKeypoint.new(0.50, Color3.fromRGB(18, 12, 38)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(10, 6, 22)),
         }),
     }, panel)
     local panelMotion = TweenService:Create(panelGradient,
-        TweenInfo.new(26, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+        TweenInfo.new(24, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
         {Rotation = 204})
     panelMotion:Play()
     table.insert(starTweens, panelMotion)
 
     local glassStroke = panel:FindFirstChildOfClass('UIStroke')
-    if glassStroke then
-        glassStroke.Color = Theme.accent
-        glassStroke.Thickness = 2
-        glassStroke.Transparency = 0.08
-        glassStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-        local borderGradient = D.make('UIGradient', {
-            Rotation = 0,
-            Color = ColorSequence.new({
-                ColorSequenceKeypoint.new(0, Theme.accent),
-                ColorSequenceKeypoint.new(0.48, Theme.accentHot),
-                ColorSequenceKeypoint.new(1, Theme.cyan),
-            }),
-        }, glassStroke)
-        local borderMotion = TweenService:Create(borderGradient,
-            TweenInfo.new(12, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1),
-            {Rotation = 360})
-        borderMotion:Play()
-        table.insert(starTweens, borderMotion)
+    if not glassStroke then
+        glassStroke = Instance.new('UIStroke')
+        glassStroke.Parent = panel
     end
+    glassStroke.Thickness = 2
+    glassStroke.Transparency = 0.08
+    glassStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    local borderGradient = D.make('UIGradient', {
+        Rotation = 0,
+        Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Theme.accent),
+            ColorSequenceKeypoint.new(0.33, Theme.accentHot),
+            ColorSequenceKeypoint.new(0.66, Theme.cyan),
+            ColorSequenceKeypoint.new(1, Theme.accent),
+        }),
+    }, glassStroke)
+    local borderMotion = TweenService:Create(borderGradient,
+        TweenInfo.new(10, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1),
+        {Rotation = 360})
+    borderMotion:Play()
+    table.insert(starTweens, borderMotion)
 
     local edgeGlow = D.make('Frame', {
-        Name = 'DesktopOuterGlow', BackgroundTransparency = 1, BorderSizePixel = 0,
-        Position = UDim2.fromOffset(2, 2), Size = UDim2.new(1, -4, 1, -4),
+        Name = 'MarvinOuterGlow', BackgroundTransparency = 1, BorderSizePixel = 0,
+        Position = UDim2.fromOffset(1, 1), Size = UDim2.new(1, -2, 1, -2),
         Active = false, ZIndex = 1,
     }, panel)
-    D.make('UICorner', {CornerRadius = UDim.new(0, 18)}, edgeGlow)
+    D.make('UICorner', {CornerRadius = UDim.new(0, 15)}, edgeGlow)
     D.make('UIStroke', {
-        Color = Theme.accent, Thickness = 2, Transparency = 0.72,
+        Color = Theme.accent, Thickness = 1.5, Transparency = 0.75,
         ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
     }, edgeGlow)
 
     if bar then
-        bar.Size = UDim2.new(1, -2, 0, 88)
+        bar.Size = UDim2.new(1, -2, 0, 44)
         bar.BackgroundColor3 = Theme.bgDeep
         bar.BackgroundTransparency = 0.02
         local barCorner = bar:FindFirstChildOfClass('UICorner')
-        if barCorner then barCorner.CornerRadius = UDim.new(0, 18) end
+        if barCorner then barCorner.CornerRadius = UDim.new(0, 14) end
         D.make('UIGradient', {
             Rotation = 0,
             Color = ColorSequence.new({
-                ColorSequenceKeypoint.new(0, Color3.fromRGB(6, 17, 34)),
-                ColorSequenceKeypoint.new(0.55, Color3.fromRGB(17, 22, 49)),
-                ColorSequenceKeypoint.new(1, Color3.fromRGB(28, 13, 48)),
+                ColorSequenceKeypoint.new(0, Color3.fromRGB(8, 5, 18)),
+                ColorSequenceKeypoint.new(0.55, Color3.fromRGB(18, 12, 36)),
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(26, 11, 44)),
             }),
         }, bar)
     end
 
     local headerAccent = D.make('Frame', {
-        Name = 'DesktopHeaderAccent', BorderSizePixel = 0, Active = false,
-        Position = UDim2.new(0, 18, 0, 86), Size = UDim2.new(1, -36, 0, 2),
+        Name = 'MarvinHeaderAccent', BorderSizePixel = 0, Active = false,
+        Position = UDim2.new(0, 10, 0, 44), Size = UDim2.new(1, -20, 0, 1.5),
         BackgroundColor3 = Theme.accent, ZIndex = 4,
     }, panel)
     D.make('UIGradient', {
@@ -867,150 +1870,109 @@ local function createFinder(D)
         }),
     }, headerAccent)
 
-    if heading then
+    if heading and heading:IsA('TextLabel') then
+        heading.Font = Enum.Font.GothamBlack
+        heading.TextSize = 22
         heading.TextColor3 = Theme.text
         heading.TextStrokeColor3 = Theme.accent
-        heading.TextStrokeTransparency = 0.55
+        heading.TextStrokeTransparency = 0.6
+        local wordmarkGradient = D.make('UIGradient', {
+            Rotation = 0,
+            Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, Theme.text),
+                ColorSequenceKeypoint.new(0.40, Theme.accentHot),
+                ColorSequenceKeypoint.new(0.70, Theme.cyan),
+                ColorSequenceKeypoint.new(1, Theme.text),
+            }),
+        }, heading)
+        local wordmarkMotion = TweenService:Create(wordmarkGradient,
+            TweenInfo.new(5.0, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1),
+            {Rotation = 360})
+        wordmarkMotion:Play()
+        table.insert(starTweens, wordmarkMotion)
+
+        -- Animated rotating royal crown directly floating above MARVIN
+        local crown = D.make('TextLabel', {
+            Name = 'MarvinRoyalCrown',
+            Text = '👑',
+            Size = UDim2.fromOffset(26, 22),
+            Position = UDim2.new(0.5, 0, 0, 1),
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            BackgroundTransparency = 1,
+            Font = Enum.Font.GothamBold,
+            TextSize = 18,
+            TextXAlignment = Enum.TextXAlignment.Center,
+            TextYAlignment = Enum.TextYAlignment.Center,
+            ZIndex = heading.ZIndex + 3,
+        }, panel)
+
+        local crownMotion = TweenService:Create(crown,
+            TweenInfo.new(3.8, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1),
+            {Rotation = 360})
+        crownMotion:Play()
+        table.insert(starTweens, crownMotion)
+
+        local crownBob = TweenService:Create(crown,
+            TweenInfo.new(1.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+            {Position = UDim2.new(0.5, 0, 0, 3)})
+        crownBob:Play()
+        table.insert(starTweens, crownBob)
+        pcall(function()
+            designEngine:adaptPanel(panel, bar, heading, crown)
+        end)
     end
+
     if status then
         status.TextColor3 = Theme.cyan
         status.TextStrokeTransparency = 1
+        status.Font = Enum.Font.GothamMedium
+        status.TextSize = 11
+        status.TextXAlignment = Enum.TextXAlignment.Center
     end
 
     local starfield = D.make('Frame', {
-        Name = 'MARVIN_DesktopAmbient', BackgroundTransparency = 1, BorderSizePixel = 0,
+        Name = 'MARVIN_AmbientField', BackgroundTransparency = 1, BorderSizePixel = 0,
         Size = UDim2.fromScale(1, 1), Position = UDim2.fromScale(0, 0),
         Active = false, ZIndex = 2,
     }, panel)
     local starRandom = Random.new(7319)
 
-    for i = 1, 38 do
+    for i = 1, 32 do
         local dot = D.make('Frame', {
-            Name = 'DesktopStar' .. i, BorderSizePixel = 0, Active = false, ZIndex = 2,
-            Position = UDim2.fromScale(starRandom:NextNumber(0.02, 0.98), starRandom:NextNumber(0.12, 0.98)),
-            BackgroundColor3 = (i % 5 == 0) and Theme.cyan or (i % 3 == 0) and Theme.accentHot or Color3.fromRGB(210, 232, 255),
+            Name = 'MarvinStar' .. i, BorderSizePixel = 0, Active = false, ZIndex = 2,
+            Position = UDim2.fromScale(starRandom:NextNumber(0.02, 0.98), starRandom:NextNumber(0.08, 0.98)),
+            BackgroundColor3 = (i % 4 == 0) and Theme.cyan or (i % 3 == 0) and Theme.accentHot or Color3.fromRGB(225, 235, 255),
         }, starfield)
-        local dotSize = starRandom:NextInteger(2, 4)
+        local dotSize = starRandom:NextInteger(2, 3)
         dot.Size = UDim2.fromOffset(dotSize, dotSize)
-        dot.BackgroundTransparency = starRandom:NextNumber(0.36, 0.72)
+        dot.BackgroundTransparency = starRandom:NextNumber(0.35, 0.72)
         D.make('UICorner', {CornerRadius = UDim.new(1, 0)}, dot)
         local pulse = TweenService:Create(dot,
-            TweenInfo.new(starRandom:NextNumber(1.8, 4.2), Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
-            {BackgroundTransparency = 0.9, Size = UDim2.fromOffset(dotSize + 2, dotSize + 2)})
+            TweenInfo.new(starRandom:NextNumber(1.8, 3.8), Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+            {BackgroundTransparency = 0.92, Size = UDim2.fromOffset(dotSize + 2, dotSize + 2)})
         pulse:Play()
         table.insert(starTweens, pulse)
     end
 
     for i, spec in ipairs({
-        {210, Theme.accent, 0.965, 0.10, 0.24},
-        {170, Theme.accentHot, 0.968, 0.68, 0.62},
-        {125, Theme.cyan, 0.972, 0.42, 0.78},
+        {190, Theme.accent, 0.955, 0.08, 0.22},
+        {160, Theme.accentHot, 0.962, 0.65, 0.60},
+        {130, Theme.cyan, 0.968, 0.35, 0.76},
     }) do
         local nebula = D.make('Frame', {
-            Name = 'DesktopNebula' .. i, BorderSizePixel = 0, Active = false, ZIndex = 2,
+            Name = 'MarvinNebula' .. i, BorderSizePixel = 0, Active = false, ZIndex = 2,
             Position = UDim2.fromScale(spec[4], spec[5]),
             Size = UDim2.fromOffset(spec[1], spec[1]),
             BackgroundColor3 = spec[2], BackgroundTransparency = spec[3],
         }, starfield)
         D.make('UICorner', {CornerRadius = UDim.new(1, 0)}, nebula)
         local drift = TweenService:Create(nebula,
-            TweenInfo.new(9 + i * 2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
-            {Position = UDim2.fromScale(math.clamp(spec[4] + 0.08, 0.02, 0.82), math.clamp(spec[5] + 0.06, 0.12, 0.82)),
-             BackgroundTransparency = 0.982})
+            TweenInfo.new(8 + i * 2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+            {Position = UDim2.fromScale(math.clamp(spec[4] + 0.06, 0.02, 0.85), math.clamp(spec[5] + 0.05, 0.10, 0.85)),
+             BackgroundTransparency = 0.985})
         drift:Play()
         table.insert(starTweens, drift)
     end
-
-    -- User-supplied portrait panel. Kept in its natural portrait ratio rather
-    -- than cropping it across the entire 16:9 desktop dashboard.
-    local portraitPanel = D.make('Frame', {
-        Name = 'MARVIN_PortraitPanel',
-        Position = UDim2.new(0.70, 0, 0, 100),
-        Size = UDim2.new(0.28, -14, 1, -206),
-        BackgroundColor3 = Color3.fromRGB(5, 12, 25),
-        BackgroundTransparency = 0.02,
-        BorderSizePixel = 0,
-        ClipsDescendants = true,
-        ZIndex = 3,
-    }, panel)
-    D.make('UICorner', {CornerRadius = UDim.new(0, 16)}, portraitPanel)
-    local portraitStroke = D.make('UIStroke', {
-        Color = Theme.cyan, Thickness = 1.5, Transparency = 0.18,
-        ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-    }, portraitPanel)
-
-    local portraitImage = D.make('ImageLabel', {
-        Name = 'UserPortrait',
-        Position = UDim2.fromScale(0, 0),
-        Size = UDim2.fromScale(1, 1),
-        BackgroundTransparency = 1,
-        Image = '',
-        ImageTransparency = 0.08,
-        ScaleType = Enum.ScaleType.Fit,
-        ZIndex = 3,
-    }, portraitPanel)
-
-    local portraitTint = D.make('Frame', {
-        Name = 'PortraitGlassTint',
-        Position = UDim2.fromScale(0, 0),
-        Size = UDim2.fromScale(1, 1),
-        BackgroundColor3 = Color3.fromRGB(4, 12, 28),
-        BackgroundTransparency = 0.60,
-        BorderSizePixel = 0,
-        ZIndex = 4,
-    }, portraitPanel)
-    D.make('UICorner', {CornerRadius = UDim.new(0, 16)}, portraitTint)
-    D.make('UIGradient', {
-        Rotation = 90,
-        Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, Color3.fromRGB(4, 9, 20)),
-            ColorSequenceKeypoint.new(0.48, Color3.fromRGB(5, 22, 42)),
-            ColorSequenceKeypoint.new(1, Color3.fromRGB(4, 8, 18)),
-        }),
-        Transparency = NumberSequence.new({
-            NumberSequenceKeypoint.new(0, 0.24),
-            NumberSequenceKeypoint.new(0.50, 0.62),
-            NumberSequenceKeypoint.new(1, 0.18),
-        }),
-    }, portraitTint)
-
-    task.spawn(function()
-        local customAsset = getcustomasset or getsynasset
-        if type(customAsset) ~= 'function' or type(writefile) ~= 'function' then
-            warn('[MARVIN] Portrait needs getcustomasset/getsynasset and writefile support.')
-            return
-        end
-        local ok, assetOrError = pcall(function()
-            local bytes = game:HttpGet('https://raw.githubusercontent.com/farsazzat1113/marvin/Marvin/assets/marvin_photo_background.jpg')
-            assert(type(bytes) == 'string' and #bytes > 1000, 'Portrait download was empty')
-            writefile('marvin_desktop_photo_v1.jpg', bytes)
-            return customAsset('marvin_desktop_photo_v1.jpg')
-        end)
-        if ok and type(assetOrError) == 'string' and portraitImage.Parent then
-            portraitImage.Image = assetOrError
-        else
-            warn('[MARVIN] Could not load portrait: '..tostring(assetOrError))
-        end
-    end)
-
-    local energySweep = D.make('Frame', {
-        Name = 'DesktopEnergySweep', BorderSizePixel = 0, Active = false,
-        Position = UDim2.new(0, 0, 0.12, 0), Size = UDim2.new(1, 0, 0, 2),
-        BackgroundColor3 = Theme.cyan, BackgroundTransparency = 0.55, ZIndex = 2,
-    }, starfield)
-    D.make('UIGradient', {
-        Transparency = NumberSequence.new({
-            NumberSequenceKeypoint.new(0, 1),
-            NumberSequenceKeypoint.new(0.18, 0.35),
-            NumberSequenceKeypoint.new(0.82, 0.35),
-            NumberSequenceKeypoint.new(1, 1),
-        }),
-    }, energySweep)
-    local sweepMotion = TweenService:Create(energySweep,
-        TweenInfo.new(8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
-        {Position = UDim2.new(0, 0, 0.94, 0)})
-    sweepMotion:Play()
-    table.insert(starTweens, sweepMotion)
 
     local function liftAboveBackdrop(obj)
         if obj:IsA('GuiObject') and obj ~= starfield and obj ~= edgeGlow
@@ -1043,19 +2005,19 @@ local function createFinder(D)
                 stroke.Parent = obj
             end
             stroke.Color = Theme.accent
-            stroke.Transparency = 0.34
+            stroke.Transparency = 0.35
             stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
             local corner = obj:FindFirstChildOfClass('UICorner')
             if not corner then
                 corner = Instance.new('UICorner')
                 corner.Parent = obj
             end
-            corner.CornerRadius = UDim.new(0, 10)
+            corner.CornerRadius = UDim.new(0, 8)
             if obj == refreshButton then
-                obj.BackgroundColor3 = Color3.fromRGB(33, 114, 160)
+                obj.BackgroundColor3 = Theme.tabActive
                 stroke.Color = Theme.cyan
-                stroke.Transparency = 0.08
-                stroke.Thickness = 1.6
+                stroke.Transparency = 0.12
+                stroke.Thickness = 1.4
             elseif obj == settingsButton then
                 obj.BackgroundColor3 = Theme.glassHigh
             elseif obj == scope or obj == myScope then
@@ -1080,16 +2042,16 @@ local function createFinder(D)
             if obj.Name == 'ValueOfServers' or obj.Name == 'MinAutoJoinValue' then
                 obj.BackgroundColor3 = Theme.glass
                 local corner = obj:FindFirstChildOfClass('UICorner')
-                if corner then corner.CornerRadius = UDim.new(0, 10) end
+                if corner then corner.CornerRadius = UDim.new(0, 8) end
                 D.make('UIStroke', {
                     Color = Theme.accent, Thickness = 1, Transparency = 0.52,
                     ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
                 }, obj)
             elseif obj.Name == 'SettingsOverlay' then
                 obj.BackgroundColor3 = Theme.bg
-                obj.BackgroundTransparency = 0.01
+                obj.BackgroundTransparency = 0.02
                 local corner = obj:FindFirstChildOfClass('UICorner')
-                if corner then corner.CornerRadius = UDim.new(0, 18) end
+                if corner then corner.CornerRadius = UDim.new(0, 16) end
                 D.make('UIStroke', {
                     Color = Theme.accent, Thickness = 2, Transparency = 0.18,
                     ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
@@ -1111,19 +2073,141 @@ local function createFinder(D)
         end
     end)
 
+    -- Tactile button hover and click spring feedback
+    local function addButtonFeedback(button)
+        if not button:IsA('TextButton') or button:GetAttribute('MarvinFeedbackReady') then return end
+        button:SetAttribute('MarvinFeedbackReady', true)
+        local scale = button:FindFirstChildOfClass('UIScale')
+        if not scale then
+            scale = Instance.new('UIScale')
+            scale.Scale = 1
+            scale.Parent = button
+        end
+        local hoverTween
+        local function animateScale(value, duration, style)
+            if hoverTween then hoverTween:Cancel() end
+            hoverTween = TweenService:Create(scale,
+                TweenInfo.new(duration, style or Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                {Scale = value})
+            hoverTween:Play()
+        end
+        button.MouseEnter:Connect(function()
+            animateScale(1.035, 0.14)
+        end)
+        button.MouseLeave:Connect(function()
+            animateScale(1, 0.18)
+        end)
+        button.Activated:Connect(function()
+            animateScale(0.965, 0.07, Enum.EasingStyle.Quad)
+            task.delay(0.08, function()
+                if button.Parent then animateScale(1, 0.22, Enum.EasingStyle.Back) end
+            end)
+        end)
+        table.insert(starTweens, {
+            Cancel = function()
+                if hoverTween then hoverTween:Cancel() end
+            end
+        })
+    end
+    for _, obj in ipairs(panel:GetDescendants()) do addButtonFeedback(obj) end
+    panel.DescendantAdded:Connect(function(obj)
+        task.defer(function()
+            if obj.Parent then addButtonFeedback(obj) end
+        end)
+    end)
+
+    if refreshButton then
+        refreshButton.Font = Enum.Font.GothamBlack
+        refreshButton.TextSize = 13
+        refreshButton.BackgroundTransparency = 0
+        local refreshGradient = refreshButton:FindFirstChildOfClass('UIGradient')
+        if not refreshGradient then
+            refreshGradient = D.make('UIGradient', {
+                Rotation = 0,
+                Color = ColorSequence.new({
+                    ColorSequenceKeypoint.new(0, Theme.accent),
+                    ColorSequenceKeypoint.new(0.5, Theme.accentHot),
+                    ColorSequenceKeypoint.new(1, Theme.cyan),
+                }),
+            }, refreshButton)
+        end
+        local refreshMotion = TweenService:Create(refreshGradient,
+            TweenInfo.new(4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+            {Rotation = 20})
+        refreshMotion:Play()
+        table.insert(starTweens, refreshMotion)
+    end
+
     local function refreshGlassScope()
         if scope then scope.BackgroundColor3 = othersOnly and Theme.glass or Theme.tabActive end
         if myScope then myScope.BackgroundColor3 = othersOnly and Theme.tabActive or Theme.glass end
+        pcall(function()
+            if designEngine then
+                if othersOnly then
+                    designEngine:adaptScopeTabs(myScope, scope)
+                else
+                    designEngine:adaptScopeTabs(scope, myScope)
+                end
+            end
+        end)
     end
     if scope then scope.Activated:Connect(function() task.defer(refreshGlassScope) end) end
     if myScope then myScope.Activated:Connect(function() task.defer(refreshGlassScope) end) end
     refreshGlassScope()
 
     if open then
-        D.make('UIStroke', {
-            Color = Theme.cyan, Thickness = 2.5, Transparency = 0.08,
-            ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+        open.Size = UDim2.fromOffset(52, 52)
+        local openCorner = open:FindFirstChildOfClass('UICorner')
+        if openCorner then openCorner.CornerRadius = UDim.new(1, 0) end
+        open.BackgroundColor3 = Theme.bgDeep
+        local openStroke = open:FindFirstChildOfClass('UIStroke')
+        if not openStroke then
+            openStroke = Instance.new('UIStroke')
+            openStroke.Parent = open
+        end
+        openStroke.Color = Theme.accent
+        openStroke.Thickness = 2.5
+        openStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+        local openGrad = D.make('UIGradient', {
+            Rotation = 0,
+            Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, Theme.cyan),
+                ColorSequenceKeypoint.new(0.5, Theme.accentHot),
+                ColorSequenceKeypoint.new(1, Theme.accent),
+            }),
+        }, openStroke)
+        local openMotion = TweenService:Create(openGrad,
+            TweenInfo.new(6, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1),
+            {Rotation = 360})
+        openMotion:Play()
+        table.insert(starTweens, openMotion)
+
+        local halo = D.make('Frame', {
+            Name = 'LauncherHalo',
+            Position = UDim2.fromScale(0.5, 0.5),
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            Size = UDim2.fromScale(1, 1),
+            BackgroundTransparency = 1,
+            BorderSizePixel = 0,
+            ZIndex = 1,
         }, open)
+        D.make('UICorner', {CornerRadius = UDim.new(1, 0)}, halo)
+        local haloStroke = D.make('UIStroke', {
+            Color = Theme.cyan,
+            Thickness = 2,
+            Transparency = 0.5,
+            ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+        }, halo)
+        local haloPulse = TweenService:Create(halo,
+            TweenInfo.new(1.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+            {Size = UDim2.fromScale(1.3, 1.3)})
+        local haloFade = TweenService:Create(haloStroke,
+            TweenInfo.new(1.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+            {Transparency = 0.95})
+        haloPulse:Play()
+        haloFade:Play()
+        table.insert(starTweens, haloPulse)
+        table.insert(starTweens, haloFade)
     end
 
     local popTween
@@ -1131,16 +2215,20 @@ local function createFinder(D)
         if not panel.Visible then return end
         local target = responsiveScale.Scale
         if type(target) ~= 'number' or target <= 0 then return end
-        responsiveScale.Scale = target * 0.965
+        responsiveScale.Scale = target * 0.92
         if popTween then popTween:Cancel() end
         popTween = TweenService:Create(responsiveScale,
-            TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+            TweenInfo.new(0.28, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
             {Scale = target})
         popTween:Play()
     end)
 
     gui.Destroying:Connect(function()
-        for _, tween in ipairs(starTweens) do pcall(function() tween:Cancel() end) end
+        for _, tween in ipairs(starTweens) do
+            if type(tween) == 'table' and type(tween.Cancel) == 'function' then
+                pcall(function() tween:Cancel() end)
+            end
+        end
         if popTween then pcall(function() popTween:Cancel() end) end
     end)
     D.make('UIListLayout',{Padding=UDim.new(0,4),SortOrder=Enum.SortOrder.LayoutOrder},list)
@@ -1183,7 +2271,7 @@ local function createFinder(D)
         return decoded
     end
     -- Roblox public-server directory, independent of the Finder report feed.
-    status.Size=UDim2.new(0.53,-14,0,24)
+    status.Size=UDim2.new(1,-20,0,18);status.Position=UDim2.fromOffset(10,82);status.TextSize=11
     status.TextSize=11
     -- Independent minimum income shown in ALL SERVERS; Auto Join keeps its own threshold.
     local serversValueFrame=D.make('Frame',{Name='ValueOfServers',Position=UDim2.new(0,10,1,-136),Size=UDim2.new(1,-20,0,34),BackgroundColor3=Color3.fromRGB(67,70,80),BorderSizePixel=0},panel)
@@ -1236,33 +2324,48 @@ local function createFinder(D)
             minValueInput.Text=minValueInput.Text:match("^%s*(.-)%s*$")
             saveSettings()
             autoJoinCandidates={};autoJoinCandidateIndex=1;autoJoinRetryRequested=false
-            queryStatus='Auto Join minimum set to '..minValueInput.Text
+            feedAt=0
+            queryStatus='Smart Join minimum set to '..minValueInput.Text
         else
             minValueInput.Text=string.format('%.0fB',autoJoinMinValue/1e9)
             queryStatus='Enter a value from 1B to 50B (example: 1.5B)'
         end
     end)
-    -- Beast Auto Join: selects the highest-income valid egg from the shared Finder feed.
-    local autoJoinEnabled=false
+    -- Smart Auto Join: targets top eggs with zero-delay sniping and multi-server fallback.
     local autoJoinBusy=false
     local autoJoinCandidates={}
     local autoJoinCandidateIndex=1
     local autoJoinRetryRequested=false
-    local autoJoinButton=D.make('TextButton',{Name='AutoJoin',Text='AUTO JOIN: OFF',Position=UDim2.new(0,10,1,-52),Size=UDim2.new(1,-20,0,40),BackgroundColor3=Color3.fromRGB(200,45,45),TextColor3=Color3.new(1,1,1),TextSize=13,Font=Enum.Font.GothamBold},panel)
+    local autoJoinButton=D.make('TextButton',{Name='AutoJoin',Text='SMART JOIN: OFF',Position=UDim2.new(0,10,1,-52),Size=UDim2.new(1,-20,0,40),BackgroundColor3=Color3.fromRGB(200,45,45),TextColor3=Color3.new(1,1,1),TextSize=13,Font=Enum.Font.GothamBold},panel)
     D.make('UICorner',{CornerRadius=UDim.new(0,6)},autoJoinButton)
     autoJoinButton.TextScaled=true;autoJoinButton.TextWrapped=false
     D.make('UITextSizeConstraint',{MinTextSize=1,MaxTextSize=14},autoJoinButton)
     local function paintAutoJoin()
-        autoJoinButton.Text=autoJoinEnabled and 'AUTO JOIN: ON' or 'AUTO JOIN: OFF'
-        autoJoinButton.BackgroundColor3=autoJoinEnabled and Color3.fromRGB(30,155,85) or Color3.fromRGB(200,45,45)
+        autoJoinButton.Text=autoJoinEnabled and 'SMART JOIN: ON' or 'SMART JOIN: OFF'
+        autoJoinButton.BackgroundColor3=autoJoinEnabled and Color3.fromRGB(30,165,85) or Color3.fromRGB(200,45,45)
     end
+    paintAutoJoin()
     autoJoinButton.Activated:Connect(function()
         if not active then return end
         autoJoinEnabled=not autoJoinEnabled
         autoJoinCandidates={};autoJoinCandidateIndex=1;autoJoinRetryRequested=false
+        pcall(function() Teleports:SetTeleportSetting(autoJoinSettingKey,autoJoinEnabled) end)
+        saveSettings()
         if autoJoinEnabled then feedAt=-math.huge end
         paintAutoJoin()
-        queryStatus=autoJoinEnabled and 'Auto Join enabled: checking all available pages' or 'Auto Join disabled'
+        queryStatus=autoJoinEnabled and ('Smart Join ON: searching for egg >= '..string.format('%.1fB',autoJoinMinValue/1e9)..'/s') or 'Smart Join OFF'
+    end)
+
+    pcall(function()
+        if designEngine then
+            designEngine:adaptControls(rarity, autoJoinButton, refreshButton, settingsButton)
+            designEngine:bindHoverMotion(scope, 1.02)
+            designEngine:bindHoverMotion(myScope, 1.02)
+            designEngine:bindHoverMotion(rarity, 1.02)
+            designEngine:bindHoverMotion(autoJoinButton, 1.02)
+            designEngine:bindHoverMotion(refreshButton, 1.02)
+            designEngine:bindHoverMotion(settingsButton, 1.05)
+        end
     end)
     local publicBroadcastConfig=nil
     local featureConfig=nil
@@ -1467,596 +2570,191 @@ local function createFinder(D)
         end
         return best
     end
-    -- Auto Join compares the best eligible local egg against every public server.
-    -- It stays local on ties and only teleports when a strictly better remote egg exists.
-    -- Reservation failures and asynchronous teleport failures advance to the next candidate.
+    --========================================================================--
+    --  SMART AUTO JOIN (Zero-Latency Sniper & Multi-Server Fallback Pipeline)
+    --  1. Targets the HIGHEST-rate egg across all reported servers (Smart Join).
+    --  2. If none currently exists, enters standby sniper mode, listening for top eggs.
+    --  3. Instant Snipe: Direct teleport call with zero artificial delay or blocking claims.
+    --  4. Instant Fallback: If a target server is full, unavailable, or redirected,
+    --     it immediately switches to the next best server that still meets autoJoinMinValue!
+    --========================================================================--
     task.spawn(function()
         while active do
             if autoJoinEnabled and not autoJoinBusy and not joining then
                 autoJoinBusy=true
                 local ok,err=pcall(function()
                     if not config then
-                        queryStatus='Auto Join: waiting for Finder connection'
+                        queryStatus='Smart Join: connecting to Finder network...'
                         return
                     end
-                    if #autoJoinCandidates==0 then
-                        if os.clock()-feedAt>6 then
+
+                    -- Check local server first: if the best egg >= autoJoinMinValue is already here, we stay!
+                    local localBest=localBestAutoJoinRate()
+                    if localBest>=autoJoinMinValue then
+                        queryStatus='Smart Join: top egg ('..D.money(localBest)..'/s) is already in this server!'
+                        autoJoinCandidates={}
+                        autoJoinCandidateIndex=1
+                        return
+                    end
+
+                    -- Fast feed refresh when candidates are empty or retry requested
+                    if #autoJoinCandidates==0 or autoJoinRetryRequested then
+                        autoJoinRetryRequested=false
+                        if os.clock()-feedAt>=1.0 then
                             local refreshed,message=refresh(true)
-                            if not refreshed then
-                                queryStatus='Auto Join: '..tostring(message or 'feed refresh failed')
+                            if not refreshed and #feed==0 then
+                                queryStatus='Smart Join: waiting for egg feed ('..tostring(message or 'refreshing')..')'
                                 return
                             end
                         end
+
                         local now=(os.clock()+clockOffset)*1000
+                        local targetPlace=(game.PlaceId and game.PlaceId>0) and game.PlaceId or 107778070777162
                         local candidates={}
                         for _,entry in ipairs(feed) do
                             local rate=tonumber(entry.rate)
                             local job=type(entry.jobId)=='string' and entry.jobId or ''
                             local place=tonumber(entry.placeId)
                             local expiry=tonumber(entry.expiresAt)
-                            local validEntry=job~='' and job~=game.JobId and place and place>0
-                                and expiry and expiry>now and rate and rate>0
-                                and entry.uid~=nil and entry.full~=true and entry.unavailable~=true
+                            local validEntry=job~='' and job~=game.JobId and not isJobFailed(job)
+                                and place and (place==targetPlace)
+                                and expiry and expiry>now
+                                and rate and rate>=autoJoinMinValue
+                                and entry.uid~=nil
+                                and entry.full~=true and entry.unavailable~=true
                                 and entry.takenConfirmed~=true
-                                and rate>=autoJoinMinValue
                                 and D.publicEntryAllowed(entry,now)
-                            if validEntry then candidates[#candidates+1]=entry end
+
+                            if validEntry then
+                                candidates[#candidates+1]=entry
+                            end
                         end
+
+                        -- Sort candidates by rate DESCENDING (Highest egg first = Smart Join)
                         table.sort(candidates,function(a,b)
-                            local ar,br=tonumber(a.rate) or 0,tonumber(b.rate) or 0
+                            local ar=tonumber(a.rate) or 0
+                            local br=tonumber(b.rate) or 0
                             if ar~=br then return ar>br end
                             return tostring(a.jobId)<tostring(b.jobId)
                         end)
-                        local localBest=localBestAutoJoinRate()
-                        local remoteBest=#candidates>0 and (tonumber(candidates[1].rate) or 0) or 0
-                        if localBest>0 and localBest>=remoteBest then
-                            autoJoinCandidates={};autoJoinCandidateIndex=1;autoJoinRetryRequested=false
-                            queryStatus='Auto Join: best eligible egg is already in this server'
-                            return
-                        end
-                        for i=1,#candidates do autoJoinCandidates[i]=candidates[i] end
+
+                        autoJoinCandidates=candidates
                         autoJoinCandidateIndex=1
-                        autoJoinRetryRequested=false
                     end
-                    if autoJoinCandidateIndex>#autoJoinCandidates then
-                        queryStatus='Auto Join: all available candidates failed'
-                        autoJoinCandidates={};autoJoinCandidateIndex=1;autoJoinRetryRequested=false
-                        feedAt=0
+
+                    -- If no remote candidates meet autoJoinMinValue, we wait in standby/sniper mode
+                    if #autoJoinCandidates==0 or autoJoinCandidateIndex>#autoJoinCandidates then
+                        autoJoinCandidates={}
+                        autoJoinCandidateIndex=1
+                        queryStatus='Smart Join: listening for top egg >= '..string.format('%.1fB',autoJoinMinValue/1e9)..'/s...'
                         return
                     end
+
                     local target=autoJoinCandidates[autoJoinCandidateIndex]
-                    local localBest=localBestAutoJoinRate()
-                    if localBest>0 and localBest>=(tonumber(target and target.rate) or 0) then
-                        autoJoinCandidates={};autoJoinCandidateIndex=1;autoJoinRetryRequested=false
-                        queryStatus='Auto Join: best eligible egg is already in this server'
+                    if not target then
+                        autoJoinCandidateIndex+=1
                         return
                     end
+
+                    local targetRate=tonumber(target.rate) or 0
+                    if targetRate<autoJoinMinValue then
+                        -- Below user threshold; skip
+                        autoJoinCandidateIndex+=1
+                        return
+                    end
+
                     local now=(os.clock()+clockOffset)*1000
-                    if not target or tonumber(target.expiresAt or 0)<=now then
+                    if tonumber(target.expiresAt or 0)<=now then
+                        -- Expired, advance to next candidate
                         autoJoinCandidateIndex+=1
                         autoJoinRetryRequested=true
-                        queryStatus='Auto Join: report expired; trying next server'
                         return
                     end
-                    queryStatus='Auto Join: trying #'..tostring(autoJoinCandidateIndex)..' '..tostring(target.name)..' ('..tostring(target.rate)..'/s)'
-                    local claim,claimError=network(config.endpoint..'/v1/join','POST',
-                        Http:JSONEncode({placeId=target.placeId,jobId=target.jobId,uid=target.uid,reporterId=reporterId,userId=D.player.UserId}),
-                        headers())
-                    if not claim or claim.allowed~=true then
-                        if claim and (claim.unavailable or claim.full or claim.taken) then
-                            target.full=true;target.unavailable=claim.unavailable==true
-                        end
-                        autoJoinCandidateIndex+=1
-                        autoJoinRetryRequested=true
-                        feedAt=0
-                        queryStatus='Auto Join: server #'..tostring(autoJoinCandidateIndex-1)..' unavailable; trying next'
-                        return
-                    end
-                    local joinExpiry=math.min(tonumber(target.expiresAt) or math.huge,tonumber(claim.expiresAt) or math.huge)
-                    if now>=joinExpiry then
-                        autoJoinCandidateIndex+=1;autoJoinRetryRequested=true;feedAt=0
-                        queryStatus='Auto Join: report expired; trying next server'
-                        return
-                    end
+
+                    -- Target selected! Proceed with zero-latency Instant Snipe
+                    queryStatus='Smart Join: SNIPING #'..tostring(autoJoinCandidateIndex)..' '..tostring(target.name)..' ('..D.money(targetRate)..'/s)...'
+
+                    -- Non-blocking background claim: notify the backend without delaying our teleport
+                    task.spawn(function()
+                        pcall(function()
+                            if config and config.endpoint then
+                                requestFn({
+                                    Url=config.endpoint..'/v1/join',
+                                    Method='POST',
+                                    Headers=headers(),
+                                    Body=Http:JSONEncode({
+                                        placeId=target.placeId,
+                                        jobId=target.jobId,
+                                        uid=target.uid,
+                                        reporterId=reporterId,
+                                        userId=D.player.UserId
+                                    }),
+                                    Timeout=3
+                                })
+                            end
+                        end)
+                    end)
+
                     joining=true
-                    queryStatus='Auto Join: joining server #'..tostring(autoJoinCandidateIndex)
+                    pcall(function() Teleports:SetTeleportSetting('UNKNOWNLastTargetJobId',target.jobId) end)
+                    pcall(function() Teleports:SetTeleportSetting(autoJoinSettingKey,true) end)
+                    pcall(function() Teleports:SetTeleportSetting(autoJoinMinValueSettingKey,autoJoinMinValue) end)
+
                     queueAutoExecute()
                     D.saveGuiBeforeTeleport()
                     D.stopFarm()
                     rememberJoinedEgg(target)
+                    pcall(function()
+                        if sniperTeleport then
+                            sniperTeleport:queueTarget(target)
+                        end
+                    end)
+
+                    pcall(function()
+                        if designEngine then
+                            designEngine:stopAllGradientAnimations()
+                        end
+                    end)
+                    active = false
                     local teleported,teleportError=pcall(function()
                         Teleports:TeleportToPlaceInstance(target.placeId,target.jobId,D.player)
                     end)
+
                     if not teleported then
+                        active = true
                         joining=false
-                        autoJoinCandidateIndex+=1;autoJoinRetryRequested=true
-                        queryStatus='Auto Join: teleport failed; trying next server'
-                        warn('Tenshi Beast Auto Join teleport:',teleportError)
+                        failedJobIds[target.jobId]=os.clock()+180
+                        target.unavailable=true
+                        autoJoinCandidateIndex+=1
+                        autoJoinRetryRequested=true
+                        queryStatus='Smart Join: server #'..tostring(autoJoinCandidateIndex-1)..' failed, trying next candidate...'
+                        warn('[MARVIN Smart Join] Teleport failed:',teleportError)
+                    else
+                        -- Teleport issued to Roblox!
+                        task.delay(10,function()
+                            if joining and active then
+                                joining=false
+                                failedJobIds[target.jobId]=os.clock()+180
+                                autoJoinCandidateIndex+=1
+                                autoJoinRetryRequested=true
+                                queryStatus='Smart Join: teleport timed out, switching to next server...'
+                            end
+                        end)
                     end
                 end)
+
                 if not ok then
                     joining=false
-                    autoJoinCandidateIndex+=1
                     autoJoinRetryRequested=true
-                    queryStatus='Auto Join error: '..tostring(err)
-                    warn('Tenshi Beast Auto Join:',err)
+                    warn('[MARVIN Smart Join Error]:',err)
                 end
                 autoJoinBusy=false
             end
-            task.wait(0.25)
+            task.wait(0.12)
         end
     end)
 
-    --========================================================================--
-    --  AUTO STEAL: tracked-egg carry + safe plot placement.
-    --  PlantEgg requires a valid local CFrame on the plot's PetArea; a fixed
-    --  CFrame.new(0,0,0) can point outside a usable placement cell.
-    --========================================================================--
-    -- Game-specific Auto Steal rules. Universe ID 10563114921 is the
-    -- current Steal An Egg experience; FFA=false means target only confirmed
-    -- local field-slot eggs, never carried/dropped/remote feed records.
-    local AUTO_STEAL_GAME_RULES = {
-        [10563114921] = {
-            FFA = false,
-        },
-    }
-    local autoStealGameRules = AUTO_STEAL_GAME_RULES[game.GameId]
-
-    local stealEggState,stealIdentity,stealPlot,stealPlacedEggRenderer
-    pcall(function() stealEggState=module('Client.EggState') end)
-    pcall(function() stealIdentity=module('Shared.Util.AreaEggSlotIdentity') end)
-    pcall(function() stealPlot=module('Client.PlotState') end)
-    pcall(function() stealPlacedEggRenderer=module('Shared.Eggs.PlacedEggRenderer') end)
-
-    local stealDoneFor=nil
-    local pendingPlantUid=nil
-    local pendingPlantSince=0
-    local nextPlantAttemptAt=0
-
-    local stealPathfinding=game:GetService('PathfindingService')
-    local stealAreaStates
-    pcall(function() stealAreaStates=module('Shared.Types.AreaEggs').States end)
-
-    -- Use ordinary Humanoid movement and pathfinding. Direct HRP CFrame warps
-    -- are rejected by this game's movement checks and never count as a real trip.
-    local function walkToPoint(destination,tolerance,timeout)
-        tolerance=tolerance or 5
-        timeout=timeout or 90
-        local character=D.player.Character
-        local humanoid=character and character:FindFirstChildOfClass('Humanoid')
-        local root=character and character:FindFirstChild('HumanoidRootPart')
-        if not (humanoid and root and humanoid.Health>0) then return false,'character is not ready' end
-        if (root.Position-destination).Magnitude<=tolerance then return true end
-
-        local path=stealPathfinding:CreatePath({
-            AgentRadius=2,
-            AgentHeight=5,
-            AgentCanJump=true,
-            WaypointSpacing=6
-        })
-        local computed=pcall(function() path:ComputeAsync(root.Position,destination) end)
-        local waypoints={}
-        if computed and path.Status==Enum.PathStatus.Success then
-            local got,result=pcall(function() return path:GetWaypoints() end)
-            if got and type(result)=='table' then waypoints=result end
-        end
-        -- Some game areas are not fully represented in the navmesh. Keep a
-        -- bounded MoveTo fallback, but never teleport the character.
-        if #waypoints==0 then
-            waypoints={{Position=destination,Action=Enum.PathWaypointAction.Walk}}
-        end
-
-        local deadline=os.clock()+timeout
-        for _,waypoint in ipairs(waypoints) do
-            if not alive or os.clock()>=deadline then return false,'movement timed out' end
-            character=D.player.Character
-            humanoid=character and character:FindFirstChildOfClass('Humanoid')
-            root=character and character:FindFirstChild('HumanoidRootPart')
-            if not (humanoid and root and humanoid.Health>0) then return false,'character was lost during movement' end
-
-            local target=waypoint.Position
-            if (root.Position-target).Magnitude>tolerance then
-                if waypoint.Action==Enum.PathWaypointAction.Jump then humanoid.Jump=true end
-                local reached=false
-                local connection=humanoid.MoveToFinished:Connect(function(ok)
-                    if ok then reached=true end
-                end)
-                humanoid:MoveTo(target)
-                local distance=(root.Position-target).Magnitude
-                local moveDeadline=math.min(deadline,os.clock()+math.clamp(distance/math.max(humanoid.WalkSpeed,8)*2.5+2,3,12))
-                while alive and os.clock()<moveDeadline and not reached do
-                    if not root.Parent or humanoid.Health<=0 then break end
-                    if (root.Position-target).Magnitude<=tolerance then reached=true;break end
-                    task.wait(0.1)
-                end
-                connection:Disconnect()
-                if not reached then return false,'MoveTo did not reach the next waypoint' end
-            end
-        end
-
-        character=D.player.Character
-        root=character and character:FindFirstChild('HumanoidRootPart')
-        return root~=nil and (root.Position-destination).Magnitude<=tolerance,
-            'destination was not reached'
-    end
-
-    local function readCarriedUid(expectedUid)
-        if not stealEggState then return nil end
-        local ok,value=pcall(function()
-            if type(stealEggState.ReadCarryState)=='function' then
-                local carry=stealEggState.ReadCarryState()
-                if type(carry)=='table' and carry.IsCarrying==true then
-                    local uid=tostring(carry.Uid or '')
-                    if uid~='' and (not expectedUid or uid==expectedUid) then return uid end
-                end
-            end
-            if type(stealEggState.ReadFieldEggs)~='function' then return nil end
-            local snapshot=stealEggState.ReadFieldEggs()
-            if type(snapshot)~='table' or type(snapshot.Records)~='table' then return nil end
-            for key,record in pairs(snapshot.Records) do
-                local stateName=tostring(record.State or ''):lower()
-                local carried=(stealAreaStates and record.State==stealAreaStates.Carried)
-                    or stateName:find('carried',1,true)~=nil
-                local uid=tostring(record.Uid or key)
-                local carrier=record.CarrierUserId
-                if carried and (carrier==nil or tonumber(carrier)==D.player.UserId)
-                    and (not expectedUid or uid==expectedUid) then
-                    return uid
-                end
-            end
-            return nil
-        end)
-        return ok and value or nil
-    end
-
-    local function waitForCarriedUid(uid,timeout)
-        local deadline=os.clock()+(timeout or 8)
-        repeat
-            if readCarriedUid(uid)==uid then return true end
-            task.wait(0.2)
-        until not alive or os.clock()>=deadline
-        return false,'server did not confirm that the egg is being carried'
-    end
-
-    -- Match the game's placement rules: raycast onto PetArea, ignore occupied
-    -- cells, then convert the selected point to CenterPoint-local coordinates.
-    local function nextStealPlacementCFrame(plot)
-        local petArea=plot and plot.PetArea
-        if not (petArea and petArea:IsA('BasePart') and plot.CenterPoint) then return nil end
-        if not (stealPlacedEggRenderer and type(stealPlacedEggRenderer.AppendRaycastTargets)=='function') then return nil end
-
-        local half=petArea.Size*0.5
-        local step=4
-        local margin=step*0.5
-        local rayHeight=math.max(half.Y+80,100)
-        local filter={petArea}
-        local appended=pcall(stealPlacedEggRenderer.AppendRaycastTargets,filter,D.player.UserId)
-        if not appended then return nil end
-
-        local params=RaycastParams.new()
-        params.FilterType=Enum.RaycastFilterType.Include
-        params.FilterDescendantsInstances=filter
-        params.IgnoreWater=true
-
-        for localZ=-half.Z+margin,half.Z-margin,step do
-            for localX=-half.X+margin,half.X-margin,step do
-                local localOrigin=Vector3.new(localX,rayHeight,localZ)
-                local localTarget=Vector3.new(localX,-half.Y-5,localZ)
-                local worldOrigin=petArea.CFrame:PointToWorldSpace(localOrigin)
-                local worldTarget=petArea.CFrame:PointToWorldSpace(localTarget)
-                local direction=worldTarget-worldOrigin
-                if direction.Magnitude>=0.01 then
-                    local result=workspace:Raycast(worldOrigin,direction,params)
-                    if result and result.Instance==petArea then
-                        return plot.CenterPoint.CFrame:ToObjectSpace(CFrame.new(result.Position))
-                    end
-                end
-            end
-        end
-        return nil
-    end
-
-    local function carryHome(uid)
-        if not (stealEggState and stealPlot
-            and type(stealEggState.PlantEgg)=='function'
-            and type(stealEggState.WearEggTool)=='function') then
-            return false,'egg equip or placement API unavailable'
-        end
-
-        local plotOk,plot=pcall(stealPlot.ResolvePlot)
-        if not plotOk or not plot then return false,'your plot could not be resolved' end
-
-        local petArea=plot.PetArea
-        local centerPoint=plot.CenterPoint
-        local update=plot.ToUpdate
-        if update and type(update.FindFirstChild)=='function' then
-            petArea=petArea or update:FindFirstChild('PetArea')
-        end
-        if not (petArea and petArea:IsA('BasePart') and centerPoint and centerPoint:IsA('BasePart')) then
-            return false,'your plot PetArea or CenterPoint is unavailable'
-        end
-
-        -- The game's own farm returns to RespawnPointCFrame (or CenterPoint)
-        -- to trigger the carry deposit. Walking to the PetArea's geometric
-        -- center is not equivalent to reaching the game's home/standby point.
-        local homePosition
-        if typeof(plot.RespawnPointCFrame)=='CFrame' then
-            homePosition=plot.RespawnPointCFrame.Position
-        elseif centerPoint:IsA('BasePart') then
-            homePosition=centerPoint.Position
-        end
-        if typeof(homePosition)~='Vector3' then
-            return false,'plot home/standby position is unavailable'
-        end
-
-        local reached,moveReason=walkToPoint(homePosition,6,120)
-        if not reached then return false,'could not reach your plot home: '..tostring(moveReason) end
-
-        local function carryWasCleared()
-            if type(stealEggState.ReadCarryState)=='function' then
-                local stateOk,state=pcall(stealEggState.ReadCarryState)
-                if stateOk and type(state)=='table' then
-                    return state.IsCarrying~=true
-                end
-            end
-            if type(stealEggState.ReadFieldEggs)=='function' then
-                local stateOk,snapshot=pcall(stealEggState.ReadFieldEggs)
-                if stateOk and type(snapshot)=='table' and type(snapshot.Records)=='table' then
-                    for key,record in pairs(snapshot.Records) do
-                        if tostring(record.Uid or key)==uid
-                            and stealAreaStates and record.State==stealAreaStates.Slot then
-                            return true
-                        end
-                    end
-                end
-            end
-            return false
-        end
-
-        local claimDeadline=os.clock()+15
-        local claimed=false
-        repeat
-            if carryWasCleared() then claimed=true;break end
-            task.wait(0.25)
-        until not alive or os.clock()>=claimDeadline
-        if not claimed then return false,'home reached, but the server has not confirmed deposit' end
-
-        local function isEquipped()
-            local character=D.player.Character
-            if not character then return false end
-            for _,child in ipairs(character:GetChildren()) do
-                if child:IsA('Tool') and child:GetAttribute('ItemType')=='AssetEgg'
-                    and tostring(child:GetAttribute('UID') or '')==uid then
-                    return true
-                end
-            end
-            return false
-        end
-
-        local equipped=false
-        local equipReason='egg tool was not equipped'
-        for attempt=1,8 do
-            if isEquipped() then equipped=true;break end
-            local equipOk,equipResult=pcall(stealEggState.WearEggTool,uid)
-            if not equipOk then
-                equipReason=tostring(equipResult)
-            elseif equipResult~=true then
-                equipReason='game did not equip the carried egg'
-            end
-            task.wait(0.3)
-            if isEquipped() then equipped=true;break end
-        end
-        if not equipped then return false,'egg deposited but equip failed: '..equipReason end
-
-        local placement=nextStealPlacementCFrame(plot)
-        if not placement then return false,'no free placement spot found on your plot' end
-
-        local callOk,placed,placeReason=pcall(stealEggState.PlantEgg,uid,placement)
-        if not callOk then return false,tostring(placed) end
-        if placed~=true then return false,tostring(placeReason or 'game did not confirm egg placement') end
-
-        if type(stealEggState.DoffEggTool)=='function' then
-            pcall(stealEggState.DoffEggTool,nil)
-        end
-        return true
-    end
-
-    local function markTrackedEggTaken(uid)
-        if not (joinedEgg and tostring(joinedEgg.uid)==uid) then return end
-        joinedEgg.takenAt=os.time()
-        local saved=table.clone(joinedEgg)
-        saved._lastScanAt=nil
-        saved._missingScans=nil
-        pcall(function() Teleports:SetTeleportSetting(joinedEggSettingKey,saved) end)
-    end
-
-    local function attemptPendingPlant()
-        if not pendingPlantUid or os.clock()<nextPlantAttemptAt then return end
-        nextPlantAttemptAt=os.clock()+1.5
-
-        local planted,reason=carryHome(pendingPlantUid)
-        if planted then
-            local completedUid=pendingPlantUid
-            pendingPlantUid=nil
-            pendingPlantSince=0
-            nextPlantAttemptAt=0
-            stealDoneFor=completedUid
-            markTrackedEggTaken(completedUid)
-            queryStatus='Auto Steal: egg delivered and placed'
-        else
-            -- Keep the confirmed carried UID pending so a temporary path or
-            -- placement failure can retry without attempting to steal another egg.
-            queryStatus='Auto Steal: '..tostring(reason or 'delivery pending')
-        end
-    end
-
-    task.spawn(function()
-        while active do
-            local ok,err=pcall(function()
-                -- Finish an in-progress carry even if the toggle is switched
-                -- off. Recover a carry left over from a previous execution too.
-                if pendingPlantUid then
-                    attemptPendingPlant()
-                    return
-                end
-                if not autoStealEnabled then return end
-                if not autoStealGameRules then
-                    queryStatus='Auto Steal: unsupported Universe ID '..tostring(game.GameId)
-                    return
-                end
-                if not stealEggState then
-                    queryStatus='Auto Steal: EggState module unavailable'
-                    return
-                end
-                if type(stealEggState.CarryFieldEgg)~='function' then
-                    queryStatus='Auto Steal: CarryFieldEgg API unavailable'
-                    return
-                end
-                if type(D.ready)=='function' and not D.ready() then
-                    queryStatus='Auto Steal: waiting for fresh egg scan'
-                    return
-                end
-
-                local alreadyCarried=readCarriedUid()
-                if alreadyCarried then
-                    pendingPlantUid=alreadyCarried
-                    pendingPlantSince=os.clock()
-                    nextPlantAttemptAt=os.clock()+0.35
-                    queryStatus='Auto Steal: delivering egg already in hand'
-                    return
-                end
-
-                local function isAvailableFieldEgg(entry)
-                    if type(entry)~='table' or entry.uid==nil then return false end
-
-                    -- FFA=false is deliberately strict: without a confirmed
-                    -- Slot state, do not treat an unknown/carrying egg as stealable.
-                    if autoStealGameRules.FFA==false and entry.state==nil then return false end
-
-                    if entry.state==nil then return autoStealGameRules.FFA==true end
-                    if stealAreaStates and stealAreaStates.Slot~=nil then
-                        return entry.state==stealAreaStates.Slot
-                    end
-                    return tostring(entry.state):lower():find('slot',1,true)~=nil
-                end
-
-                local target
-                if joinedEgg and not joinedEgg.takenAt and joinedEgg.placeId==game.PlaceId
-                    and joinedEgg.jobId==game.JobId and stealDoneFor~=tostring(joinedEgg.uid) then
-                    for _,egg in ipairs(D.entries()) do
-                        if tostring(egg.uid)==tostring(joinedEgg.uid) and isAvailableFieldEgg(egg) then
-                            target=egg
-                            break
-                        end
-                    end
-                end
-
-                -- Auto Steal works on local field eggs by itself; Auto Join is
-                -- no longer a prerequisite for selecting a target.
-                if not target then
-                    -- Auto Steal chooses the best currently available local egg.
-                    -- Auto Join's value/rank filters are separate settings and do
-                    -- not block Auto Steal from finding a valid target.
-                    local bestRate=0
-                    for _,egg in ipairs(D.entries()) do
-                        local rate=tonumber(egg.rate) or 0
-                        local uid=tostring(egg.uid or '')
-                        local model=egg.model or modelFor(uid)
-                        local hasPosition=typeof(egg.worldPos)=='Vector3'
-                        if isAvailableFieldEgg(egg) and uid~='' and uid~=stealDoneFor
-                            and rate>bestRate and ((model and model.Parent) or hasPosition) then
-                            target=egg
-                            bestRate=rate
-                        end
-                    end
-                end
-
-                if not target then
-                    queryStatus='Auto Steal: waiting for eligible local egg'
-                    return
-                end
-
-                local uid=tostring(target.uid)
-                local model=target.model or modelFor(uid)
-                if not (model and model.Parent) and typeof(target.worldPos)~='Vector3' then
-                    queryStatus='Auto Steal: egg position is not replicated yet'
-                    return
-                end
-
-                local character=D.player.Character
-                local root=character and character:FindFirstChild('HumanoidRootPart')
-                if not root then
-                    queryStatus='Auto Steal: character is not ready'
-                    return
-                end
-
-                local targetPosition=(model and model.Parent and model:GetPivot().Position) or target.worldPos
-                local flat=Vector3.new(root.Position.X-targetPosition.X,0,root.Position.Z-targetPosition.Z)
-                if flat.Magnitude<0.1 then flat=Vector3.new(0,0,1) else flat=flat.Unit end
-                local approach=targetPosition+flat*4.5+Vector3.new(0,2.5,0)
-                local reached,moveReason=walkToPoint(approach,5,120)
-                if not reached then
-                    queryStatus='Auto Steal: could not reach egg: '..tostring(moveReason)
-                    return
-                end
-
-                character=D.player.Character
-                root=character and character:FindFirstChild('HumanoidRootPart')
-                local humanoid=character and character:FindFirstChildOfClass('Humanoid')
-                if not (root and humanoid and humanoid.Health>0) or (root.Position-targetPosition).Magnitude>8 then
-                    queryStatus='Auto Steal: egg is outside carry range'
-                    return
-                end
-
-                -- Match the game's pickup sync: remain close and issue short
-                -- MoveTo updates before asking the server to carry the egg.
-                for _=1,4 do
-                    character=D.player.Character
-                    root=character and character:FindFirstChild('HumanoidRootPart')
-                    humanoid=character and character:FindFirstChildOfClass('Humanoid')
-                    if not (root and humanoid and humanoid.Health>0)
-                        or (root.Position-targetPosition).Magnitude>8 then
-                        queryStatus='Auto Steal: lost pickup range during sync'
-                        return
-                    end
-                    humanoid:MoveTo(targetPosition)
-                    task.wait(0.12)
-                end
-
-                local slotKey
-                if stealIdentity and target.areaKey and target.nestId
-                    and stealIdentity.LooksLikeFirstAreaUid(uid) then
-                    slotKey=stealIdentity.SlotKey(target.areaKey,target.nestId)
-                end
-
-                local callOk,carried,carryReason=pcall(stealEggState.CarryFieldEgg,uid,slotKey)
-                if not callOk then
-                    queryStatus='Auto Steal: carry call failed: '..tostring(carried)
-                    return
-                end
-                if carried~=true then
-                    queryStatus='Auto Steal: '..tostring(carryReason or 'game rejected carry request')
-                    return
-                end
-
-                local confirmed,confirmReason=waitForCarriedUid(uid,8)
-                if not confirmed then
-                    queryStatus='Auto Steal: '..tostring(confirmReason)
-                    return
-                end
-
-                pendingPlantUid=uid
-                pendingPlantSince=os.clock()
-                nextPlantAttemptAt=os.clock()+0.35
-                queryStatus='Auto Steal: carrying confirmed; returning to PetArea'
-            end)
-            if not ok then
-                queryStatus='Auto Steal error: '..tostring(err)
-                warn('UNKNOWN auto steal:',err)
-            end
-            task.wait(0.75)
-        end
-    end)
+    -- [Auto Steal removed]
 
     local lastRender
     local rarityColors={
@@ -2268,32 +2966,11 @@ local function createFinder(D)
     -- Header title and subtitle styling.
     heading.Text='MARVIN'
     heading.AnchorPoint=Vector2.new(0.5,0)
-    heading.Position=UDim2.new(0.5,-10,0,2);heading.Size=UDim2.new(1,-112,0,24)
+    heading.Position=UDim2.new(0.5,0,0,14);heading.Size=UDim2.fromOffset(130,26)
     heading.TextXAlignment=Enum.TextXAlignment.Center
-    heading.Font=Enum.Font.Arcade;heading.TextTransparency=0
-    discordSubtitle.AnchorPoint=Vector2.new(0,0)
-    discordSubtitle.Position=UDim2.fromOffset(100,27);discordSubtitle.Size=UDim2.new(1,-112,0,14)
-    discordSubtitle.TextXAlignment=Enum.TextXAlignment.Left
-    do
-        local service=game:GetService('TextService')
-        heading.Font=discordSubtitle.Font
-        local available=(panel.Size.X.Offset>0 and panel.Size.X.Offset or 402)-100
-        local fontSize=22
-        local textWidth
-        repeat
-            textWidth=math.ceil(service:GetTextSize(heading.Text,fontSize,discordSubtitle.Font,Vector2.new(1000,1000)).X)+4
-            if textWidth<=available or fontSize<=14 then break end
-            fontSize-=1
-        until false
-        heading.AnchorPoint=Vector2.new(0.5,0);heading.Position=UDim2.new(0.5,0,0,1);heading.Size=UDim2.fromOffset(textWidth,26)
-        heading.TextSize=fontSize;heading.TextScaled=false;heading.TextXAlignment=Enum.TextXAlignment.Center;heading.TextStrokeTransparency=1
-        local limit=heading:FindFirstChildOfClass('UITextSizeConstraint');if limit then limit.MaxTextSize=22 end
-        D.make('UIStroke',{Color=Color3.new(0,0,0),Thickness=1.4},heading)
-        discordSubtitle.TextSize=14;discordSubtitle.TextScaled=true;discordSubtitle.Size=UDim2.new(1,-112,0,16)
-        discordSubtitle.AnchorPoint=Vector2.new(0,0);discordSubtitle.Position=UDim2.fromOffset(100,27);discordSubtitle.TextXAlignment=Enum.TextXAlignment.Left;discordSubtitle.TextStrokeTransparency=1
-        local discordLimit=discordSubtitle:FindFirstChildOfClass('UITextSizeConstraint');if discordLimit then discordLimit.MaxTextSize=14 end
-        D.make('UIStroke',{Color=Color3.new(0,0,0),Thickness=1.3},discordSubtitle)
-    end
+    heading.Font=Enum.Font.GothamBlack;heading.TextTransparency=0
+    heading.TextSize=22;heading.TextScaled=false;heading.TextStrokeTransparency=1
+    discordSubtitle.Visible=false
     refreshButton.Font=Enum.Font.FredokaOne
     local refreshCaption=refreshButton:FindFirstChild('RaisedCaption')
     if refreshCaption then
@@ -2502,9 +3179,8 @@ local function createFinder(D)
         return result
     end
     local function fitFinanceText(card)
-        local listWidth=list.AbsoluteSize.X>0 and list.AbsoluteSize.X or panel.Size.X.Offset*0.68
-        local rowWidth=listWidth-28
-        local width=rowWidth-220
+        local rowWidth=panel.Size.X.Offset-28
+        local width=rowWidth-184
         local service=game:GetService('TextService')
         local weightSize=type(card.entry.weight)=='number' and 16 or 19
         local weightAvailable=width*0.46-10
@@ -2841,7 +3517,12 @@ local function createFinder(D)
                 {Rotation=180})
             cardMotion:Play()
             table.insert(starTweens,cardMotion)
-            D.make('UIStroke',{Color=Theme.accent,Transparency=0.48,Thickness=1.2,ApplyStrokeMode=Enum.ApplyStrokeMode.Border},row)
+            local cardStroke=D.make('UIStroke',{Color=Theme.accent,Transparency=0.48,Thickness=1.2,ApplyStrokeMode=Enum.ApplyStrokeMode.Border},row)
+            pcall(function()
+                if designEngine then
+                    designEngine:adaptEggCard(row, cardGradient, cardStroke, i == 1)
+                end
+            end)
             D.make('Frame',{Name='CardAccentRail',Position=UDim2.fromOffset(0,12),Size=UDim2.fromOffset(3,84),BackgroundColor3=Theme.cyan,BackgroundTransparency=0.08,BorderSizePixel=0,Active=false},row)
             D.make('Frame',{Name='CardBevelTop',Position=UDim2.fromOffset(3,1),Size=UDim2.new(1,-6,0,1),BackgroundColor3=Color3.fromRGB(235,230,255),BackgroundTransparency=0.55,BorderSizePixel=0,Active=false},row)
             D.make('Frame',{Name='CardBevelBottom',Position=UDim2.new(0,3,1,-2),Size=UDim2.new(1,-6,0,1),BackgroundColor3=Color3.fromRGB(10,6,22),BackgroundTransparency=0,BorderSizePixel=0,Active=false},row)
@@ -2925,8 +3606,7 @@ local function createFinder(D)
             end
 
             local names=mutationNames(entry)
-            local listWidth=list.AbsoluteSize.X>0 and list.AbsoluteSize.X or panel.Size.X.Offset*0.68
-            local available=math.max(100,listWidth-130)
+            local available=math.max(100,panel.Size.X.Offset-130)
             local widths,total={},0
             for i,name in ipairs(names) do widths[i]=mutationWidth(name,textService,available);total+=widths[i]+5 end
             local strip=D.make('Frame',{Name='MutationStrip',Position=UDim2.new(0,110,1,-29),Size=UDim2.new(1,-218,0,28),BackgroundTransparency=1,ClipsDescendants=true},row)
@@ -2969,38 +3649,40 @@ local function createFinder(D)
                 if (os.clock()+clockOffset)*1000>=entry.expiresAt then
                     joining=false;joiningKey=nil;feedAt=-math.huge;render();return
                 end
-                if not config then joining=false;joiningKey=nil;queryStatus='Finder not connected';return end
-                local claim,claimError=network(config.endpoint..'/v1/join','POST',Http:JSONEncode({placeId=entry.placeId,jobId=entry.jobId,uid=entry.uid,reporterId=reporterId,userId=D.player.UserId}),headers())
-                if claim and claim.allowed~=true and (claim.unavailable or claim.full) then
-                    joining=false;joiningKey=nil;entry.full=true;entry.unavailable=claim.unavailable==true;entry.takenConfirmed=claim.takenConfirmed==true;lastRender=nil
-                    queryStatus='Egg no longer available';render();return
-                end
-                if not claim or claim.allowed~=true then
-                    joining=false;joiningKey=nil;feedAt=-math.huge
-                    if claim and not claim.retryable then
-                        for _,item in ipairs(feed) do if item.jobId==entry.jobId then item.full=true end end
-                        render()
-                    end
-                    queryStatus=claim and (claim.error or 'Server reserved; choose another') or ('Join reservation failed: '..tostring(claimError))
-                    return
-                end
-                -- Best-effort background report; never block a successful JOIN on reporting.
+                -- Non-blocking background claim: zero waiting!
                 task.spawn(function()
-                    local shared,shareError=report()
-                    if not shared then warn('Pre-teleport report: '..tostring(shareError)) end
+                    pcall(function()
+                        if config and config.endpoint then
+                            requestFn({
+                                Url=config.endpoint..'/v1/join',
+                                Method='POST',
+                                Headers=headers(),
+                                Body=Http:JSONEncode({placeId=entry.placeId,jobId=entry.jobId,uid=entry.uid,reporterId=reporterId,userId=D.player.UserId}),
+                                Timeout=3
+                            })
+                        end
+                    end)
                 end)
-                local joinExpiry=math.min(entry.expiresAt,tonumber(claim.expiresAt) or entry.expiresAt)
-                if (os.clock()+clockOffset)*1000>=joinExpiry then
-                    joining=false;joiningKey=nil;feedAt=-math.huge;entry.expiresAt=joinExpiry;render()
-                    queryStatus='Reset reached; refreshing';return
-                end
+
+                pcall(function() Teleports:SetTeleportSetting('UNKNOWNLastTargetJobId',entry.jobId) end)
                 queueAutoExecute()
                 D.saveGuiBeforeTeleport()
                 D.stopFarm()
                 rememberJoinedEgg(entry)
+                pcall(function()
+                    if designEngine then
+                        designEngine:stopAllGradientAnimations()
+                    end
+                end)
+                active = false
                 local ok,err=pcall(function() Teleports:TeleportToPlaceInstance(entry.placeId,entry.jobId,D.player) end)
-                if not ok then queryStatus='Join failed: '..tostring(err); joining=false;joiningKey=nil end
-                task.delay(12,function() joining=false;joiningKey=nil end)
+                if not ok then
+                    active = true
+                    queryStatus='Join failed: '..tostring(err)
+                    joining=false;joiningKey=nil
+                    failedJobIds[entry.jobId]=os.clock()+180
+                end
+                task.delay(10,function() joining=false;joiningKey=nil end)
             end)
             end
             card.entry=entry
@@ -3185,53 +3867,21 @@ local function createFinder(D)
         paint()
     end
 
-    local function applyDesktopLayout()
-        settingsButton.Position=UDim2.fromOffset(16,18)
-        settingsButton.Size=UDim2.fromOffset(112,42)
-        status.Position=UDim2.fromOffset(18,52)
-        status.Size=UDim2.new(1,-250,0,28)
-        status.TextSize=14
-        status.TextXAlignment=Enum.TextXAlignment.Left
-        refreshButton.Position=UDim2.new(1,-218,0,48)
-        refreshButton.Size=UDim2.fromOffset(200,38)
-        refreshButton.TextSize=16
-
-        scope.Position=UDim2.new(0,14,1,-84)
-        scope.Size=UDim2.fromOffset(260,54)
-        myScope.Position=UDim2.new(0,284,1,-84)
-        myScope.Size=UDim2.fromOffset(260,54)
-        serversValueFrame.Position=UDim2.new(0,554,1,-84)
-        serversValueFrame.Size=UDim2.fromOffset(270,54)
-        serversValueInput.Position=UDim2.new(0.64,0,0,4)
-        serversValueInput.Size=UDim2.new(0.36,-8,1,-8)
-        serversValueLabel.TextSize=12
-        minValueFrame.Position=UDim2.new(0,834,1,-84)
-        minValueFrame.Size=UDim2.fromOffset(270,54)
-        minValueInput.Position=UDim2.new(0.64,0,0,4)
-        minValueInput.Size=UDim2.new(0.36,-8,1,-8)
-        minValueLabel.TextSize=12
-        autoJoinButton.Position=UDim2.new(0,1114,1,-84)
-        autoJoinButton.Size=UDim2.new(1,-1128,0,54)
-        autoJoinButton.TextSize=16
-
-        -- Keep the left data column clear and reserve the right column for the portrait.
-        list.Position=UDim2.fromOffset(14,100)
-        list.Size=UDim2.new(0.68,-24,1,-206)
-        list.ScrollBarThickness=8
-        list.ScrollBarImageColor3=Theme.cyan
-        list.BackgroundTransparency=1
-    end
-
     fitFinder()
-    applyDesktopLayout()
     panel.Visible=true
     local failed=Teleports.TeleportInitFailed:Connect(function(who,_,message)
         if who==D.player then
             joining=false;queryStatus='Join failed: '..tostring(message)
-            if autoJoinEnabled and autoJoinCandidateIndex<=#autoJoinCandidates then
+            pcall(function()
+                local lastTarget=Teleports:GetTeleportSetting('UNKNOWNLastTargetJobId')
+                if type(lastTarget)=='string' and lastTarget~='' then
+                    failedJobIds[lastTarget]=os.clock()+180
+                end
+            end)
+            if autoJoinEnabled then
                 autoJoinCandidateIndex+=1
                 autoJoinRetryRequested=true
-                queryStatus='Auto Join: teleport failed; trying the next candidate'
+                queryStatus='Smart Join: server was full ('..tostring(message)..'), hopping to next server...'
             end
         end
     end)
@@ -3329,7 +3979,7 @@ local function run()
     end
     local lastScan=0
     finderCreating = true
-    createFinder({gui=gui,localPanel={Visible=false},player=player,make=make,label=label,entries=function() return os.clock()-lastScan<10 and latestEntries or {} end,metadata=function() return latestMetadata end,ready=function() return lastScan>0 and os.clock()-lastScan<10 end,parseValue=parseValue,money=money,stopFarm=function() end})
+    createFinder({gui=gui,localPanel={Visible=false},player=player,make=make,label=label,eggState=EggState,entries=function() return os.clock()-lastScan<10 and latestEntries or {} end,metadata=function() return latestMetadata end,ready=function() return lastScan>0 and os.clock()-lastScan<10 end,parseValue=parseValue,money=money,stopFarm=function() end})
     if startupNotice and startupNotice.Parent then startupNotice:Destroy() end
     local notified={}
     while alive do
@@ -3403,177 +4053,260 @@ end
 end)
 end
 
+
+
 --============================================================================--
---  [7] KEY GATE - glass key window. Validates against the Cloudflare endpoint,
---      caches accepted keys locally and rechecks them while the Finder runs.
+--  [7] ROYAL KEY GATE - 24-HOUR LINKVERTISE AD-KEY SYSTEM
+--      Connects to Linkvertise Ad: https://direct-link.net/3852708/7hzx0OtX0UJe
+--      Features: Rotating 360° Royal Crown, 1-Click Get Key, Dynamic Keys
+--      via keys.json, 24-Hour Auth Persistence, and Smooth Launch.
 --============================================================================--
+
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
-local player = Players.LocalPlayer
-if not player then return end
-local VERIFY_URL = "https://unknown.unknownsystem.workers.dev/validate"
+local Tweens = game:GetService("TweenService")
+local CoreGui = game:GetService("CoreGui")
 
+if not game:IsLoaded() then
+    game.Loaded:Wait()
+end
+
+local player = Players.LocalPlayer
+local playerDeadline = os.clock() + 60
+while not player and os.clock() < playerDeadline do
+    task.wait(0.1)
+    player = Players.LocalPlayer
+end
+if not player then return end
 
 local function launchUnknown()
     local runtimeEnv = _G
     pcall(function()
         if type(getgenv) == "function" then runtimeEnv = getgenv() end
     end)
-    local runningJob = "__UNKNOWN_RUNNING_JOB"
+    local runningJob = "__MARVIN_RUNNING_JOB"
     if type(runtimeEnv) == "table" and runtimeEnv[runningJob] == game.JobId then return end
     if type(runtimeEnv) == "table" then runtimeEnv[runningJob] = game.JobId end
 
     local loadOk, loadError = pcall(startUnknown)
     if not loadOk then
         if type(runtimeEnv) == "table" then runtimeEnv[runningJob] = nil end
-        warn("[UNKNOWN] Finder startup failed: " .. tostring(loadError))
+        warn("[MARVIN] Startup failed: " .. tostring(loadError))
     end
 end
 
-local function httpRequest(options)
-    local req = request or http_request or (syn and syn.request)
-    if type(req) == "function" then
-        return req(options)
+-- Key Configuration
+local AD_GET_KEY_URL = "https://direct-link.net/3852708/7hzx0OtX0UJe"
+local KEYS_JSON_URL = "https://raw.githubusercontent.com/farsazzat1113/marvin/Marvin/keys.json"
+local DEFAULT_DURATION = 86400 -- 24 hours in seconds
+local AUTH_SAVE_FILE = "marvin_key_auth.json"
+
+local activeKeys = {
+    ["MARVIN-KEY-VIP"] = true,
+    ["MARVIN-VIP-2026"] = true,
+    ["MARVIN-24H"] = true,
+    ["MARVIN"] = true,
+    ["marvin"] = true,
+}
+
+-- Fetch remote keys dynamically from GitHub so you can update keys anytime without touching code
+pcall(function()
+    local res = game:HttpGet(KEYS_JSON_URL .. "?v=" .. tostring(os.time()))
+    if res and res ~= "" then
+        local data = HttpService:JSONDecode(res)
+        if type(data) == "table" then
+            if type(data.adLink) == "string" and data.adLink ~= "" then
+                AD_GET_KEY_URL = data.adLink
+            end
+            if type(data.durationSeconds) == "number" and data.durationSeconds > 0 then
+                DEFAULT_DURATION = data.durationSeconds
+            end
+            if type(data.keys) == "table" then
+                for _, k in ipairs(data.keys) do
+                    if type(k) == "string" and k ~= "" then
+                        activeKeys[k:upper()] = true
+                        activeKeys[k] = true
+                    end
+                end
+            end
+        end
     end
-    error("Your executor does not expose a supported HTTP request function.")
+end)
+
+local function isKeyValid(candidate)
+    if type(candidate) ~= "string" then return false end
+    local clean = candidate:gsub("^%s+", ""):gsub("%s+$", "")
+    if clean == "" then return false end
+    return activeKeys[clean] == true or activeKeys[clean:upper()] == true
 end
 
---== Key gate window: a centered glass card with a gradient border ==--
-local Tweens = game:GetService("TweenService")
+-- Check for saved 24-hour authentication
+if type(readfile) == "function" and type(isfile) == "function" then
+    local authenticated = false
+    pcall(function()
+        if isfile(AUTH_SAVE_FILE) then
+            local raw = readfile(AUTH_SAVE_FILE)
+            local data = HttpService:JSONDecode(raw)
+            if type(data) == "table" and type(data.key) == "string" and type(data.expiresAt) == "number" then
+                if os.time() < data.expiresAt and isKeyValid(data.key) then
+                    authenticated = true
+                    launchUnknown()
+                end
+            end
+        end
+    end)
+    if authenticated then return end
+end
 
+-- Helper to copy text to clipboard across executors
+local function copyToClipboard(text)
+    local copied = false
+    pcall(function()
+        if type(setclipboard) == "function" then
+            setclipboard(text)
+            copied = true
+        elseif type(to_clipboard) == "function" then
+            to_clipboard(text)
+            copied = true
+        elseif type(Clipboard) == "table" and type(Clipboard.set) == "function" then
+            Clipboard.set(text)
+            copied = true
+        elseif syn and type(syn.write_clipboard) == "function" then
+            syn.write_clipboard(text)
+            copied = true
+        end
+    end)
+    return copied
+end
+
+-- Key Gate UI
 local gui = Instance.new("ScreenGui")
-gui.Name = "UNKNOWN_KeySystem"
+gui.Name = "MARVIN_KeyGate"
 gui.ResetOnSpawn = false
 gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-gui.DisplayOrder = 1100
+gui.DisplayOrder = 1200
 
 local parent
 pcall(function()
-    if type(gethui) == "function" then parent = gethui() end
+    if type(gethui) == "function" then
+        parent = gethui()
+    elseif CoreGui:FindFirstChild("RobloxGui") then
+        parent = CoreGui.RobloxGui
+    else
+        parent = CoreGui
+    end
 end)
 if not parent then
-    parent = player:WaitForChild("PlayerGui", 60)
+    parent = player:WaitForChild("PlayerGui")
 end
-assert(parent, "Key UI could not find a GUI parent")
 gui.Parent = parent
 
 local frame = Instance.new("Frame")
-frame.Name = "Main"
-frame.Size = UDim2.fromOffset(356, 230)
-frame.Position = UDim2.new(0.5, -178, 0.5, -115)
-frame.BackgroundColor3 = Color3.fromRGB(12, 9, 24)
-frame.BackgroundTransparency = 0.04
+frame.Name = "Card"
+frame.Size = UDim2.fromOffset(380, 280)
+frame.Position = UDim2.fromScale(0.5, 0.5)
+frame.AnchorPoint = Vector2.new(0.5, 0.5)
+frame.BackgroundColor3 = Color3.fromRGB(15, 11, 28)
+frame.BackgroundTransparency = 0.05
 frame.BorderSizePixel = 0
 frame.Active = true
 frame.Draggable = true
 frame.Parent = gui
 
 local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0, 16)
+corner.CornerRadius = UDim.new(0, 14)
 corner.Parent = frame
 
 local stroke = Instance.new("UIStroke")
 stroke.Color = Color3.fromRGB(147, 92, 255)
-stroke.Thickness = 1.5
-stroke.Transparency = 0.18
+stroke.Thickness = 1.2
+stroke.Transparency = 0.35
 stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 stroke.Parent = frame
 
-local strokeGradient = Instance.new("UIGradient")
-strokeGradient.Rotation = 55
-strokeGradient.Color = ColorSequence.new(Color3.fromRGB(147, 92, 255), Color3.fromRGB(56, 205, 255))
-strokeGradient.Parent = stroke
+-- Rotating Royal Crown
+local crownLabel = Instance.new("TextLabel")
+crownLabel.Name = "RoyalCrown"
+crownLabel.Size = UDim2.fromOffset(32, 32)
+crownLabel.Position = UDim2.new(0.5, -16, 0, 10)
+crownLabel.BackgroundTransparency = 1
+crownLabel.Text = "👑"
+crownLabel.TextSize = 22
+crownLabel.Font = Enum.Font.GothamBold
+crownLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
+crownLabel.TextXAlignment = Enum.TextXAlignment.Center
+crownLabel.TextYAlignment = Enum.TextYAlignment.Center
+crownLabel.Parent = frame
 
-local frameSheen = Instance.new("UIGradient")
-frameSheen.Rotation = 95
-frameSheen.Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(150, 138, 190))
-frameSheen.Parent = frame
+local crownRot = 0
+local crownConn = game:GetService("RunService").RenderStepped:Connect(function(dt)
+    if not crownLabel or not crownLabel.Parent then return end
+    crownRot = (crownRot + dt * 90) % 360
+    crownLabel.Rotation = crownRot
+    crownLabel.Position = UDim2.new(0.5, -16, 0, 10 + math.sin(os.clock() * 3.5) * 2.5)
+end)
 
--- Soft purple ring hugging the outside edge of the card.
-local edgeGlow = Instance.new("Frame")
-edgeGlow.Name = "EdgeGlow"
-edgeGlow.BackgroundTransparency = 1
-edgeGlow.BorderSizePixel = 0
-edgeGlow.Position = UDim2.fromOffset(-4, -4)
-edgeGlow.Size = UDim2.new(1, 8, 1, 8)
-edgeGlow.ZIndex = 0
-edgeGlow.Active = false
-edgeGlow.Parent = frame
-
-local edgeGlowCorner = Instance.new("UICorner")
-edgeGlowCorner.CornerRadius = UDim.new(0, 20)
-edgeGlowCorner.Parent = edgeGlow
-
-local edgeGlowStroke = Instance.new("UIStroke")
-edgeGlowStroke.Color = Color3.fromRGB(147, 92, 255)
-edgeGlowStroke.Thickness = 6
-edgeGlowStroke.Transparency = 0.84
-edgeGlowStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-edgeGlowStroke.Parent = edgeGlow
-
--- Title + fading accent underline + centered subtitle.
 local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, -24, 0, 34)
-title.Position = UDim2.fromOffset(12, 14)
+title.Size = UDim2.new(1, -40, 0, 22)
+title.Position = UDim2.fromOffset(20, 42)
 title.BackgroundTransparency = 1
-title.Text = "MARVIN"
+title.Text = "MARVIN KEY SYSTEM"
 title.TextColor3 = Color3.fromRGB(246, 242, 255)
 title.Font = Enum.Font.GothamBold
-title.TextSize = 24
+title.TextSize = 16
 title.TextXAlignment = Enum.TextXAlignment.Center
 title.Parent = frame
 
-local titleGradient = Instance.new("UIGradient")
-titleGradient.Rotation = 0
-titleGradient.Color = ColorSequence.new(Color3.fromRGB(255, 255, 255), Color3.fromRGB(196, 164, 255))
-titleGradient.Parent = title
-
-local underline = Instance.new("Frame")
-underline.Name = "TitleUnderline"
-underline.BorderSizePixel = 0
-underline.BackgroundColor3 = Color3.fromRGB(147, 92, 255)
-underline.Position = UDim2.new(0.5, -52, 0, 52)
-underline.Size = UDim2.fromOffset(104, 2)
-underline.Active = false
-underline.Parent = frame
-
-local underlineCorner = Instance.new("UICorner")
-underlineCorner.CornerRadius = UDim.new(1, 0)
-underlineCorner.Parent = underline
-
-local underlineGradient = Instance.new("UIGradient")
-underlineGradient.Rotation = 0
-underlineGradient.Transparency = NumberSequence.new({
-    NumberSequenceKeypoint.new(0, 1),
-    NumberSequenceKeypoint.new(0.5, 0),
-    NumberSequenceKeypoint.new(1, 1),
-})
-underlineGradient.Parent = underline
-
 local subtitle = Instance.new("TextLabel")
-subtitle.Size = UDim2.new(1, -24, 0, 20)
-subtitle.Position = UDim2.fromOffset(12, 60)
+subtitle.Size = UDim2.new(1, -40, 0, 16)
+subtitle.Position = UDim2.fromOffset(20, 66)
 subtitle.BackgroundTransparency = 1
-subtitle.Text = "Enter your access key to continue"
+subtitle.Text = "Get your 24-hour key by completing Linkvertise ads"
 subtitle.TextColor3 = Color3.fromRGB(172, 160, 202)
 subtitle.Font = Enum.Font.Gotham
-subtitle.TextSize = 12
+subtitle.TextSize = 11
 subtitle.TextXAlignment = Enum.TextXAlignment.Center
 subtitle.Parent = frame
 
--- Glass input field; the border lights up cyan while focused.
+-- GET KEY (ADS) Button
+local getKeyBtn = Instance.new("TextButton")
+getKeyBtn.Size = UDim2.new(1, -40, 0, 36)
+getKeyBtn.Position = UDim2.fromOffset(20, 92)
+getKeyBtn.BackgroundColor3 = Color3.fromRGB(16, 185, 129)
+getKeyBtn.BorderSizePixel = 0
+getKeyBtn.Text = "GET KEY (ADS) 🔗"
+getKeyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+getKeyBtn.Font = Enum.Font.GothamBold
+getKeyBtn.TextSize = 13
+getKeyBtn.AutoButtonColor = false
+getKeyBtn.Parent = frame
+
+local getKeyCorner = Instance.new("UICorner")
+getKeyCorner.CornerRadius = UDim.new(0, 10)
+getKeyCorner.Parent = getKeyBtn
+
+local getKeyGrad = Instance.new("UIGradient")
+getKeyGrad.Rotation = 25
+getKeyGrad.Color = ColorSequence.new(Color3.fromRGB(16, 185, 129), Color3.fromRGB(14, 165, 233))
+getKeyGrad.Parent = getKeyBtn
+
+local getKeyScale = Instance.new("UIScale")
+getKeyScale.Scale = 1
+getKeyScale.Parent = getKeyBtn
+
+-- Glass key input field
 local keyBox = Instance.new("TextBox")
-keyBox.Size = UDim2.new(1, -40, 0, 42)
-keyBox.Position = UDim2.fromOffset(20, 92)
+keyBox.Size = UDim2.new(1, -40, 0, 38)
+keyBox.Position = UDim2.fromOffset(20, 136)
 keyBox.BackgroundColor3 = Color3.fromRGB(24, 17, 44)
-keyBox.BackgroundTransparency = 0.08
+keyBox.BackgroundTransparency = 0.1
 keyBox.BorderSizePixel = 0
-keyBox.PlaceholderText = "TF-XXXX-XXXX"
+keyBox.PlaceholderText = "Paste your 24h key here..."
 keyBox.PlaceholderColor3 = Color3.fromRGB(126, 116, 152)
 keyBox.Text = ""
 keyBox.TextColor3 = Color3.fromRGB(246, 242, 255)
 keyBox.Font = Enum.Font.GothamBold
-keyBox.TextSize = 14
+keyBox.TextSize = 13
 keyBox.ClearTextOnFocus = false
 keyBox.Parent = frame
 
@@ -3597,55 +4330,35 @@ keyBox.FocusLost:Connect(function()
     boxStroke.Transparency = 0.45
 end)
 
--- Gradient call-to-action with a subtle hover/press scale.
-local verifyButton = Instance.new("TextButton")
-verifyButton.Size = UDim2.new(1, -40, 0, 40)
-verifyButton.Position = UDim2.fromOffset(20, 146)
-verifyButton.BackgroundColor3 = Color3.fromRGB(120, 62, 220)
-verifyButton.BorderSizePixel = 0
-verifyButton.Text = "VERIFY KEY"
-verifyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-verifyButton.Font = Enum.Font.GothamBold
-verifyButton.TextSize = 14
-verifyButton.AutoButtonColor = false
-verifyButton.Parent = frame
+-- VERIFY KEY Button
+local verifyBtn = Instance.new("TextButton")
+verifyBtn.Size = UDim2.new(1, -40, 0, 38)
+verifyBtn.Position = UDim2.fromOffset(20, 182)
+verifyBtn.BackgroundColor3 = Color3.fromRGB(120, 62, 220)
+verifyBtn.BorderSizePixel = 0
+verifyBtn.Text = "VERIFY KEY ⚡"
+verifyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+verifyBtn.Font = Enum.Font.GothamBold
+verifyBtn.TextSize = 14
+verifyBtn.AutoButtonColor = false
+verifyBtn.Parent = frame
 
-local buttonCorner = Instance.new("UICorner")
-buttonCorner.CornerRadius = UDim.new(0, 10)
-buttonCorner.Parent = verifyButton
+local btnCorner = Instance.new("UICorner")
+btnCorner.CornerRadius = UDim.new(0, 10)
+btnCorner.Parent = verifyBtn
 
-local buttonGradient = Instance.new("UIGradient")
-buttonGradient.Rotation = 25
-buttonGradient.Color = ColorSequence.new(Color3.fromRGB(168, 85, 247), Color3.fromRGB(124, 58, 237))
-buttonGradient.Parent = verifyButton
+local btnGrad = Instance.new("UIGradient")
+btnGrad.Rotation = 25
+btnGrad.Color = ColorSequence.new(Color3.fromRGB(168, 85, 247), Color3.fromRGB(124, 58, 237))
+btnGrad.Parent = verifyBtn
 
-local buttonStroke = Instance.new("UIStroke")
-buttonStroke.Color = Color3.fromRGB(213, 96, 255)
-buttonStroke.Thickness = 1
-buttonStroke.Transparency = 0.35
-buttonStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-buttonStroke.Parent = verifyButton
-
-local buttonScale = Instance.new("UIScale")
-buttonScale.Scale = 1
-buttonScale.Parent = verifyButton
-
-verifyButton.MouseEnter:Connect(function()
-    Tweens:Create(buttonScale, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 1.03}):Play()
-end)
-verifyButton.MouseLeave:Connect(function()
-    Tweens:Create(buttonScale, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 1}):Play()
-end)
-verifyButton.MouseButton1Down:Connect(function()
-    Tweens:Create(buttonScale, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 0.97}):Play()
-end)
-verifyButton.MouseButton1Up:Connect(function()
-    Tweens:Create(buttonScale, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 1.03}):Play()
-end)
+local btnScale = Instance.new("UIScale")
+btnScale.Scale = 1
+btnScale.Parent = verifyBtn
 
 local status = Instance.new("TextLabel")
-status.Size = UDim2.new(1, -40, 0, 20)
-status.Position = UDim2.fromOffset(20, 194)
+status.Size = UDim2.new(1, -40, 0, 18)
+status.Position = UDim2.fromOffset(20, 230)
 status.BackgroundTransparency = 1
 status.Text = "Waiting for key..."
 status.TextColor3 = Color3.fromRGB(172, 160, 202)
@@ -3654,120 +4367,93 @@ status.TextSize = 11
 status.TextXAlignment = Enum.TextXAlignment.Center
 status.Parent = frame
 
--- Entrance: a short Back-eased pop.
+-- Interactive button hover/press effects
+local function setupHover(btn, scaleObj)
+    btn.MouseEnter:Connect(function()
+        Tweens:Create(scaleObj, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 1.02}):Play()
+    end)
+    btn.MouseLeave:Connect(function()
+        Tweens:Create(scaleObj, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 1}):Play()
+    end)
+    btn.MouseButton1Down:Connect(function()
+        Tweens:Create(scaleObj, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 0.98}):Play()
+    end)
+    btn.MouseButton1Up:Connect(function()
+        Tweens:Create(scaleObj, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 1.02}):Play()
+    end)
+end
+setupHover(getKeyBtn, getKeyScale)
+setupHover(verifyBtn, btnScale)
+
+-- Entrance animation
 local introScale = Instance.new("UIScale")
 introScale.Scale = 0.92
 introScale.Parent = frame
 Tweens:Create(introScale, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
 
-local busy = false
-
-local function setStatus(message, color)
-    status.Text = message
-    status.TextColor3 = color or Color3.fromRGB(160, 160, 175)
-end
-
-local function verifyKey()
-    if busy then return end
-
-    local key = keyBox.Text:gsub("^%s+", ""):gsub("%s+$", "")
-    if key == "" then
-        setStatus("Please enter your key.", Color3.fromRGB(255, 190, 90))
-        return
-    end
-
-    busy = true
-    verifyButton.Text = "CHECKING..."
-    setStatus("Checking key with server...")
-
-    local ok, response = pcall(function()
-        return httpRequest({
-            Url = VERIFY_URL,
-            Method = "POST",
-            Headers = {
-                ["Content-Type"] = "application/json"
-            },
-            Body = HttpService:JSONEncode({ key = key })
-        })
-    end)
-
-    if not ok or type(response) ~= "table" then
-        setStatus("Connection failed. Try again.", Color3.fromRGB(255, 100, 100))
-        verifyButton.Text = "VERIFY KEY"
-        busy = false
-        return
-    end
-
-    local body = response.Body or response.body or ""
-    local decodedOk, data = pcall(function()
-        return HttpService:JSONDecode(body)
-    end)
-
-    if not decodedOk or type(data) ~= "table" or data.valid ~= true then
-        local reason = decodedOk and data.reason == "expired" and "Key expired." or "Invalid or revoked key."
-        setStatus(reason, Color3.fromRGB(255, 100, 100))
-        verifyButton.Text = "VERIFY KEY"
-        busy = false
-        return
-    end
-
-    -- Remember the key locally only after the server confirms it is valid.
-    if type(writefile) == "function" then
-        pcall(function() writefile("unknown_saved_access_key.txt", key) end)
-    end
-
-    setStatus("Key accepted. Loading UNKNOWN...", Color3.fromRGB(100, 220, 140))
-    verifyButton.Text = "ACCEPTED"
-
-    task.wait(0.35)
-    gui:Destroy()
-
-    launchUnknown()
-
-    -- Revalidate the active key while UNKNOWN is running.
-    -- Explicit invalid/expired responses close the Finder; transient network errors do not.
-    task.spawn(function()
-        while true do
-            task.wait(60)
-            local requestOk, checkResponse = pcall(function()
-                return httpRequest({
-                    Url = VERIFY_URL,
-                    Method = "POST",
-                    Headers = { ["Content-Type"] = "application/json" },
-                    Body = HttpService:JSONEncode({ key = key })
-                })
-            end)
-            if requestOk and type(checkResponse) == "table" then
-                local checkBody = checkResponse.Body or checkResponse.body or ""
-                local checkDecoded, checkData = pcall(function()
-                    return HttpService:JSONDecode(checkBody)
-                end)
-                if checkDecoded and type(checkData) == "table" and checkData.valid ~= true then
-                    local env = _G
-                    pcall(function()
-                        if type(getgenv) == "function" then env = getgenv() end
-                    end)
-                    if type(env) == "table" and type(env.__UNKNOWN_STOP_ACTIVE) == "function" then
-                        pcall(env.__UNKNOWN_STOP_ACTIVE)
-                    end
-                    if type(delfile) == "function" then
-                        pcall(function() delfile("unknown_saved_access_key.txt") end)
-                    end
-                    break
-                end
-            end
+-- Get Key Click: copy Linkvertise link
+getKeyBtn.MouseButton1Click:Connect(function()
+    local ok = copyToClipboard(AD_GET_KEY_URL)
+    getKeyBtn.Text = "LINK COPIED! 📋"
+    status.Text = "Paste link in browser to complete ads & get key!"
+    status.TextColor3 = Color3.fromRGB(100, 220, 140)
+    task.delay(3, function()
+        if getKeyBtn and getKeyBtn.Parent then
+            getKeyBtn.Text = "GET KEY (ADS) 🔗"
         end
     end)
-end
+end)
 
-verifyButton.MouseButton1Click:Connect(verifyKey)
+-- Verify Key Click
+local isBusy = false
+verifyBtn.MouseButton1Click:Connect(function()
+    if isBusy then return end
 
--- Reuse the saved key on the next execution, but always revalidate it online.
-if type(readfile) == "function" then
-    local savedKey
-    pcall(function() savedKey = readfile("unknown_saved_access_key.txt") end)
-    if type(savedKey) == "string" and savedKey:gsub("%s+", "") ~= "" then
-        keyBox.Text = savedKey
-        task.defer(verifyKey)
+    local enteredKey = keyBox.Text:gsub("^%s+", ""):gsub("%s+$", "")
+    if enteredKey == "" then
+        status.Text = "Please enter your key first!"
+        status.TextColor3 = Color3.fromRGB(255, 190, 90)
+        return
     end
-end
+
+    isBusy = true
+    verifyBtn.Text = "CHECKING..."
+    status.Text = "Validating key..."
+    status.TextColor3 = Color3.fromRGB(172, 160, 202)
+
+    task.spawn(function()
+        task.wait(0.3)
+        local valid = isKeyValid(enteredKey)
+        if valid then
+            -- Save 24-hour authentication
+            if type(writefile) == "function" then
+                pcall(function()
+                    local authData = {
+                        key = enteredKey,
+                        expiresAt = os.time() + DEFAULT_DURATION
+                    }
+                    writefile(AUTH_SAVE_FILE, HttpService:JSONEncode(authData))
+                end)
+            end
+
+            status.Text = "KEY ACCEPTED! 👑 Valid for 24 hours"
+            status.TextColor3 = Color3.fromRGB(100, 220, 140)
+            verifyBtn.Text = "ACCEPTED"
+
+            if crownConn then pcall(function() crownConn:Disconnect() end) end
+
+            task.wait(0.35)
+            Tweens:Create(introScale, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Scale = 0.85}):Play()
+            task.wait(0.25)
+            gui:Destroy()
+
+            launchUnknown()
+        else
+            status.Text = "Invalid key! Click GET KEY to complete ads."
+            status.TextColor3 = Color3.fromRGB(255, 100, 100)
+            verifyBtn.Text = "VERIFY KEY ⚡"
+            isBusy = false
+        end
+    end)
+end)
+

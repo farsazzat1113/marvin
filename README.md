@@ -1,82 +1,87 @@
-# UNKNOWN
+# MARVIN Ultimate
 
-**Shared Egg Finder + Cloudflare Key Gate** — a single-file Roblox UI script with a
-premium glass interface, live shared feed, and auto-join.
+**Shared Egg Finder + Independent Visual Design Engine (CSS/TS Architecture) + Smart Sniper & Direct Egg Teleport** —
+a single-file Roblox UI script with a completely separate visual design system, CSS/JS-inspired tokens,
+safe translation layer, non-invasive visual adapter, smart sniper with direct egg teleport on join, rotating royal crown, and 24-hour Linkvertise key gate.
 
-![Build](https://img.shields.io/badge/build-Public%20v0.4.3%20%2F%20UI20-935CFF)
-![Theme](https://img.shields.io/badge/theme-Glass%20Premium-38CDFF)
+![Build](https://img.shields.io/badge/build-Public%20v0.7.3%20%2F%20UI34--Clean-935CFF)
+![Performance](https://img.shields.io/badge/performance-Zero--Lag%20Featherlight-34EB96)
+![Theme](https://img.shields.io/badge/design%20engine-Independent%20Visual%20Adapter-FFD700)
+![Key Gate](https://img.shields.io/badge/key%20gate-Linkvertise%2024H%20Monetized-FF8C00)
+![Engine](https://img.shields.io/badge/engine-Smart%20Sniper%20%2B%20Direct%20Egg%20Teleport-34EB96)
 ![File](https://img.shields.io/badge/format-single--file%20Lua-success)
 
-## Live design preview
+## Executor Loadstrings
 
-[Open the animated MARVIN dashboard preview](https://html-preview.github.io/?url=https%3A%2F%2Fgithub.com%2Ffarsazzat1113%2Fmarvin%2Fblob%2Fmarvin-premium-purple-ui-2026-11-12%2Fdesign%2Fmarvin-dashboard-preview.html)
+To run MARVIN directly in your executor:
 
-This is a separate HTML/CSS/JavaScript visual prototype. Its starfield, nebula lighting,
-gradient title, orbital core, hover states, and preview-only controls animate in a browser.
-It is not connected to Roblox or the live Lua callbacks.
+### 🚀 1️⃣ Obfuscated Build (Protected & Recommended)
+```lua
+loadstring(game:HttpGet("https://raw.githubusercontent.com/farsazzat1113/marvin/arena/c26d50e5-marvin/UNKNOWN.obfuscated.lua"))()
+```
 
-## Overview
+### 💻 2️⃣ Clean Source Build
+```lua
+loadstring(game:HttpGet("https://raw.githubusercontent.com/farsazzat1113/marvin/arena/c26d50e5-marvin/UNKNOWN.lua"))()
+```
 
-UNKNOWN scans the current server's field eggs, reports sightings to the shared
-Finder host, and renders a live list of the best eggs reported across servers —
-with one-click join and an automatic "join the best server" mode.
+---
 
-The Finder only boots **after the key-validation endpoint returns `valid=true`**
-and revalidates the key every 60 seconds while running.
+## Smart Sniper + Direct Egg Teleport Engine
 
-## What's new in UI20 — Auto Steal
+The modular `MARVIN_SmartSniperTeleport` subsystem connects the cross-server Egg Finder directly to in-game player spawn and spatial positioning:
 
-- **AUTO STEAL** — hands-free carry + plant for the egg a join tracked:
-  the character is parked next to the egg, the game's own carry remote is
-  invoked, then the egg is taken home and planted on your plot.
-- While **Auto Join** is armed, the best local egg over your minimum gets
-  picked up automatically too - no buttons pressed.
-- New persisted settings toggle: **SETTINGS → AUTO STEAL: ON/OFF** (default ON).
+1. **Target Egg Tracking:** Finds servers containing the exact target egg selected by the user (either via manual card click or automated Smart Join / Auto Join candidate selection).
+2. **Server Join & Metadata Handoff:** Prepares and passes target metadata (`uid`, `key`, `name`, `placeId`, `jobId`, `rate`, `area`, `queuedAt`) across server hops using `TeleportService:SetTeleportSetting` and local JSON cache fallback (`marvin_sniper_target.json`).
+3. **Character Readiness Detection:** Awaits full character assembly (`Character`, `HumanoidRootPart`, `Humanoid.Health > 0`) upon server entry.
+4. **Multi-Stage Spatial Resolution:**
+   - *Stage 1 (Workspace Containers):* Queries `AreaEggSlotsClient`, `EggSlots`, `AreaEggSlots`, `Eggs` folders and matches model names, UIDs, and attributes.
+   - *Stage 2 (EggState Modules):* Queries `EggState.ReadFieldEggs()` records for authoritative `BottomCFrame` or `CFrame` coordinates.
+   - *Stage 3 (Pivot & Parts):* Fallback to model primary part or pivot location with coordinate sanity bounds.
+5. **Direct Teleport to Safe Offset:** Teleports the character directly to a safe position offset (+2.5 studs X, +2.0 studs Y, +2.5 studs Z, facing the egg) with zeroed linear and angular velocities to prevent physics kickback or rubberbanding.
+6. **Bypasses Default Base/House Spawn:** Immediately overrides spawn settling at the normal base or house location when direct teleport target is available.
+7. **Arrival & Availability Verification:** Checks Euclidean distance (`dist <= 18 studs`) and validates egg state against field records (`State == States.Slot` or available).
+8. **Server-Authoritative Confirmation:** Respects server-authoritative acquisition mechanics — logs status and stands by for authoritative game confirmation without prematurely claiming client acquisition.
+9. **Safe Fallback:** If character loading times out or the target egg is not resolved, the player safely settles at the standard spawn without throwing errors or breaking the session.
 
-## What's new in UI19 — "Glass Premium"
+---
 
-- **Glass Premium theme** — translucent deep-space panel, purple→cyan gradient
-  borders, soft outer glow, fading header hairline.
-- **Animated starfield v2** — fine twinkling stars plus three slow-breathing
-  nebula glows, always behind the real content (managed Z-order).
-- **Glass cards** — deep indigo egg cards with soft gradients and purple
-  hairline borders; consistent 8 px rounding everywhere.
-- **Panel pop** — the window opens with a short Back-eased scale animation.
-- **Key gate redesign** — centered glass card, accent underline, focus-lit input
-  border, gradient verify button with hover/press feedback, entrance animation.
-- **Encoding cleanup** — fixed mojibake strings (`â¦` → `…`, `Ã—` → `×`, `—`).
-- **Organized source** — numbered section banners ([1]–[7]) and a header map.
+## Visual Design Engine Architecture
 
-## Source map
+### 1️⃣ Design Token Layer (CSS/JS-Inspired Design System)
+- **Centralized Themes:**
+  - `RoyalAmethyst` (Default signature luxury glassmorphism)
+  - `CyberpunkCyan` (Electric cyan / neon teal high-contrast)
+  - `EmeraldMatrix` (Deep jade emerald and amber gold)
+  - `ObsidianGold` (Minimalist luxury obsidian and 24K gold)
+  - `SafeModeClean` (High legibility, static contrast, zero-motion Safe Mode)
+- **Token Dictionary:**
+  - Standardized Radii (`xs`, `sm`, `md`, `lg`, `pill`).
+  - Standardized Strokes (`thin`, `normal`, `thick`).
+  - Gradients, glow, surface transparencies, and typography scales.
 
-| # | Section | Responsibility |
-|---|---------|----------------|
-| 1 | Bootstrap | Auto-execute queue, silent retry per server hop |
-| 2 | Finder core | Services, GUI factory, parsing/formatting helpers |
-| 3 | Glass Premium UI | Theme, header, settings overlay, animations |
-| 4 | Network | Config loader, broadcast, feed pagination, auto-join |
-| 5 | Card renderer | Egg cards, rarity/mutation glyphs, join flow |
-| 6 | Scan loop | Field-egg reader feeding UI + broadcaster |
-| 7 | Key gate | Glass key window, validation + periodic recheck |
+### 2️⃣ Safe Roblox Translation Layer
+- Converts CSS-style visual declarations (`backgroundColor`, `backgroundTransparency`, `borderRadius`, `border`, `gradient`, `glow`) into native Roblox properties.
+- **Strict Deduplication:** Reuses existing `UICorner`, `UIStroke`, `UIGradient`, and `UIScale` objects, cleans up any redundant modifier duplicates, and guards against duplicate event listeners.
+- **Animated Color Gradients:** Native support for continuous 360° rotating gradients and smooth shimmering offsets via `animateGradient` and `stopGradientAnimation`.
+- **Full Safe Mode Integration:** Halts all gradient motion and transitions in Safe Mode for optimal performance and legibility.
+- Full snapshot and restore engine (`snapshot(instance, props)` and `restore(instance)`).
 
-## Local state files
+### 3️⃣ Non-Invasive Visual Adapter
+- Strictly separates visual presentation from core logic and UI controls.
+- **Preserves Dimensions & Functionality:** Never alters element `Size`, `Position`, `AnchorPoint`, or `LayoutOrder`, and leaves 100% of event callbacks and signals untouched.
+- Adapts all UI elements (`panel`, `bar`, `heading`, `crown`, `scope`, `myScope`, `rarity`, `autoJoinButton`, `refreshButton`, `settingsButton`, `open`, egg cards).
+- Micro-interaction hover scaling on buttons without touching `Activated` connections.
+- **Server Authority Respect:** Defers egg acquisition status until authoritatively verified by the game server via `awaitServerAcquisitionConfirmation`.
 
-Written to the executor workspace when available:
+---
 
-| File | Purpose |
-|------|---------|
-| `tenshi_beta_ui.json` | UI settings (scope, thresholds, auto-execute, size) |
-| `tenshi_public_sighting_lifecycle_v1.json` | Sighting lifecycle / tombstones |
-| `tenshi_beta_top5_cycle_v2.json` | Retained top-5 cards across refreshes |
-| `tenshi_public_gui_size_v2.json` | Saved GUI scale |
-| `unknown_saved_access_key.txt` | Last accepted key (revalidated online) |
-
-## Controls
+## Controls (All Original Functionality & Callbacks Intact)
 
 - **Launcher icon** / **F key** — toggle the panel (draggable via its header).
+- **GET KEY (ADS)** — copies the Linkvertise link to clipboard.
 - **ALL SERVERS / MY SERVER** — feed scope tabs.
 - **REFRESH** — manual feed refresh with the reset countdown.
 - **VALUE OF SERVERS / MIN AUTO JOIN VALUE** — `1B`–`50B` thresholds.
-- **AUTO JOIN** — teleports to the best eligible reported server automatically.
-- **AUTO STEAL** — carries + plants the tracked egg without any input.
-- **SETTINGS** — auto-execute / auto-steal toggles and Discord link.
+- **SMART JOIN** — zero-latency sniper that teleports to the highest eligible egg and falls back automatically if full.
+- **SETTINGS** — auto-execute toggles and Discord link.
