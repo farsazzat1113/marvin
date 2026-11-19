@@ -26,7 +26,7 @@ local function startUnknown()
 --============================================================================--
 
 local HttpService = game:GetService("HttpService")
-local RAW_SCRIPT_URL = "https://raw.githubusercontent.com/farsazzat1113/marvin/Marvin/UNKNOWN.lua?v=" .. tostring(os.time())
+local RAW_SCRIPT_URL = "https://raw.githubusercontent.com/farsazzat1113/marvin/Marvin/MarvinHub.lua?v=" .. tostring(os.time())
 local autoExecuteEnabled = true
 if type(readfile) == "function" then
     pcall(function()
@@ -4096,7 +4096,8 @@ local function launchUnknown()
 end
 
 -- Key Configuration
-local AD_GET_KEY_URL = "https://direct-link.net/3852708/7hzx0OtX0UJe"
+local AD_GET_KEY_URL = "https://farsazzat1113.github.io/marvin/"
+local DIRECT_AD_URL = "https://direct-link.net/3852708/7hzx0OtX0UJe"
 local KEYS_JSON_URL = "https://raw.githubusercontent.com/farsazzat1113/marvin/Marvin/keys.json"
 local DEFAULT_DURATION = 86400 -- 24 hours in seconds
 local AUTH_SAVE_FILE = "marvin_key_auth.json"
@@ -4138,6 +4139,27 @@ local function isKeyValid(candidate)
     local clean = candidate:gsub("^%s+", ""):gsub("%s+$", "")
     if clean == "" then return false end
     return activeKeys[clean] == true or activeKeys[clean:upper()] == true
+end
+
+-- Check for pre-set key in environment (e.g. 1-click web launcher: _G.MARVIN_KEY = "...")
+local envKey = _G.MARVIN_KEY
+pcall(function()
+    if not envKey and type(getgenv) == "function" then
+        envKey = getgenv().MARVIN_KEY
+    end
+end)
+if type(envKey) == "string" and isKeyValid(envKey) then
+    if type(writefile) == "function" then
+        pcall(function()
+            local authData = {
+                key = envKey,
+                expiresAt = os.time() + DEFAULT_DURATION
+            }
+            writefile(AUTH_SAVE_FILE, HttpService:JSONEncode(authData))
+        end)
+    end
+    launchUnknown()
+    return
 end
 
 -- Check for saved 24-hour authentication
@@ -4391,11 +4413,18 @@ introScale.Scale = 0.92
 introScale.Parent = frame
 Tweens:Create(introScale, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
 
--- Get Key Click: copy Linkvertise link
+-- Get Key Click: open browser & copy portal link
 getKeyBtn.MouseButton1Click:Connect(function()
+    pcall(function()
+        if type(openurl) == "function" then
+            openurl(AD_GET_KEY_URL)
+        elseif type(open_url) == "function" then
+            open_url(AD_GET_KEY_URL)
+        end
+    end)
     local ok = copyToClipboard(AD_GET_KEY_URL)
-    getKeyBtn.Text = "LINK COPIED! 📋"
-    status.Text = "Paste link in browser to complete ads & get key!"
+    getKeyBtn.Text = "OPENED & COPIED! 📋"
+    status.Text = "Complete ad step in browser to get key!"
     status.TextColor3 = Color3.fromRGB(100, 220, 140)
     task.delay(3, function()
         if getKeyBtn and getKeyBtn.Parent then

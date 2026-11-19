@@ -11,9 +11,32 @@ safe translation layer, non-invasive visual adapter, smart sniper with direct eg
 ![Engine](https://img.shields.io/badge/engine-Smart%20Sniper%20%2B%20Direct%20Egg%20Teleport-34EB96)
 ![File](https://img.shields.io/badge/format-single--file%20Lua-success)
 
-## Executor Loadstrings
+## Universal Hub Loadstring (Like Figgy Hub)
 
-To run MARVIN directly in your executor:
+Run MARVIN VIP in any executor with our universal auto-updating loader:
+
+```lua
+loadstring(game:HttpGet("https://raw.githubusercontent.com/farsazzat1113/marvin/Marvin/MarvinHub.lua"))()
+```
+*Or without file extension:*
+```lua
+loadstring(game:HttpGet("https://raw.githubusercontent.com/farsazzat1113/marvin/Marvin/MarvinHub"))()
+```
+
+### ⚡ 1-Click Execution (Pre-authenticated with VIP Key)
+```lua
+_G.MARVIN_KEY = "MARVIN-KEY-VIP"; loadstring(game:HttpGet("https://raw.githubusercontent.com/farsazzat1113/marvin/Marvin/MarvinHub.lua"))()
+```
+
+### 🌐 Official Web Portal & Key Gateway
+Visit: **[https://farsazzat1113.github.io/marvin/](https://farsazzat1113.github.io/marvin/)**
+- Anti-Adblock protected 24h key generator
+- 1-Click Loadstring copy
+- Executor compatibility guide (Real Executor, Delta, Fluxus, etc.)
+
+---
+
+## Direct Executor Builds
 
 ### 🚀 1️⃣ Obfuscated Build (Protected & Recommended)
 ```lua
