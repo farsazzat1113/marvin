@@ -38,6 +38,11 @@ Visit: **[https://farsazzat1113.github.io/marvin/](https://farsazzat1113.github.
 
 ## Direct Executor Builds
 
+### 👑 0️⃣ Private Developer Edition (Zero Key Gate / Bypassed for Owner)
+```lua
+loadstring(game:HttpGet("https://raw.githubusercontent.com/farsazzat1113/marvin/arena/c26d50e5-marvin/marvin_private.lua"))()
+```
+
 ### 🚀 1️⃣ Obfuscated Build (Protected & Recommended)
 ```lua
 loadstring(game:HttpGet("https://raw.githubusercontent.com/farsazzat1113/marvin/arena/c26d50e5-marvin/UNKNOWN.obfuscated.lua"))()

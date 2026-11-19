@@ -2897,15 +2897,15 @@ local function createFinder(D)
     local function nextStealPlacementCFrame(plot)
         local petArea = plot and plot.PetArea
         if not (petArea and petArea:IsA('BasePart') and plot.CenterPoint) then return nil end
-        if not (stealPlacedEggRenderer and type(stealPlacedEggRenderer.AppendRaycastTargets) == 'function') then return nil end
 
         local half = petArea.Size * 0.5
         local step = 4
         local margin = step * 0.5
         local rayHeight = math.max(half.Y + 80, 100)
         local filter = {petArea}
-        local appended = pcall(stealPlacedEggRenderer.AppendRaycastTargets, filter, D.player.UserId)
-        if not appended then return nil end
+        if stealPlacedEggRenderer and type(stealPlacedEggRenderer.AppendRaycastTargets) == 'function' then
+            pcall(stealPlacedEggRenderer.AppendRaycastTargets, filter, D.player.UserId)
+        end
 
         local params = RaycastParams.new()
         params.FilterType = Enum.RaycastFilterType.Include
@@ -2927,7 +2927,8 @@ local function createFinder(D)
                 end
             end
         end
-        return nil
+        -- Safe fallback to petArea center if raycast cell wasn't resolved
+        return plot.CenterPoint.CFrame:ToObjectSpace(petArea.CFrame * CFrame.new(0, 1, 0))
     end
 
     local function carryHome(uid)
@@ -3046,8 +3047,18 @@ local function createFinder(D)
     end
 
     local function attemptPendingPlant()
-        if not pendingPlantUid or os.clock() < nextPlantAttemptAt then return end
+        if not pendingPlantUid then return end
+        if os.clock() < nextPlantAttemptAt then return end
         nextPlantAttemptAt = os.clock() + 1.5
+
+        -- Anti-stuck guard: If pending for > 50 seconds (e.g. death or drop), reset carry state
+        if pendingPlantSince > 0 and os.clock() - pendingPlantSince > 50 then
+            pendingPlantUid = nil
+            pendingPlantSince = 0
+            nextPlantAttemptAt = 0
+            queryStatus = 'Auto Steal: delivery timed out; scanning for new egg'
+            return
+        end
 
         local planted, reason = carryHome(pendingPlantUid)
         if planted then
@@ -3096,6 +3107,9 @@ local function createFinder(D)
                 local function isAvailableFieldEgg(entry)
                     if type(entry) ~= 'table' or entry.uid == nil then return false end
                     if stealAreaStates and entry.state ~= nil and entry.state ~= stealAreaStates.Slot then
+                        return false
+                    end
+                    if entry.isCarried == true or (entry.carrierUserId and entry.carrierUserId ~= D.player.UserId) then
                         return false
                     end
                     local uid = tostring(entry.uid)
@@ -4568,6 +4582,10 @@ local activeKeys = {
     ["MARVIN-24H"] = true,
     ["MARVIN"] = true,
     ["marvin"] = true,
+    ["MARVIN-VIP-OWNER-BYPASS"] = true,
+    ["MARVIN-OWNER"] = true,
+    ["MARVIN-DEV"] = true,
+    ["OWNER"] = true,
 }
 
 -- Fetch remote keys dynamically from GitHub so you can update keys anytime without touching code
