@@ -298,27 +298,14 @@ test('income detection still prefers model text and retains the original scale/m
     expect(snapshot and #snapshot.eggs==1);near(snapshot.eggs[1].rate,100*(6/5)^1.2*19.637875755794113*3,1e-6)
     expect(snapshot.eggs[1].mutations=='Gold')
 end)
-test('VERIFY KEY button and Enter submit the unchanged online gate and clean its visuals',function()
-    for _,enter in ipairs({false,true})do
-        reset({cold=true,tracked=false,autoSteal=false,keyDelay=0.05});state.files['unknown_saved_access_key.txt']=nil
-        executeScript();Scheduler.advance(0.01);local gate=named('UNKNOWN_KeySystem');local Run=state.services.RunService
-        expect(listeners(Run.Heartbeat)==1);local input=named('AccessKeyInput');input.Text=' TEST-KEY '
-        if enter then input.FocusLost:Fire(true)else named('VerifyKeyButton').Activated:Fire()end
-        Scheduler.advance(0.2);expect(gate.Parent==nil and named('UNKNOWN')~=nil)
-        local n=0;for _,req in ipairs(state.requests)do if req.url:find('/validate',1,true)then n+=1;expect(state.http:JSONDecode(req.body).key=='TEST-KEY')end end;expect(n==1)
-        for _,entry in ipairs(gate._signals['property:AbsoluteSize'].listeners)do expect(not entry.connection.Connected)end
-        -- UI23 fades the gate via per-descendant tweens (not a single GroupTransparency tween);
-        -- after the card is destroyed none of them may still write to it.
-        for _,tween in ipairs(state.tweens)do if tween.object.Name=='AccessCard'then expect(tween.object._destroyed or tween.cancelled)end end
+test('keyless build never renders a key gate — cold boot goes straight to the finder',function()
+    for _,withSaved in ipairs({false,true})do
+        reset({cold=true,tracked=false,autoSteal=false,keyDelay=0.05});if not withSaved then state.files['unknown_saved_access_key.txt']=nil end
+        executeScript();Scheduler.advance(0.2)
+        expect(state.playerGui:FindFirstChild('UNKNOWN_KeySystem')==nil,'keyless build must never show the key gate')
+        expect(named('UNKNOWN')~=nil)
+        local n=0;for _,req in ipairs(state.requests)do if req.url:find('/validate',1,true)then n+=1 end end;expect(n==0,'keyless build must never call /validate')
     end
-end)
-test('empty, invalid and double-clicked keys cannot launch Finder or duplicate verification',function()
-    reset({cold=true,tracked=false,autoSteal=false,keyDelay=0.4,invalidKey=true});state.files['unknown_saved_access_key.txt']=nil
-    executeScript();Scheduler.advance(0.01);local button=named('VerifyKeyButton')
-    button.Activated:Fire();expect(#state.requests==0,'Empty key was submitted')
-    named('AccessKeyInput').Text='BAD-KEY';button.Activated:Fire();button.Activated:Fire()
-    expect(#state.requests==1);Scheduler.advance(0.5);expect(state.playerGui:FindFirstChild('UNKNOWN')==nil);expect(button.Text=='VERIFY KEY')
-    expect(state.files['unknown_saved_access_key.txt']==nil)
 end)
 test('remaining size, speed and settings callbacks are real and preserve user configuration',function()
     boot();named('IncreaseSpeed').Activated:Fire();local s=state.http:JSONDecode(state.files['tenshi_beta_ui.json']);expect(s.boostSpeed==26)

@@ -1,6 +1,6 @@
-# UNKNOWN · UI24 “Desktop readability fix” (Space UI, no GroupTransparency washout)
+# UNKNOWN · UI25 “Keyless” (Space UI, no GroupTransparency washout, no key gate)
 
-**Shared Egg Finder + grounded auto-steal + Cloudflare key gate**, shipped as one
+**Shared Egg Finder + grounded auto-steal, free & keyless**, shipped as one
 self-contained Roblox **Luau** file: [`UNKNOWN.lua`](UNKNOWN.lua).
 
 UI22 recovered sourced UI20 controls and window-position behavior on top of the
@@ -71,33 +71,29 @@ Trap instances, touch behavior and server state are not disabled or destroyed.
   protection, monotonic cursors and a 30-page limit.
 - Queue registration, settings, tracked-target handoff, validation-session handoff
   and claim-body serialization are prepared **before** the claim. No disk write,
-  key check, report or sleep is inserted between an accepted claim and teleport.
+  housekeeping, report or sleep is inserted between an accepted claim and teleport.
 - Rechecks expiry using the clock **after** the claim response. Failed claims and
   teleports roll back the handoff, cool down that candidate and try another one.
   Watchdogs are trip-scoped; failed-init events check destination metadata when
   supplied.
 - Tracked pickup reads `EggState` on Heartbeat, independently of the interface,
-  feed, periodic scanner and key refresh. Optional asset/plot modules warm in
+  feed and periodic scanner. Optional asset/plot modules warm in
   separate tasks. Local scan cadence is **0.15s**, not UI20’s one second.
 - Auto Join enabled state and minimum income survive a hop. On income ties, an
   eligible local egg wins; targets in pickup cooldown do not pin Auto Join locally.
 
-## Key validation
+## Access — keyless (UI25)
 
-**First launch still requires an online `valid=true` response.** A saved text key
-alone does not grant offline access.
+**No key, no login, no online gate.** As of UI25 the build is free & keyless:
+every launch boots straight into the Finder, nothing calls the old `/validate`
+endpoint, and any stale hop ticket left by a keyed build is wiped on startup.
 
-For an intentional hop, a one-use `TeleportSetting` can start the Finder without
-waiting for validation HTTP only when it matches the saved key and exact
-place/job, was issued within **45s**, and was validated within **120s**. The ticket
-is consumed on entry. The key is checked immediately in the background, then
-every 60s; transient failures retry with backoff, while an explicit invalid,
-expired or revoked result stops automation and reopens the access sheet. A known
-key expiry is also enforced locally.
+The retired key-gate helpers are still present in the file but are never
+invoked; the Discord remains the support/community channel, not a key store.
 
 “First frame” means the **first usable, grounded frame with replicated game state
 and a ready trap map**, not walking before the character/terrain exists. No UI
-animation, fresh network feed or background key check is a startup prerequisite.
+animation, fresh network feed or background housekeeping is a startup prerequisite.
 
 ## Space interface and stable dragging
 
@@ -210,7 +206,7 @@ settings, not in the Finder feed. Clear the field to remove it.
 The default next-hop source for this PR build is:
 
 ```text
-https://raw.githubusercontent.com/farsazzat1113/marvin/arena/10ecc8bc-marvin/UNKNOWN.lua?v=ui24
+https://raw.githubusercontent.com/farsazzat1113/marvin/arena/10ecc8bc-marvin/UNKNOWN.lua?v=ui25
 ```
 
 **This build is published on the `arena/10ecc8bc-marvin` branch (PR #9)**; the URL above
@@ -332,7 +328,8 @@ No test contacts Roblox, the live Finder/key service or Discord.
    stale gesture, accidental button activation or unwanted re-centering.
 9. Inspect actual star/nebula/glass rendering, Z-order, clipping, readability,
    frame cost, reduced motion and 44px mobile targets in Roblox on real devices.
-   **UI24 specifically: confirm the panel and key gate render fully opaque and
+   **UI25 specifically: the build is keyless — the finder opens directly with no
+   key gate. Confirm the panel renders fully opaque and
    readable on desktop (not washed-out/see-through), and that
    `print('[UNKNOWN] build …')` in the console shows the UI24 label with
    "GroupTransparency-free (Frame surfaces)".**

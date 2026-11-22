@@ -1,17 +1,16 @@
 --================================================================================================--
--- UNKNOWN · Public v0.7.1 / UI24 "Desktop readability fix"
+-- UNKNOWN · Public v0.8.0 / UI25 "Keyless"
 -- Single-file client. Grounded walking only; no character CFrame/Position/PivotTo writes.
 -- [1] Pure policy + bounded tasks   [2] Space UI / input owner   [3] Ground navigation / traps
 -- [4] Perks / steal state machine   [5] Finder feed / join / broadcast
--- [6] Replicated scanner           [7] Key session
--- A first launch always needs valid=true. A recent, one-hop validated session may start
--- immediately on the destination while its key is revalidated in the background.
+-- [6] Replicated scanner           [7] Access boot (keyless — no key gate, no validation traffic)
+-- Free & keyless: every launch boots straight into the finder. No key, no online gate.
 --================================================================================================--
 
 local BUILD = {
-    name = 'UI24 · Desktop readability fix',
+    name = 'UI25 · Keyless launch',
     -- Preview build: never queue the older Marvin release while this PR is open.
-    sourceUrl = 'https://raw.githubusercontent.com/farsazzat1113/marvin/arena/10ecc8bc-marvin/UNKNOWN.lua?v=ui24',
+    sourceUrl = 'https://raw.githubusercontent.com/farsazzat1113/marvin/arena/10ecc8bc-marvin/UNKNOWN.lua?v=ui25',
     verifyUrl = 'https://unknown.unknownsystem.workers.dev/validate',
     sessionKey = 'UNKNOWNValidatedHopV1',
     joinedKey = 'UNKNOWNJoinedEggV1',
@@ -1715,8 +1714,8 @@ local function startUnknown(access)
         DisplayOrder = 1200, ZIndexBehavior = Enum.ZIndexBehavior.Sibling}, parent)
     pcall(function() gui.ScreenInsets = Enum.ScreenInsets.DeviceSafeInsets end)
     gui:SetAttribute('UnknownBuild', BUILD.name)
-    gui:SetAttribute('TenshiUIBuild', 'PUBLIC-V071-UI24')
-    print('[UNKNOWN] build ' .. BUILD.name .. ' · ' .. 'PUBLIC-V071-UI24' .. ' · GroupTransparency-free (Frame surfaces)')
+    gui:SetAttribute('TenshiUIBuild', 'PUBLIC-V080-UI25')
+    print('[UNKNOWN] build ' .. BUILD.name .. ' · ' .. 'PUBLIC-V080-UI25' .. ' · keyless · GroupTransparency-free (Frame surfaces)')
     local alive = true
     local stop
     stop = function()
@@ -2999,7 +2998,7 @@ warn('[UNKNOWN] Auto Execute failed / run the loader manually in this server')
     return function() return alive end
 end
 
--- [7] KEY GATE · first launch online; recent one-use hop session + background check.
+-- [7] ACCESS BOOT · keyless: straight into the finder, no key gate, no validation HTTP.
 local function runAccessSystem()
     local env = environment()
     if env.__UNKNOWN_RUNNING_JOB == game.JobId and env.__UNKNOWN_BUILD == BUILD.name and type(env.__UNKNOWN_STOP_ACTIVE) == 'function' then return end
@@ -3151,19 +3150,9 @@ local function runAccessSystem()
         if not reduced then fadeGroup(frame, 0, {reduced = false}) end
     end
 
-    local savedKey, session
-    if type(readfile) == 'function' then pcall(function() savedKey = readfile('unknown_saved_access_key.txt'):match('^%s*(.-)%s*$') end) end
-    pcall(function() session = Teleports:GetTeleportSetting(BUILD.sessionKey) end)
-    local candidate = type(savedKey) == 'string' and savedKey ~= '' and savedKey or type(session) == 'table' and session.key
-    local resume = Policy.resume(session, candidate, game.PlaceId, game.JobId, os.time())
-    auth:clearHop() -- consume once, including malformed/stale/wrong-destination tickets
-    if resume then
-        auth.key, auth.verifiedAt, auth.expiresAt = candidate, session.verifiedAt, session.expiresAt
-        launch() -- no validation HTTP or key UI in the hop's startup path
-        checkLoop(true)
-    else
-        makeGate()
-        if gate and type(savedKey) == 'string' and savedKey ~= '' then gate.input.Text = savedKey; task.defer(submit) end
-    end
+    -- KEYLESS: no key gate, no hop-session resume — boot straight into the finder.
+    -- (The gate helpers above are retained but never invoked; nothing calls /validate.)
+    auth:clearHop() -- wipe any stale ticket left behind by a keyed build
+    launch()
 end
 runAccessSystem()
