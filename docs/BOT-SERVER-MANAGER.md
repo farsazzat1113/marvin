@@ -1,65 +1,30 @@
-# MARVIN Bot & Server Manager — implementation notes
+# MARVIN Bot & Server Manager
 
-## What this change contains
-- An isolated Luau ModuleScript at `modules/BotServerManager.lua`.
-- Three UI filters: All, Bot Servers, and Normal Servers.
-- A session registry API: `SetSessions`, `UpsertSession`, `RemoveSession`.
-- Optional callbacks for selecting a session, creating a bot configuration, and requesting start/stop actions.
-- No changes to `UNKNOWN.lua`, Smart Join, Egg Finder, key validation, network endpoints, or existing settings.
+This feature branch keeps the existing `UNKNOWN.lua` unchanged and adds an isolated server-manager UI plus an optional NPC adapter for Roblox experiences you own.
 
-## Important scope boundary
-This module is a **UI and session-registry foundation**, not a Roblox account bot runner. A normal LocalScript cannot securely create/login to extra Roblox accounts or keep another player's client running after the user's device is off. Do not store Roblox passwords, session cookies, or authentication tokens in MARVIN. Do not automate public-game accounts in ways that violate Roblox Terms or game rules.
+## Files
+- `modules/BotServerManager.lua`: reusable UI and session registry.
+- `examples/MARVINBotManager.client.lua`: client LocalScript example that displays the current server separately from NPC-agent sessions.
+- `examples/MARVINBotAgent.server.lua`: server-side NPC agent adapter.
+- This is **not** a separate Roblox account bot, and it does not create additional Roblox servers or log into accounts.
 
-For a game experience you own, the supported path for autonomous characters is server-side NPC agents (Humanoids controlled by your server scripts). For authorized QA, use Roblox Studio test clients / approved test infrastructure and feed their status into this manager through an adapter you control.
+## Install in your own Roblox experience
+1. In `ReplicatedStorage`, create a Folder named `Modules`.
+2. Add a ModuleScript named `BotServerManager` and paste `modules/BotServerManager.lua`.
+3. In `ServerStorage`, add a rig Model named `BotAgentTemplate`. It must contain a `Humanoid` and `HumanoidRootPart`.
+4. Add `examples/MARVINBotAgent.server.lua` as a Script under `ServerScriptService`.
+5. Add `examples/MARVINBotManager.client.lua` as a LocalScript under `StarterPlayer/StarterPlayerScripts`.
+6. Publish/test in a private test place. The server adapter allows only the user who owns a user-owned experience. For a group-owned experience, replace `authorized()` with a group-role allowlist.
 
-## Installation (safe, isolated)
-1. Keep the current `UNKNOWN.lua` and your backup unchanged.
-2. In Roblox Studio, create a ModuleScript named `BotServerManager` and paste the contents of `modules/BotServerManager.lua`.
-3. Create a ScreenGui/Frame in your own experience and require the module from a LocalScript:
-   ```lua
-   local BotServerManager = require(path.To.BotServerManager)
-   local manager = BotServerManager.new({
-       parent = script.Parent,
-       onCreateBot = function()
-           -- Open your own NPC/test-agent configuration screen here.
-       end,
-       onSelect = function(session)
-           print("Selected session:", session.id)
-       end,
-       onStart = function(session)
-           -- Call your authorized server-side NPC/test harness.
-       end,
-       onStop = function(session)
-           -- Stop the NPC/test harness you own.
-       end,
-   })
+## What works
+- Separate All / Bot Servers / Normal Servers filters.
+- Current Roblox server appears as a normal session.
+- Create, list, start, and stop server-controlled NPC agents.
+- NPCs follow the owner in the experience; they are not independent accounts or separate servers.
+- The client requests actions through a RemoteFunction; the server validates ownership and owns the NPC state.
 
-   manager:SetSessions({
-       { id = "npc-001", name = "Farm Helper", kind = "bot", status = "IDLE", detail = "NPC" },
-       { id = "server-001", name = "Current server", kind = "normal", status = "CONNECTED" },
-   })
-   ```
-4. Connect the callbacks to your own server-authoritative NPC/test-agent system. The client UI itself must not be treated as trusted authority.
-5. Call `UpsertSession(session)` when a session changes and `RemoveSession(id)` when it ends.
-
-## Session schema
-```lua
-{
-    id = "stable-unique-id",
-    name = "Display name",
-    kind = "bot", -- or "normal"; set explicitly from trusted metadata
-    placeId = 123, -- optional
-    jobId = "server-job-id", -- optional
-    status = "RUNNING", -- optional display state
-    detail = "NPC / test client", -- optional
-}
-```
-
-## Integration status
-- [x] New isolated manager module committed on a feature branch.
-- [x] Existing script left untouched.
-- [ ] Wire the module into the existing MARVIN UI after its actual UI host/container and data contract are confirmed.
-- [ ] Add a trusted backend/session adapter for permitted NPCs or QA sessions.
-- [ ] Test in a private Roblox experience before any production rollout.
-
-The existing Finder feed contains public server/egg discovery data; it does not by itself identify which server belongs to an independently authenticated bot account. The category must come from explicit trusted metadata, not guesses based on usernames or server names.
+## Limitations
+- A normal Roblox LocalScript cannot create or authenticate extra Roblox accounts, run other clients after your device is off, or enumerate arbitrary public servers as logged-in bots.
+- Do not put Roblox passwords, session cookies, or authentication tokens in the script.
+- This example is a supported NPC/test-agent pattern for an experience you control. It does not automate or exploit another game's public servers.
+- No changes were made to `UNKNOWN.lua`, Egg Finder, Smart Join, or the existing key flow.
