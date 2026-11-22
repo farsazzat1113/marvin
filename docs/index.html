@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UNKNOWN — Shared Egg Finder for Steal An Egg</title>
+<meta name="description" content="UNKNOWN: a live cross-server egg finder for Roblox Steal An Egg. Grounded auto-steal, auto join, anti-trap pathing. One line and you're in.">
+<style>
+  :root{
+    --bg:#070a18; --surface:#11172f; --raised:#1c2441; --line:#48558a;
+    --text:#edf2ff; --muted:#9fafcf;
+    --accent:#63b6ff; --purple:#a87fff; --teal:#6becd3;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+    overflow-x:hidden; line-height:1.6;
+  }
+  #stars{position:fixed;inset:0;z-index:0;pointer-events:none}
+  .wrap{position:relative;z-index:1;max-width:1060px;margin:0 auto;padding:0 22px}
+
+  /* ── Nav ── */
+  nav{display:flex;align-items:center;justify-content:space-between;padding:26px 0}
+  .brand{display:flex;align-items:center;gap:12px;font-weight:800;font-size:20px;letter-spacing:2px}
+  .mono{
+    width:42px;height:42px;border-radius:12px;display:grid;place-items:center;
+    background:linear-gradient(135deg,var(--surface),#131030);
+    border:1px solid rgba(168,127,255,.45);color:var(--accent);
+    font-weight:900;font-size:22px;box-shadow:0 0 22px rgba(99,182,255,.25);
+  }
+  .navlinks{display:flex;gap:26px;font-size:14px;color:var(--muted)}
+  .navlinks a{color:var(--muted);text-decoration:none;transition:color .2s}
+  .navlinks a:hover{color:var(--text)}
+  @media(max-width:640px){.navlinks{display:none}}
+
+  /* ── Hero ── */
+  header{padding:70px 0 50px;text-align:center}
+  .eyebrow{
+    display:inline-block;font-size:12px;letter-spacing:3px;color:var(--teal);
+    border:1px solid rgba(107,236,211,.35);border-radius:999px;
+    padding:7px 18px;margin-bottom:26px;background:rgba(107,236,211,.06);
+  }
+  h1{
+    font-size:clamp(44px,9vw,88px);font-weight:900;letter-spacing:4px;line-height:1.05;
+    background:linear-gradient(100deg,var(--purple),var(--accent) 55%,var(--teal));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:drop-shadow(0 0 34px rgba(99,182,255,.3));
+  }
+  .sub{color:var(--muted);font-size:clamp(15px,2.4vw,19px);max-width:620px;margin:22px auto 0}
+  .sub b{color:var(--text);font-weight:600}
+
+  /* ── Loader box ── */
+  .loaderbox{
+    max-width:760px;margin:44px auto 0;background:rgba(17,23,47,.72);
+    border:1px solid rgba(72,85,138,.55);border-radius:18px;overflow:hidden;
+    backdrop-filter:blur(10px);box-shadow:0 24px 70px rgba(0,0,0,.5);
+  }
+  .loaderbox .bar{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:12px 18px;background:rgba(7,10,24,.7);
+    border-bottom:1px solid rgba(72,85,138,.4);font-size:12px;letter-spacing:2px;color:var(--muted);
+  }
+  .dots{display:flex;gap:7px}
+  .dots i{width:10px;height:10px;border-radius:50%;background:var(--raised)}
+  .dots i:nth-child(1){background:#ff5f57}.dots i:nth-child(2){background:#febc2e}.dots i:nth-child(3){background:#28c840}
+  .loaderbox pre{
+    padding:22px;font-size:14px;overflow-x:auto;white-space:pre-wrap;word-break:break-all;
+    color:var(--teal);font-family:'Cascadia Code','Fira Code',Consolas,monospace;
+  }
+  .copybtn{
+    display:block;width:100%;padding:17px;border:0;cursor:pointer;
+    background:linear-gradient(100deg,var(--purple),var(--accent));
+    color:#070a18;font-weight:800;font-size:15px;letter-spacing:2px;
+    transition:filter .18s,transform .12s;
+  }
+  .copybtn:hover{filter:brightness(1.15)}
+  .copybtn:active{transform:scale(.985)}
+  .copybtn.done{background:linear-gradient(100deg,var(--teal),var(--accent))}
+
+  .meta{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:26px}
+  .pill{
+    font-size:12.5px;color:var(--muted);border:1px solid rgba(72,85,138,.5);
+    padding:7px 15px;border-radius:999px;background:rgba(17,23,47,.5);
+  }
+  .pill b{color:var(--text)}
+
+  /* ── Sections ── */
+  section{padding:64px 0}
+  .kicker{font-size:12px;letter-spacing:3px;color:var(--accent);margin-bottom:10px}
+  h2{font-size:clamp(26px,4.6vw,40px);font-weight:800;letter-spacing:1px;margin-bottom:14px}
+  .lede{color:var(--muted);max-width:640px}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px;margin-top:36px}
+  .card{
+    background:linear-gradient(160deg,rgba(17,23,47,.85),rgba(19,16,48,.85));
+    border:1px solid rgba(72,85,138,.45);border-radius:16px;padding:26px 22px;
+    transition:transform .18s,border-color .18s,box-shadow .18s;
+  }
+  .card:hover{transform:translateY(-4px);border-color:rgba(99,182,255,.55);box-shadow:0 14px 44px rgba(99,182,255,.14)}
+  .card .ic{
+    width:44px;height:44px;border-radius:12px;display:grid;place-items:center;margin-bottom:16px;
+    background:rgba(99,182,255,.1);border:1px solid rgba(99,182,255,.3);
+  }
+  .card h3{font-size:17px;margin-bottom:8px}
+  .card p{font-size:13.5px;color:var(--muted)}
+
+  /* ── Steps ── */
+  .steps{counter-reset:s;margin-top:36px;display:grid;gap:14px}
+  .step{
+    display:flex;gap:18px;align-items:flex-start;background:rgba(17,23,47,.55);
+    border:1px solid rgba(72,85,138,.4);border-radius:14px;padding:20px 22px;
+  }
+  .step::before{
+    counter-increment:s;content:counter(s);flex:0 0 38px;height:38px;border-radius:11px;
+    display:grid;place-items:center;font-weight:800;color:#070a18;
+    background:linear-gradient(135deg,var(--accent),var(--teal));
+  }
+  .step h3{font-size:15.5px;margin-bottom:3px}
+  .step p{font-size:13.5px;color:var(--muted)}
+  .step code{color:var(--teal);font-size:12.5px;word-break:break-all}
+
+  /* ── FAQ ── */
+  details{
+    background:rgba(17,23,47,.55);border:1px solid rgba(72,85,138,.4);
+    border-radius:14px;padding:18px 22px;margin-top:12px;
+  }
+  summary{cursor:pointer;font-weight:600;font-size:15px;list-style:none}
+  summary::before{content:'+';color:var(--accent);margin-right:10px;font-weight:800}
+  details[open] summary::before{content:'−'}
+  details p{color:var(--muted);font-size:13.5px;margin-top:10px}
+
+  footer{
+    border-top:1px solid rgba(72,85,138,.3);padding:36px 0 46px;text-align:center;
+    color:var(--muted);font-size:13px;
+  }
+  footer a{color:var(--accent);text-decoration:none}
+  footer .mono{margin:0 auto 16px}
+  .tag{letter-spacing:3px;font-size:11px;color:var(--muted);margin-top:6px}
+</style>
+</head>
+<body>
+<canvas id="stars"></canvas>
+<div class="wrap">
+
+  <nav>
+    <div class="brand"><div class="mono">U</div>UNKNOWN</div>
+    <div class="navlinks">
+      <a href="#features">Features</a>
+      <a href="#how">How to use</a>
+      <a href="#faq">FAQ</a>
+      <a href="https://discord.com/users/1078459357185970268">Discord</a>
+    </div>
+  </nav>
+
+  <header>
+    <div class="eyebrow">SHARED EGG FINDER · STEAL AN EGG</div>
+    <h1>UNKNOWN</h1>
+    <p class="sub">A live <b>cross-server egg feed</b> for Roblox <b>Steal An Egg</b> — see the best eggs
+    across servers, join the one that matters, and steal it home with <b>grounded, human-like movement</b>.
+    One line and you're in.</p>
+
+    <div class="loaderbox">
+      <div class="bar"><div class="dots"><i></i><i></i><i></i></div><span>UNKNOWN LOADER · v0.7.1 (UI24)</span></div>
+      <pre id="loader">loadstring(game:HttpGet("https://raw.githubusercontent.com/farsazzat1113/marvin/arena/10ecc8bc-marvin/UNKNOWN.lua"))()</pre>
+      <button class="copybtn" id="copy">COPY SCRIPT</button>
+    </div>
+
+    <div class="meta">
+      <div class="pill">Works on major executors</div>
+      <div class="pill">Mobile + desktop</div>
+      <div class="pill"><b>Key required</b> — via Discord</div>
+      <div class="pill">No teleport-walk exploits</div>
+    </div>
+  </header>
+
+  <section id="features">
+    <div class="kicker">THE TOOLKIT</div>
+    <h2>Everything the egg hunt needs.</h2>
+    <p class="lede">Every feature is built for the real game, not a demo. The feed is shared live between everyone running UNKNOWN.</p>
+    <div class="grid">
+      <div class="card">
+        <div class="ic">🛰️</div>
+        <h3>Live Egg Feed</h3>
+        <p>Reports from every server running UNKNOWN, refreshed in near real time. Income, rarity, mutations, weight — sorted best-first.</p>
+      </div>
+      <div class="card">
+        <div class="ic">🚪</div>
+        <h3>Auto Join</h3>
+        <p>Claims the egg on the backend, then teleports you straight to its server. Failed claims roll back and try the next candidate.</p>
+      </div>
+      <div class="card">
+        <div class="ic">🥚</div>
+        <h3>Grounded Auto Steal</h3>
+        <p>Walks to the egg with real physics — no CFrame teleports, no velocity writes — then carries and plants it at your base.</p>
+      </div>
+      <div class="card">
+        <div class="ic">🪤</div>
+        <h3>Anti-Trap Pathing</h3>
+        <p>Tracks placed traps in real time and plans detours around their actual hitboxes, not just their centers.</p>
+      </div>
+      <div class="card">
+        <div class="ic">🎯</div>
+        <h3>Custom Targets</h3>
+        <p>Set an exact income or a minimum, filter by rarity tier, and the finder + auto join only chase what you actually want.</p>
+      </div>
+      <div class="card">
+        <div class="ic">🔔</div>
+        <h3>Discord Webhook</h3>
+        <p>Optional notifications when your egg is planted at home. Your key is never sent — only egg and server details.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="how">
+    <div class="kicker">ONE LINE, YOU'RE IN</div>
+    <h2>How to use.</h2>
+    <div class="steps">
+      <div class="step">
+        <div>
+          <h3>Paste the loader in your executor</h3>
+          <p>Copy the one-liner above and run it inside Steal An Egg. Works with the major executors that support <code>loadstring</code> + HTTP.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div>
+          <h3>Verify your key</h3>
+          <p>First launch asks for your access key — get it from the <a href="https://discord.com/users/1078459357185970268" style="color:var(--accent)">Discord</a>. A recent key resumes automatically after server hops.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div>
+          <h3>Hunt</h3>
+          <p>Browse <b>ALL SERVERS</b> and hit <b>JOIN</b> on the egg you want — or stay local with <b>MY SERVER</b> + <b>STEAL</b>. Toggle <b>AUTO JOIN</b> / <b>AUTO STEAL</b> for hands-free play.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="faq">
+    <div class="kicker">QUESTIONS</div>
+    <h2>FAQ.</h2>
+    <details>
+      <summary>Does it teleport my character?</summary>
+      <p>No. UNKNOWN never writes your character's CFrame/Position and never uses velocity exploits. Movement is real Humanoid walking with trap avoidance — slower than speed-hack hubs, but dramatically safer.</p>
+    </details>
+    <details>
+      <summary>Is there a key system?</summary>
+      <p>Yes — one quick online check on first launch (and after that it revalidates quietly in the background). Keys come from the Discord. No key, no access.</p>
+    </details>
+    <details>
+      <summary>Does it work on mobile?</summary>
+      <p>Yes. The whole interface is touch-sized, draggable, and adapts to portrait and landscape. Desktop gets a resizable panel.</p>
+    </details>
+    <details>
+      <summary>Where do the egg reports come from?</summary>
+      <p>From other players running UNKNOWN. Every report is validated for expiry, server ID and value before it's shown — taken or full servers are marked, not silently dropped.</p>
+    </details>
+    <details>
+      <summary>What executors are supported?</summary>
+      <p>Any executor with loadstring, HTTP requests, and (optionally) teleport-queue for Auto Execute after a hop. Without a queue API, Auto Join still works — you'll just re-run the loader manually in the new server.</p>
+    </details>
+  </section>
+
+  <footer>
+    <div class="mono">U</div>
+    <div>© UNKNOWN · Shared Egg Finder for Steal An Egg</div>
+    <div class="tag">NOT AFFILIATED WITH ROBLOX CORPORATION</div>
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  // Starfield — matches the in-game space theme; honors reduced motion.
+  var canvas = document.getElementById('stars'), ctx = canvas.getContext('2d');
+  var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var stars = [], W, H;
+  function resize(){
+    W = canvas.width = innerWidth; H = canvas.height = innerHeight;
+    stars = [];
+    var n = Math.min(160, Math.floor(W * H / 12000));
+    for (var i = 0; i < n; i++) stars.push({
+      x: Math.random() * W, y: Math.random() * H,
+      r: Math.random() * 1.4 + 0.4, p: Math.random() * Math.PI * 2,
+      s: 0.05 + Math.random() * 0.12
+    });
+  }
+  resize(); addEventListener('resize', resize);
+  function draw(t){
+    ctx.clearRect(0, 0, W, H);
+    var g = ctx.createLinearGradient(0, 0, W, H);
+    g.addColorStop(0, 'rgba(168,127,255,0.05)');
+    g.addColorStop(0.5, 'rgba(99,182,255,0.04)');
+    g.addColorStop(1, 'rgba(107,236,211,0.03)');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    for (var i = 0; i < stars.length; i++){
+      var st = stars[i];
+      var tw = reduced ? 0.8 : 0.55 + 0.45 * Math.sin(t / 900 + st.p);
+      ctx.globalAlpha = tw;
+      ctx.fillStyle = i % 5 === 0 ? '#a87fff' : i % 7 === 0 ? '#6becd3' : '#edf2ff';
+      ctx.beginPath(); ctx.arc(st.x, st.y, st.r, 0, Math.PI * 2); ctx.fill();
+      if (!reduced){
+        st.x += st.s * 0.22; st.y += st.s * 0.1;
+        if (st.x > W + 4) st.x = -4; if (st.y > H + 4) st.y = -4;
+      }
+    }
+    ctx.globalAlpha = 1;
+    if (!reduced) requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+
+  // Copy button with fallback.
+  var btn = document.getElementById('copy'), pre = document.getElementById('loader');
+  btn.addEventListener('click', function(){
+    var text = pre.textContent;
+    function done(){
+      btn.textContent = 'COPIED ✓'; btn.classList.add('done');
+      setTimeout(function(){ btn.textContent = 'COPY SCRIPT'; btn.classList.remove('done'); }, 1800);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(done, function(){ fallback(); });
+    } else fallback();
+    function fallback(){
+      var ta = document.createElement('textarea');
+      ta.value = text; document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); done(); } catch(e) { btn.textContent = 'SELECT + COPY MANUALLY'; }
+      document.body.removeChild(ta);
+    }
+  });
+})();
+</script>
+</body>
+</html>
