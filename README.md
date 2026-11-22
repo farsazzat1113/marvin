@@ -210,10 +210,10 @@ settings, not in the Finder feed. Clear the field to remove it.
 The default next-hop source for this PR build is:
 
 ```text
-https://raw.githubusercontent.com/farsazzat1113/marvin/arena/c057ebf5-marvin/UNKNOWN.lua?v=ui24
+https://raw.githubusercontent.com/farsazzat1113/marvin/arena/10ecc8bc-marvin/UNKNOWN.lua?v=ui24
 ```
 
-**This build is published on the `arena/c057ebf5-marvin` branch**; the URL above
+**This build is published on the `arena/10ecc8bc-marvin` branch (PR #9)**; the URL above
 serves exactly this file (UNKNOWN.lua SHA-256
 `044cab8638c22f7d43f914c790d919b0ae26f2f2f562b97b3a2585f9fa55f81f`).
 Publication was explicitly authorized. An older pinned loader can leave an old

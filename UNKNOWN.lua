@@ -11,7 +11,7 @@
 local BUILD = {
     name = 'UI24 · Desktop readability fix',
     -- Preview build: never queue the older Marvin release while this PR is open.
-    sourceUrl = 'https://raw.githubusercontent.com/farsazzat1113/marvin/arena/c057ebf5-marvin/UNKNOWN.lua?v=ui24',
+    sourceUrl = 'https://raw.githubusercontent.com/farsazzat1113/marvin/arena/10ecc8bc-marvin/UNKNOWN.lua?v=ui24',
     verifyUrl = 'https://unknown.unknownsystem.workers.dev/validate',
     sessionKey = 'UNKNOWNValidatedHopV1',
     joinedKey = 'UNKNOWNJoinedEggV1',

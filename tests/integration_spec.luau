@@ -134,7 +134,7 @@ test('claim is not blocked by a slow broadcast; preparation precedes claim ACK',
     expect(ack and hop and hop>ack)
     for i=ack+1,hop-1 do local k=state.log[i].kind;expect(k~='file'and k~='queue'and k~='teleSetting','Preparation occurred after ACK')end
     expect(state.log[hop].at-state.log[ack].at<=1/60+1e-6)
-    expect(state.queuePayload:find('/farsazzat1113/marvin/arena/c057ebf5-marvin/',1,true)~=nil,'Queued loader does not use the preview branch')
+    expect(state.queuePayload:find('/farsazzat1113/marvin/arena/10ecc8bc-marvin/',1,true)~=nil,'Queued loader does not use the preview branch')
     expect(state.teleSettings.UNKNOWNJoinedEggV1.uid=='remote-egg')
     expect(state.teleSettings.UNKNOWNValidatedHopV1.jobId=='remote-job')
 end)
