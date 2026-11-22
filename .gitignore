@@ -1,0 +1,13 @@
+# Private executor-local settings and key material (never publish).
+tenshi_beta_ui.json
+unknown_saved_access_key.txt
+
+# Executor-generated lifecycle / legacy size caches.
+tenshi_public_sighting_lifecycle_v1.json
+tenshi_beta_top5_cycle_v2.json
+tenshi_public_gui_size_v2.json
+
+# Local tooling / test artifacts.
+.cache/
+__pycache__/
+*.py[cod]

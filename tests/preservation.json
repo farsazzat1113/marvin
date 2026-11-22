@@ -1,0 +1,48 @@
+{
+  "baseline": "UI21.2, SHA-256 e4eba1f767f5cef154472cee498221a5855509bb4795390e7eeee0a6ddc39871",
+  "regions": [
+    {
+      "name": "navigator",
+      "start": "local function createTrapIndex(deps)",
+      "end": "-- END NAVIGATOR",
+      "sha256": "24c256c355e9f57df0c494ae3d4535b6455f693f2bd5bfcf097a559b41493c93"
+    },
+    {
+      "name": "perks",
+      "start": "local function createMovementPerks(deps)",
+      "end": "-- BEGIN STEAL CONTROLLER",
+      "sha256": "10a515a59840f3b15ac60de7e94329e19cde1da2270ff6058cf09ba05018401a"
+    },
+    {
+      "name": "steal",
+      "start": "local function createStealController(deps)",
+      "end": "-- END STEAL CONTROLLER",
+      "sha256": "0932a8df50700e725ea352c0d0cf49e032a9ede98ee6c6fcbb8bf823bd09c761"
+    },
+    {
+      "name": "webhook",
+      "start": "local function createWebhook(deps)",
+      "end": "-- [5] FINDER",
+      "sha256": "9eb754b945b40a508c9c9b26aa47a06157351c39525d15279ba80dc7cee97f42"
+    },
+    {
+      "name": "scan",
+      "start": "    local function runFinder()",
+      "end": "-- [7] KEY GATE",
+      "sha256": "6a0907d471ee29d0ae72adf2898011082bcae102cab9c58156c3196fffaf4023",
+      "note": "UI23 warm() retry backoff 0.1s->1.6x cap 5s; bounded missing-module discovery. Functional scanner untouched."
+    },
+    {
+      "name": "verification",
+      "start": "    local function verify(key)",
+      "end": "    local function accept(key, data)",
+      "sha256": "6a71f916b7c0f6c15f67864e0f9215939039708ee768ec42ae60d6ad2686074e"
+    },
+    {
+      "name": "value_calculation",
+      "start": "    local function displayedRate(model)",
+      "end": "    local function isHalloweenEgg(entry)",
+      "sha256": "30370839975ad726ce3469be91c1158a7a4dec6fb7ee99f00d133ff93cef0d1b"
+    }
+  ]
+}
