@@ -89,13 +89,18 @@ local function spawnBot(player)
     botsById[id] = bot
 
     task.spawn(function()
-        while botsById[id] == bot and bot.running and npc.Parent do
-            local currentCharacter = player.Character
-            local currentRoot = currentCharacter and currentCharacter:FindFirstChild("HumanoidRootPart")
-            if currentRoot and humanoid.Health > 0 then
-                humanoid:MoveTo(currentRoot.Position + currentRoot.CFrame.RightVector * 4)
+        while botsById[id] == bot and npc.Parent and humanoid.Health > 0 do
+            if bot.running then
+                local currentCharacter = player.Character
+                local currentRoot = currentCharacter and currentCharacter:FindFirstChild("HumanoidRootPart")
+                if currentRoot then
+                    humanoid:MoveTo(currentRoot.Position + currentRoot.CFrame.RightVector * 4)
+                end
             end
             task.wait(2)
+        end
+        if botsById[id] == bot then
+            botsById[id] = nil
         end
     end)
 
