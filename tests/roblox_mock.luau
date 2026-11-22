@@ -233,6 +233,9 @@ function Instance.new(class)
         BackgroundTransparency=0,Text='',Image='',CanvasPosition=Vector2.zero,Position=UDim2.new(),Size=UDim2.new(),AnchorPoint=Vector2.zero},
         _children={},_signals={},_attrs={}},instanceMeta)
     if class == 'UIScale' then obj.Scale=1 end
+    if class == 'TextLabel' or class == 'TextButton' or class == 'TextBox' then obj.TextTransparency=0 end
+    if class == 'ImageLabel' or class == 'ImageButton' then obj.ImageTransparency=0 end
+    if class == 'UIStroke' then obj.Transparency=0 end
     if class == 'Part' or class == 'MeshPart' then obj.Position=Vector3.zero;obj.Size=Vector3.new(2,2,2);obj.CFrame=CFrame.new();obj.Anchored=false end
     return obj
 end

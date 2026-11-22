@@ -1,5 +1,5 @@
 --================================================================================================--
--- UNKNOWN · Public v0.7.0 / UI23 "Space recovery + performance pass"
+-- UNKNOWN · Public v0.7.1 / UI24 "Desktop readability fix"
 -- Single-file client. Grounded walking only; no character CFrame/Position/PivotTo writes.
 -- [1] Pure policy + bounded tasks   [2] Space UI / input owner   [3] Ground navigation / traps
 -- [4] Perks / steal state machine   [5] Finder feed / join / broadcast
@@ -9,9 +9,9 @@
 --================================================================================================--
 
 local BUILD = {
-    name = 'UI23 · Space recovery + performance pass',
+    name = 'UI24 · Desktop readability fix',
     -- Preview build: never queue the older Marvin release while this PR is open.
-    sourceUrl = 'https://raw.githubusercontent.com/farsazzat1113/marvin/arena/c057ebf5-marvin/UNKNOWN.lua?v=ui23',
+    sourceUrl = 'https://raw.githubusercontent.com/farsazzat1113/marvin/arena/c057ebf5-marvin/UNKNOWN.lua?v=ui24',
     verifyUrl = 'https://unknown.unknownsystem.workers.dev/validate',
     sessionKey = 'UNKNOWNValidatedHopV1',
     joinedKey = 'UNKNOWNJoinedEggV1',
@@ -256,6 +256,67 @@ local function createEggLocator(D)
 end
 
 -- UI-only helpers. Position has one owner; no root-window position tweens.
+-- Frame-based fade (not CanvasGroup GroupTransparency): GroupTransparency rasterizes the
+-- whole subtree to a texture and washes out / goes dim on some desktop clients. We fade by
+-- scaling each element's own transparency between its captured base value and fully hidden.
+local function fadeGroup(root, target, deps)
+    local tweens, reduced = deps and deps.tweens, deps and deps.reduced
+    local function baseTransparency(obj, prop, attr)
+        local base = obj:GetAttribute(attr)
+        if base == nil then base = obj[prop]; obj:SetAttribute(attr, base) end
+        return base
+    end
+    local function collect()
+        local items = {}
+        local function add(obj)
+            if obj:IsA('GuiObject') then
+                local base = baseTransparency(obj, 'BackgroundTransparency', 'FadeBaseBackground')
+                if type(base) == 'number' then
+                    items[#items + 1] = {obj = obj, prop = 'BackgroundTransparency', from = obj.BackgroundTransparency, to = base + (1 - base) * target}
+                end
+                if obj:IsA('TextLabel') or obj:IsA('TextButton') or obj:IsA('TextBox') then
+                    local textBase = baseTransparency(obj, 'TextTransparency', 'FadeBaseText')
+                    if type(textBase) == 'number' then
+                        items[#items + 1] = {obj = obj, prop = 'TextTransparency', from = obj.TextTransparency or 0, to = textBase + (1 - textBase) * target}
+                    end
+                end
+                if obj:IsA('ImageLabel') or obj:IsA('ImageButton') then
+                    local imageBase = baseTransparency(obj, 'ImageTransparency', 'FadeBaseImage')
+                    if type(imageBase) == 'number' then
+                        items[#items + 1] = {obj = obj, prop = 'ImageTransparency', from = obj.ImageTransparency or 0, to = imageBase + (1 - imageBase) * target}
+                    end
+                end
+            elseif obj:IsA('UIStroke') then
+                local strokeBase = baseTransparency(obj, 'Transparency', 'FadeBaseStroke')
+                if type(strokeBase) == 'number' then
+                    items[#items + 1] = {obj = obj, prop = 'Transparency', from = obj.Transparency, to = strokeBase + (1 - strokeBase) * target}
+                end
+            end
+        end
+        add(root)
+        for _, obj in ipairs(root:GetDescendants()) do add(obj) end
+        return items
+    end
+    local items = collect()
+    if reduced then
+        for _, item in ipairs(items) do item.obj[item.prop] = item.to end
+        return
+    end
+    for _, item in ipairs(items) do
+        local obj, prop, to, from = item.obj, item.prop, item.to, item.from
+        if obj.Parent and type(to) == 'number' and type(from) == 'number' and math.abs(to - from) > 0.005 then
+            if tweens and tweens[obj] then tweens[obj]:Cancel() end
+            local tween = game:GetService('TweenService'):Create(obj,
+                TweenInfo.new(0.22, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {[prop] = to})
+            if tweens then
+                tweens[obj] = tween
+                tween.Completed:Once(function() if tweens[obj] == tween then tweens[obj] = nil end end)
+            end
+            tween:Play()
+        elseif obj.Parent then obj[prop] = to end
+    end
+end
+
 local function createWindowController(deps)
     local prefix = deps.prefix or 'UnknownWindow'
     local window = {alive = true, position = nil, view = nil, size = nil, drag = nil, endConnection = nil}
@@ -457,8 +518,8 @@ local function createObsidianUI(D, settings, actions)
     local shadow = Kit.make('Frame', {Name = 'SoftEdge', Size = UDim2.new(1, 8, 1, 8),
         Position = UDim2.fromOffset(-4, -4), BackgroundTransparency = 1, ZIndex = 1}, panel)
     Kit.round(shadow, 25); Kit.stroke(shadow, Palette.purple, 0.9, 7)
-    local surface = Kit.make('CanvasGroup', {Name = 'Surface', Size = UDim2.fromScale(1, 1),
-        BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, GroupTransparency = 0, ZIndex = 2}, panel)
+    local surface = Kit.make('Frame', {Name = 'Surface', Size = UDim2.fromScale(1, 1),
+        BackgroundColor3 = Palette.bg, BorderSizePixel = 0, ClipsDescendants = true, ZIndex = 2}, panel)
     Kit.round(surface, 22)
     local edge = Kit.stroke(surface, Palette.text, 0.28, 1.3)
     Kit.make('UIGradient', {Rotation = 35, Color = ColorSequence.new(Palette.purple, Palette.accent)}, edge)
@@ -531,7 +592,7 @@ local function createObsidianUI(D, settings, actions)
         self.visible = value; visibilitySerial += 1
         local serial = visibilitySerial
         if value then panel.Visible = true; launcher.Visible = false end
-        animate(surface, {GroupTransparency = value and 0 or 1}, 0.22)
+        fadeGroup(surface, value and 0 or 1, {tweens = ui.tweens, reduced = settings.reducedMotion})
         if not value then
             launcher.Visible = true
             task.delay(settings.reducedMotion and 0 or 0.22, function()
@@ -918,7 +979,8 @@ local function createObsidianUI(D, settings, actions)
         end
     end))
     ui:fit(); task.defer(function() if ui.active then ui:fit() end end)
-    surface.GroupTransparency = settings.reducedMotion and 0 or 1; animate(surface, {GroupTransparency = 0}, 0.28)
+    fadeGroup(surface, settings.reducedMotion and 0 or 1, {tweens = ui.tweens, reduced = true}) -- base = visible
+    if not settings.reducedMotion then fadeGroup(surface, 0, {tweens = ui.tweens, reduced = false}) end
     return ui
 end
 
@@ -1653,7 +1715,8 @@ local function startUnknown(access)
         DisplayOrder = 1200, ZIndexBehavior = Enum.ZIndexBehavior.Sibling}, parent)
     pcall(function() gui.ScreenInsets = Enum.ScreenInsets.DeviceSafeInsets end)
     gui:SetAttribute('UnknownBuild', BUILD.name)
-    gui:SetAttribute('TenshiUIBuild', 'PUBLIC-V070-UI23')
+    gui:SetAttribute('TenshiUIBuild', 'PUBLIC-V071-UI24')
+    print('[UNKNOWN] build ' .. BUILD.name .. ' · ' .. 'PUBLIC-V071-UI24' .. ' · GroupTransparency-free (Frame surfaces)')
     local alive = true
     local stop
     stop = function()
@@ -3041,9 +3104,9 @@ local function runAccessSystem()
         local gui = Kit.make('ScreenGui', {Name = 'UNKNOWN_KeySystem', ResetOnSpawn = false, IgnoreGuiInset = false,
             DisplayOrder = 1200, ZIndexBehavior = Enum.ZIndexBehavior.Sibling}, parent)
         pcall(function() gui.ScreenInsets = Enum.ScreenInsets.DeviceSafeInsets end)
-        local frame = Kit.make('CanvasGroup', {Name = 'AccessCard', AnchorPoint = Vector2.new(0.5, 0.5),
-            Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(380, 326), BackgroundColor3 = Color3.new(1, 1, 1),
-            BorderSizePixel = 0, ZIndex = 2}, gui)
+        local frame = Kit.make('Frame', {Name = 'AccessCard', AnchorPoint = Vector2.new(0.5, 0.5),
+            Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(380, 326), BackgroundColor3 = Palette.bg,
+            BorderSizePixel = 0, ClipsDescendants = true, ZIndex = 2}, gui)
         Kit.round(frame, 22)
         local edge = Kit.stroke(frame, Palette.text, 0.32, 1.3)
         Kit.make('UIGradient', {Rotation = 35, Color = ColorSequence.new(Palette.purple, Palette.accent)}, edge)
@@ -3084,11 +3147,8 @@ local function runAccessSystem()
         fit(); task.defer(function() if gui.Parent then fit() end end)
         button.Activated:Connect(function() task.spawn(submit) end)
         input.FocusLost:Connect(function(enter) if enter then task.spawn(submit) end end)
-        frame.GroupTransparency = reduced and 0 or 1
-        if not reduced then
-            entrance = game:GetService('TweenService'):Create(frame, TweenInfo.new(0.22, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {GroupTransparency = 0})
-            entrance:Play()
-        end
+        fadeGroup(frame, 1, {reduced = true}) -- base = visible
+        if not reduced then fadeGroup(frame, 0, {reduced = false}) end
     end
 
     local savedKey, session

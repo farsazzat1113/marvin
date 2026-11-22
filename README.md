@@ -1,20 +1,25 @@
-# UNKNOWN · UI23 “Space recovery + performance pass”
+# UNKNOWN · UI24 “Desktop readability fix” (Space UI, no GroupTransparency washout)
 
 **Shared Egg Finder + grounded auto-steal + Cloudflare key gate**, shipped as one
 self-contained Roblox **Luau** file: [`UNKNOWN.lua`](UNKNOWN.lua).
 
 UI22 recovered sourced UI20 controls and window-position behavior on top of the
-UI21.2 custom-value client with a native space-themed interface. **UI23 then ran a
-measured performance/cleanup pass**: publish dedup, hidden-mode polling throttles,
-change-gated rendering, bounded module retries and removal of the one permanent
-per-frame Heartbeat handler — see [PERF.md](PERF.md) for the measured before/after
-table. The grounded navigator, steal/perks, webhook, validation request and income
-calculation stay byte-identical to the reviewed UI21.2 baseline; the scanner block
-carries one justified backoff edit (hash re-anchored, logic untouched); automated
-fingerprints protect these seven blocks. Existing Finder report/feed/claim
-endpoints, reset tombstones and retained top-five data are kept. See
-[RECOVERY.md](RECOVERY.md) for the feature manifest, confirmed gaps, explicit
-functional additions and remaining runtime limitations.
+UI21.2 custom-value client with a native space-themed interface. **UI23 ran a
+measured performance/cleanup pass** (publish dedup, hidden-mode polling throttles,
+change-gated rendering, bounded module retries, removal of the one permanent
+per-frame Heartbeat handler — see [PERF.md](PERF.md)). **UI24 then fixed a real
+desktop-client defect**: the main panel and key-gate card were `CanvasGroup`s whose
+`GroupTransparency` fade rasterizes the whole subtree to a texture and renders
+**washed-out / barely readable on some desktop clients** (mobile was unaffected).
+UI24 switches both surfaces to plain `Frame`s and fades by scaling each element's
+own transparency, eliminating the texture flattening. The grounded navigator,
+steal/perks, webhook, validation request and income calculation stay byte-identical
+to the reviewed UI21.2 baseline; the scanner block carries one justified backoff
+edit (hash re-anchored, logic untouched); automated fingerprints protect these
+seven blocks. Existing Finder report/feed/claim endpoints, reset tombstones and
+retained top-five data are kept. See [RECOVERY.md](RECOVERY.md) for the feature
+manifest, confirmed gaps, explicit functional additions and remaining runtime
+limitations.
 
 ## Grounded auto-steal
 
@@ -205,12 +210,12 @@ settings, not in the Finder feed. Clear the field to remove it.
 The default next-hop source for this PR build is:
 
 ```text
-https://raw.githubusercontent.com/farsazzat1113/marvin/arena/c057ebf5-marvin/UNKNOWN.lua?v=ui23
+https://raw.githubusercontent.com/farsazzat1113/marvin/arena/c057ebf5-marvin/UNKNOWN.lua?v=ui24
 ```
 
 **This build is published on the `arena/c057ebf5-marvin` branch**; the URL above
 serves exactly this file (UNKNOWN.lua SHA-256
-`5f7e6816471b547c2d3a559b54e0e122c22087a69d56be7fda948b25fa5a025e`).
+`044cab8638c22f7d43f914c790d919b0ae26f2f2f562b97b3a2585f9fa55f81f`).
 Publication was explicitly authorized. An older pinned loader can leave an old
 source override in
 the executor environment; do not assume it points to the current local file.
@@ -327,6 +332,10 @@ No test contacts Roblox, the live Finder/key service or Discord.
    stale gesture, accidental button activation or unwanted re-centering.
 9. Inspect actual star/nebula/glass rendering, Z-order, clipping, readability,
    frame cost, reduced motion and 44px mobile targets in Roblox on real devices.
+   **UI24 specifically: confirm the panel and key gate render fully opaque and
+   readable on desktop (not washed-out/see-through), and that
+   `print('[UNKNOWN] build …')` in the console shows the UI24 label with
+   "GroupTransparency-free (Frame surfaces)".**
 10. Exercise the original Discord profile, accessible rarity filter and Top 4
     switch, including unavailable reports and returning to the full listing.
 

@@ -388,7 +388,8 @@ end)
 test('failed UI construction releases existing perks and movement owners',function()
     reset({tracked=false,autoSteal=false,infiniteJump=true,speedBoost=true,keyDelay=20})
     local original=Instance.new
-    Instance.new=function(class)if class=='CanvasGroup'then error('Injected UI construction failure')end;return original(class)end
+    -- UI23 uses Frame surfaces (no CanvasGroup), so inject the failure on an eager, always-constructed scroll container.
+    Instance.new=function(class)if class=='ScrollingFrame'then error('Injected UI construction failure')end;return original(class)end
     executeScript();Instance.new=original;Scheduler.advance(0.1)
     expect(state.playerGui:FindFirstChild('UNKNOWN')==nil);near(state.humanoid.WalkSpeed,16)
     state.services.UserInputService.JumpRequest:Fire();expect(state.jumps==0);expect(next(Scheduler.bindings)==nil)

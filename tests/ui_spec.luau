@@ -307,7 +307,9 @@ test('VERIFY KEY button and Enter submit the unchanged online gate and clean its
         Scheduler.advance(0.2);expect(gate.Parent==nil and named('UNKNOWN')~=nil)
         local n=0;for _,req in ipairs(state.requests)do if req.url:find('/validate',1,true)then n+=1;expect(state.http:JSONDecode(req.body).key=='TEST-KEY')end end;expect(n==1)
         for _,entry in ipairs(gate._signals['property:AbsoluteSize'].listeners)do expect(not entry.connection.Connected)end
-        for _,tween in ipairs(state.tweens)do if tween.object.Name=='AccessCard'then expect(tween.cancelled)end end
+        -- UI23 fades the gate via per-descendant tweens (not a single GroupTransparency tween);
+        -- after the card is destroyed none of them may still write to it.
+        for _,tween in ipairs(state.tweens)do if tween.object.Name=='AccessCard'then expect(tween.object._destroyed or tween.cancelled)end end
     end
 end)
 test('empty, invalid and double-clicked keys cannot launch Finder or duplicate verification',function()
