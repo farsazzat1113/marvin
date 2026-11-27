@@ -5,7 +5,9 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const dataDir = resolve(root, '.marvin-data');
+const dataDir = process.env.MARVIN_DATA_DIR
+  ? resolve(process.env.MARVIN_DATA_DIR)
+  : resolve(root, '.marvin-data');
 const jobsFile = resolve(dataDir, 'jobs.json');
 const host = process.env.MARVIN_HOST || '127.0.0.1';
 const port = Number(process.env.MARVIN_PORT || 8787);
