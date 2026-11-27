@@ -77,6 +77,24 @@ async function bodyJson(req) {
 function licenseDigest(key) {
   return createHmac('sha256', licensePepper).update(key, 'utf8').digest();
 }
+async function refreshLicenseRecords() {
+  if (process.env.MARVIN_LICENSES_JSON) return;
+  try {
+    const licenseFile = process.env.MARVIN_LICENSES_FILE || resolve(dataDir, 'licenses.json');
+    const configured = JSON.parse(await readFile(licenseFile, 'utf8'));
+    const records = configured?.licenses && typeof configured.licenses === 'object'
+      ? configured.licenses
+      : configured;
+    licenseRecords = records && typeof records === 'object' && !Array.isArray(records)
+      ? Object.fromEntries(Object.entries(records).filter(([hash, record]) =>
+          /^[a-f0-9]{64}$/i.test(hash) && record && typeof record === 'object'
+        ))
+      : {};
+  } catch {
+    licenseRecords = {};
+  }
+}
+
 function verifyLicenseKey(key) {
   if (!licensePepper || !Object.keys(licenseRecords).length) return { configured: false };
   const candidate = licenseDigest(key);
@@ -134,6 +152,7 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${host}:${port}`);
   try {
     if (req.method === 'POST' && url.pathname === '/api/license/verify') {
+      await refreshLicenseRecords();
       if (licenseRateLimit(req)) {
         res.setHeader('Retry-After', '60');
         return send(res, 429, { error: 'Too many verification attempts. Try again later.' });
