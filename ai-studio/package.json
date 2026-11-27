@@ -10,7 +10,8 @@
     "test": "node --test",
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0",
-    "hash:license": "node scripts/hash-license.mjs"
+    "hash:license": "node scripts/hash-license.mjs",
+    "license": "node scripts/manage-licenses.mjs"
   },
   "devDependencies": {
     "vite": "^6.0.0"
