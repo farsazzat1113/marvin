@@ -89,3 +89,29 @@ The API now includes `POST /api/license/verify`. It is deliberately fail-closed:
 - The local admin CLI is available as `npm run license -- issue --plan vip --days 30`, `npm run license -- list`, and `npm run license -- revoke <licenseId>`. Issuance prints the raw key once; it is never written to disk. The private registry defaults to `ai-studio/.marvin-data/licenses.json`, which is ignored by Git, and stores only HMAC digests plus metadata. Set `MARVIN_LICENSES_FILE` to a private persistent path on a server. The API reloads this file for each verification request, so revocation takes effect on the next check without restarting the API.
 - The local registry is a first administration step, not yet a production database: it is a single-process JSON file and does not provide multi-instance locking, remote admin authentication, or managed backups. Before cloud launch, migrate it to a private database and expose administrative actions only behind owner authentication, MFA, audit logging, and a private network boundary.
 
+
+
+## Cloud deployment preparation (Docker)
+
+The development branch now includes a minimal container for the license API:
+- `Dockerfile` uses the official Node.js 22 Alpine image, runs as the unprivileged `node` user, and contains only the API and license-management CLI.
+- `docker-compose.yml` persists the private data directory in a named volume and binds the API to `127.0.0.1:8787` by default. Do not expose this port directly to the public internet; put a TLS reverse proxy/WAF in front of it.
+- `/api/health/live` is a lightweight liveness endpoint suitable for container health checks. `/api/health/ready` returns 200 only when the license pepper and a non-empty registry are configured; otherwise it returns 503.
+- Copy `.env.example` to `.env` on the host and replace the placeholder with a newly generated high-entropy secret from a password manager/secret manager. Never commit `.env` or paste the secret into chat. The example value is deliberately unusable.
+- Initialize the registry using the CLI inside a private administrative shell. The raw license key is printed once; deliver it privately to its intended user.
+- The JSON registry is still single-instance only. Do not scale replicas or run multiple API containers against it. Before multi-instance production, migrate to a transactional managed database with backups and concurrency controls.
+- Docker Compose is a deployment package, not a cloud host. No cloud provider, DNS, TLS certificate, firewall, database, backup service, or public deployment has been provisioned by this commit.
+
+Suggested host commands (after installing Docker Engine and Compose):
+```sh
+cp .env.example .env
+# Edit .env locally; set a unique MARVIN_LICENSE_PEPPER value.
+docker compose build
+docker compose up -d
+docker compose ps
+docker compose logs --tail=100 api
+curl -fsS http://127.0.0.1:8787/api/health/live
+curl -i http://127.0.0.1:8787/api/health/ready
+```
+
+Before accepting real users, configure a TLS reverse proxy, firewall allowlist/rate limits, off-host encrypted backups, secret-manager injection, monitoring/alerts, and an authenticated owner-only administration path. The current CLI should be run through a private host console/SSH session; no public admin HTTP endpoint exists.
