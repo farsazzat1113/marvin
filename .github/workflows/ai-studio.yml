@@ -1,0 +1,25 @@
+name: MARVIN AI Studio CI
+on:
+  push:
+    paths:
+      - "ai-studio/**"
+      - ".github/workflows/ai-studio.yml"
+  pull_request:
+    paths:
+      - "ai-studio/**"
+      - ".github/workflows/ai-studio.yml"
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ai-studio
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: ai-studio/package-lock.json
+      - run: npm install
+      - run: npm run build
