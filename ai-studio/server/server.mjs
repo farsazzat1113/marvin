@@ -1,4 +1,5 @@
 import http from 'node:http';
+import { readFileSync } from 'node:fs';
 import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
@@ -17,9 +18,18 @@ const statuses = new Set(['draft', 'review', 'approved', 'scheduled', 'rendering
 const licensePepper = process.env.MARVIN_LICENSE_PEPPER || '';
 let licenseRecords = {};
 try {
-  const configured = JSON.parse(process.env.MARVIN_LICENSES_JSON || '{}');
-  if (configured && typeof configured === 'object' && !Array.isArray(configured)) {
-    licenseRecords = Object.fromEntries(Object.entries(configured).filter(([hash, record]) =>
+  let configured;
+  if (process.env.MARVIN_LICENSES_JSON) {
+    configured = JSON.parse(process.env.MARVIN_LICENSES_JSON);
+  } else {
+    const licenseFile = process.env.MARVIN_LICENSES_FILE || resolve(dataDir, 'licenses.json');
+    configured = JSON.parse(readFileSync(licenseFile, 'utf8'));
+  }
+  const records = configured?.licenses && typeof configured.licenses === 'object'
+    ? configured.licenses
+    : configured;
+  if (records && typeof records === 'object' && !Array.isArray(records)) {
+    licenseRecords = Object.fromEntries(Object.entries(records).filter(([hash, record]) =>
       /^[a-f0-9]{64}$/i.test(hash) && record && typeof record === 'object'
     ));
   }
