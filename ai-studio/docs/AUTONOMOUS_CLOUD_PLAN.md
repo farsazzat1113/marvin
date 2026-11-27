@@ -76,3 +76,15 @@ The existing ai-studio branch is an early local prototype. It has a React/Vite d
 - Retention period for source assets and generated media.
 
 These must be selected based on actual cost, hardware/provider availability, privacy requirements, and the owner's account permissions.
+
+## Private license verification (development branch)
+
+The API now includes `POST /api/license/verify`. It is deliberately fail-closed:
+- The endpoint returns HTTP 503 until both `MARVIN_LICENSE_PEPPER` and a non-empty `MARVIN_LICENSES_JSON` allowlist are configured on the server.
+- License keys are never stored in this repository. The allowlist contains HMAC-SHA256 digests, not plaintext keys.
+- Each record supports `status` (`active` or another non-active value), optional `plan`, optional `licenseId`, and optional ISO-8601 `expiresAt`.
+- Unknown, revoked, and expired keys are rejected. The endpoint has a per-source-IP in-memory attempt limit; production deployment should also use an edge/WAF rate limit.
+- The hash helper reads a key from standard input and prints only its digest: `MARVIN_LICENSE_PEPPER='...' npm run hash:license`. Do not put real keys or the pepper in shell history, source files, GitHub Actions logs, or chat. Use a managed secret store for deployment.
+- This endpoint is not yet deployed and is not connected to the existing Roblox script or its current public key list. Existing users therefore keep their current access path unchanged. Do not switch clients until a private host, secret configuration, migration plan, and end-to-end client test are ready.
+- The in-memory allowlist is suitable only as an initial integration step; production should move license records to a durable private database with an audited admin workflow, revocation, and backup.
+
