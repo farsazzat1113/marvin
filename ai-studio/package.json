@@ -9,7 +9,8 @@
     "check:server": "node --check server/server.mjs",
     "test": "node --test",
     "build": "vite build",
-    "preview": "vite preview --host 0.0.0.0"
+    "preview": "vite preview --host 0.0.0.0",
+    "hash:license": "node scripts/hash-license.mjs"
   },
   "devDependencies": {
     "vite": "^6.0.0"
