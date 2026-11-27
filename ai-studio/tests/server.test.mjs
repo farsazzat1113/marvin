@@ -45,7 +45,9 @@ test('job queue supports create, list, update, delete, and blocks unconfigured p
       ...process.env,
       MARVIN_HOST: '127.0.0.1',
       MARVIN_PORT: String(port),
-      MARVIN_DATA_DIR: dataDir
+      MARVIN_DATA_DIR: dataDir,
+      MARVIN_LICENSE_PEPPER: '',
+      MARVIN_LICENSES_JSON: ''
     },
     stdio: 'ignore'
   });
