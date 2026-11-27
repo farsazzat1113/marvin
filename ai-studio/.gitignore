@@ -1,0 +1,6 @@
+node_modules/
+dist/
+.marvin-data/
+.env
+.env.*
+!.env.example
