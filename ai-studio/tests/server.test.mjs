@@ -56,7 +56,14 @@ test('job queue supports create, list, update, delete, and blocks unconfigured p
   try {
     await waitForServer(port, child);
 
-    const live = await fetch(`${base}/api/health/live`);\n    assert.equal(live.status, 200);\n    assert.equal((await live.json()).ok, true);\n\n    const ready = await fetch(`${base}/api/health/ready`);\n    assert.equal(ready.status, 503);\n\n    const verifierDisabled = await fetch(`${base}/api/license/verify`, {
+    const live = await fetch(`${base}/api/health/live`);
+    assert.equal(live.status, 200);
+    assert.equal((await live.json()).ok, true);
+
+    const ready = await fetch(`${base}/api/health/ready`);
+    assert.equal(ready.status, 503);
+
+    const verifierDisabled = await fetch(`${base}/api/license/verify`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ key: 'MARVIN-TEST-KEY-0001' })
