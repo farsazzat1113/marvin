@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { createHmac } from 'node:crypto';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
@@ -176,5 +176,81 @@ test('private license verifier accepts only active, unexpired server-side hashes
       setTimeout(resolve, 1500).unref();
     });
     await rm(dataDir, { recursive: true, force: true });
+  }
+});
+
+
+test('license admin CLI stores only hashes and revocation takes effect without restarting API', async () => {
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), 'marvin-license-admin-test-'));
+  const registryPath = path.join(tempDir, 'licenses.json');
+  const pepper = 'test-only-license-admin-pepper';
+  const env = {
+    ...process.env,
+    MARVIN_LICENSE_PEPPER: pepper,
+    MARVIN_LICENSES_FILE: registryPath,
+    MARVIN_LICENSES_JSON: ''
+  };
+  const runAdmin = (...args) => spawnSync(process.execPath, ['scripts/manage-licenses.mjs', ...args], {
+    cwd: projectDir,
+    env,
+    encoding: 'utf8'
+  });
+
+  const port = await reservePort();
+  const child = spawn(process.execPath, ['server/server.mjs'], {
+    cwd: projectDir,
+    env: {
+      ...env,
+      MARVIN_HOST: '127.0.0.1',
+      MARVIN_PORT: String(port),
+      MARVIN_DATA_DIR: tempDir
+    },
+    stdio: 'ignore'
+  });
+  const base = `http://127.0.0.1:${port}`;
+  const verify = key => fetch(`${base}/api/license/verify`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ key })
+  });
+
+  try {
+    const issued = runAdmin('issue', '--plan', 'vip', '--days', '30');
+    assert.equal(issued.status, 0, issued.stderr);
+    const keyMatch = issued.stdout.match(/MARVIN-[A-Za-z0-9_-]{40,}/);
+    const idMatch = issued.stdout.match(/LICENSE ID: ([a-f0-9-]+)/i);
+    assert.ok(keyMatch, 'issue command should print the new key once');
+    assert.ok(idMatch, 'issue command should print the license ID');
+    const key = keyMatch[0];
+    const licenseId = idMatch[1];
+
+    const rawRegistry = await readFile(registryPath, 'utf8');
+    assert.equal(rawRegistry.includes(key), false, 'plaintext key must not be persisted');
+    const registry = JSON.parse(rawRegistry);
+    const expectedHash = createHmac('sha256', pepper).update(key, 'utf8').digest('hex');
+    assert.ok(registry.licenses[expectedHash]);
+    assert.equal(registry.licenses[expectedHash].status, 'active');
+
+    await waitForServer(port, child);
+    const accepted = await verify(key);
+    assert.equal(accepted.status, 200);
+
+    const listed = runAdmin('list');
+    assert.equal(listed.status, 0, listed.stderr);
+    assert.equal(listed.stdout.includes(key), false);
+    assert.match(listed.stdout, new RegExp(licenseId));
+
+    const revoked = runAdmin('revoke', licenseId);
+    assert.equal(revoked.status, 0, revoked.stderr);
+    const rejected = await verify(key);
+    assert.equal(rejected.status, 401, 'revocation should apply on the next verification request');
+  } finally {
+    child.kill('SIGTERM');
+    await new Promise(resolve => {
+      if (child.exitCode !== null) return resolve();
+      child.once('exit', resolve);
+      setTimeout(resolve, 1500).unref();
+    });
+    await rm(tempDir, { recursive: true, force: true });
   }
 });
