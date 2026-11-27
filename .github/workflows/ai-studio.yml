@@ -20,4 +20,5 @@ jobs:
         with:
           node-version: 20
       - run: npm install
+      - run: npm run check:server
       - run: npm run build
