@@ -1,10 +1,12 @@
 {
   "name": "marvin-ai-studio",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
+    "server": "node server/server.mjs",
+    "check:server": "node --check server/server.mjs",
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0"
   },
