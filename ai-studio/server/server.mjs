@@ -169,6 +169,19 @@ const server = http.createServer(async (req, res) => {
       if (!result.valid) return send(res, 401, { valid: false, error: 'License key is invalid, revoked, or expired.' });
       return send(res, 200, { valid: true, license: result.license });
     }
+    if (req.method === 'GET' && url.pathname === '/api/health/live') {
+      return send(res, 200, { ok: true, service: 'marvin-api', timestamp: new Date().toISOString() });
+    }
+    if (req.method === 'GET' && url.pathname === '/api/health/ready') {
+      await refreshLicenseRecords();
+      const ready = Boolean(licensePepper && Object.keys(licenseRecords).length);
+      return send(res, ready ? 200 : 503, {
+        ok: ready,
+        service: 'marvin-license-api',
+        licenseVerificationConfigured: ready,
+        timestamp: new Date().toISOString()
+      });
+    }
     if (req.method === 'GET' && url.pathname === '/api/health') {
       let engine = { connected: false, models: [], error: '' };
       try {
