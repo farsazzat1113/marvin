@@ -123,6 +123,23 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'OPTIONS') { res.writeHead(204); return res.end(); }
   const url = new URL(req.url, `http://${host}:${port}`);
   try {
+    if (req.method === 'POST' && url.pathname === '/api/license/verify') {
+      if (licenseRateLimit(req)) {
+        res.setHeader('Retry-After', '60');
+        return send(res, 429, { error: 'Too many verification attempts. Try again later.' });
+      }
+      if (!licensePepper || !Object.keys(licenseRecords).length) {
+        return send(res, 503, { error: 'License verification is not configured on this server.' });
+      }
+      const input = await bodyJson(req);
+      const key = typeof input.key === 'string' ? input.key.trim() : '';
+      if (key.length < 12 || key.length > 256) {
+        return send(res, 400, { valid: false, error: 'A valid license key is required.' });
+      }
+      const result = verifyLicenseKey(key);
+      if (!result.valid) return send(res, 401, { valid: false, error: 'License key is invalid, revoked, or expired.' });
+      return send(res, 200, { valid: true, license: result.license });
+    }
     if (req.method === 'GET' && url.pathname === '/api/health') {
       let engine = { connected: false, models: [], error: '' };
       try {
