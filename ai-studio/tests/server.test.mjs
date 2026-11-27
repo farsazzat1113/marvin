@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
+import { createHmac } from 'node:crypto';
 import { mkdtemp, rm } from 'node:fs/promises';
 import net from 'node:net';
 import os from 'node:os';
@@ -53,6 +54,13 @@ test('job queue supports create, list, update, delete, and blocks unconfigured p
   try {
     await waitForServer(port, child);
 
+    const verifierDisabled = await fetch(`${base}/api/license/verify`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ key: 'MARVIN-TEST-KEY-0001' })
+    });
+    assert.equal(verifierDisabled.status, 503);
+
     const empty = await fetch(`${base}/api/jobs`);
     assert.equal(empty.status, 200);
     assert.deepEqual((await empty.json()).jobs, []);
@@ -96,6 +104,68 @@ test('job queue supports create, list, update, delete, and blocks unconfigured p
 
     const finalList = await (await fetch(`${base}/api/jobs`)).json();
     assert.deepEqual(finalList.jobs, []);
+  } finally {
+    child.kill('SIGTERM');
+    await new Promise(resolve => {
+      if (child.exitCode !== null) return resolve();
+      child.once('exit', resolve);
+      setTimeout(resolve, 1500).unref();
+    });
+    await rm(dataDir, { recursive: true, force: true });
+  }
+});
+
+
+test('private license verifier accepts only active, unexpired server-side hashes', async () => {
+  const dataDir = await mkdtemp(path.join(os.tmpdir(), 'marvin-license-test-'));
+  const port = await reservePort();
+  const pepper = 'test-only-pepper-never-use-in-production';
+  const digest = key => createHmac('sha256', pepper).update(key, 'utf8').digest('hex');
+  const activeKey = 'MARVIN-PRIVATE-TEST-KEY-0001';
+  const revokedKey = 'MARVIN-PRIVATE-TEST-KEY-0002';
+  const expiredKey = 'MARVIN-PRIVATE-TEST-KEY-0003';
+  const records = {
+    [digest(activeKey)]: { status: 'active', plan: 'vip', licenseId: 'test-active', expiresAt: '2099-01-01T00:00:00.000Z' },
+    [digest(revokedKey)]: { status: 'revoked', plan: 'vip', licenseId: 'test-revoked' },
+    [digest(expiredKey)]: { status: 'active', plan: 'vip', licenseId: 'test-expired', expiresAt: '2000-01-01T00:00:00.000Z' }
+  };
+  const child = spawn(process.execPath, ['server/server.mjs'], {
+    cwd: projectDir,
+    env: {
+      ...process.env,
+      MARVIN_HOST: '127.0.0.1',
+      MARVIN_PORT: String(port),
+      MARVIN_DATA_DIR: dataDir,
+      MARVIN_LICENSE_PEPPER: pepper,
+      MARVIN_LICENSES_JSON: JSON.stringify(records)
+    },
+    stdio: 'ignore'
+  });
+  const base = `http://127.0.0.1:${port}`;
+  const verify = key => fetch(`${base}/api/license/verify`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ key })
+  });
+
+  try {
+    await waitForServer(port, child);
+
+    const accepted = await verify(activeKey);
+    assert.equal(accepted.status, 200);
+    const acceptedBody = await accepted.json();
+    assert.equal(acceptedBody.valid, true);
+    assert.equal(acceptedBody.license.id, 'test-active');
+    assert.equal(acceptedBody.license.plan, 'vip');
+
+    for (const key of [revokedKey, expiredKey, 'MARVIN-UNKNOWN-KEY-0000']) {
+      const rejected = await verify(key);
+      assert.equal(rejected.status, 401);
+      assert.equal((await rejected.json()).valid, false);
+    }
+
+    const malformed = await verify('short');
+    assert.equal(malformed.status, 400);
   } finally {
     child.kill('SIGTERM');
     await new Promise(resolve => {
