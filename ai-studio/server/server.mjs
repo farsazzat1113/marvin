@@ -1,5 +1,5 @@
 import http from 'node:http';
-import { randomUUID } from 'node:crypto';
+import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -14,6 +14,21 @@ const port = Number(process.env.MARVIN_PORT || 8787);
 const ollamaBase = process.env.OLLAMA_HOST || 'http://127.0.0.1:11434';
 const allowedOrigins = new Set(['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:4173', 'http://127.0.0.1:4173']);
 const statuses = new Set(['draft', 'review', 'approved', 'scheduled', 'rendering', 'ready', 'publishing', 'published', 'failed']);
+const licensePepper = process.env.MARVIN_LICENSE_PEPPER || '';
+let licenseRecords = {};
+try {
+  const configured = JSON.parse(process.env.MARVIN_LICENSES_JSON || '{}');
+  if (configured && typeof configured === 'object' && !Array.isArray(configured)) {
+    licenseRecords = Object.fromEntries(Object.entries(configured).filter(([hash, record]) =>
+      /^[a-f0-9]{64}$/i.test(hash) && record && typeof record === 'object'
+    ));
+  }
+} catch {
+  licenseRecords = {};
+}
+const licenseAttempts = new Map();
+const LICENSE_WINDOW_MS = 60_000;
+const LICENSE_MAX_ATTEMPTS = 10;
 let writeChain = Promise.resolve();
 
 async function readJobs() {
@@ -48,6 +63,44 @@ async function bodyJson(req) {
   if (!raw) return {};
   try { return JSON.parse(raw); }
   catch { throw Object.assign(new Error('Invalid JSON body'), { status: 400 }); }
+}
+function licenseDigest(key) {
+  return createHmac('sha256', licensePepper).update(key, 'utf8').digest();
+}
+function verifyLicenseKey(key) {
+  if (!licensePepper || !Object.keys(licenseRecords).length) return { configured: false };
+  const candidate = licenseDigest(key);
+  let matchedRecord = null;
+  for (const [hash, record] of Object.entries(licenseRecords)) {
+    const stored = Buffer.from(hash, 'hex');
+    if (stored.length === candidate.length && timingSafeEqual(stored, candidate)) matchedRecord = record;
+  }
+  if (!matchedRecord) return { configured: true, valid: false };
+  if (matchedRecord.status !== 'active') return { configured: true, valid: false };
+  if (matchedRecord.expiresAt) {
+    const expiry = Date.parse(matchedRecord.expiresAt);
+    if (!Number.isFinite(expiry) || expiry <= Date.now()) return { configured: true, valid: false };
+  }
+  return {
+    configured: true,
+    valid: true,
+    license: {
+      id: cleanText(matchedRecord.licenseId, 80) || null,
+      plan: cleanText(matchedRecord.plan, 40) || 'standard',
+      expiresAt: matchedRecord.expiresAt || null
+    }
+  };
+}
+function licenseRateLimit(req) {
+  const ip = req.socket.remoteAddress || 'unknown';
+  const now = Date.now();
+  const current = licenseAttempts.get(ip);
+  if (!current || now - current.startedAt >= LICENSE_WINDOW_MS) {
+    licenseAttempts.set(ip, { startedAt: now, count: 1 });
+    return false;
+  }
+  current.count += 1;
+  return current.count > LICENSE_MAX_ATTEMPTS;
 }
 function cleanText(value, max = 4000) {
   return typeof value === 'string' ? value.trim().slice(0, max) : '';
