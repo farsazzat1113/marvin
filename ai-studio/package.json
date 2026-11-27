@@ -1,0 +1,23 @@
+{
+  "name": "marvin-ai-studio",
+  "private": true,
+  "version": "0.2.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "server": "node server/server.mjs",
+    "check:server": "node --check server/server.mjs",
+    "test": "node --test",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "hash:license": "node scripts/hash-license.mjs",
+    "license": "node scripts/manage-licenses.mjs"
+  },
+  "devDependencies": {
+    "vite": "^6.0.0"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  }
+}
